@@ -1,36 +1,30 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+.
 
-## Getting Started
+🛠️ Infraestructura y CI/CD
+El proyecto utiliza un flujo de Integración y Despliegue Continuo (CI/CD) automatizado para garantizar la estabilidad del código:
 
-First, run the development server:
+Frontend (Vercel): Configurado con un pipeline nativo que ejecuta el build y despliega automáticamente cada cambio en la rama principal.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Backend (Render): Integrado con despliegue automático que reinicia el servicio y aplica los cambios tras pasar las validaciones de entorno.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Pipeline de Calidad: Ambos servicios están vinculados al repositorio, asegurando que solo el código que compila correctamente llegue a producción.
+<img width="1311" height="493" alt="image" src="https://github.com/user-attachments/assets/4c87f9d0-5bef-4da0-8070-92cc5a14b49d" />
+<img width="1421" height="950" alt="image" src="https://github.com/user-attachments/assets/0d5950ad-6164-4e03-ad3c-c259cdc19441" />
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+🌿 Flujo de Trabajo (Git Flow)
+Para mantener la integridad de la rama principal (main), el repositorio tiene reglas de protección:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Prohibido el Push Directo: No se permiten cambios directos en main.
 
-## Learn More
+Pull Requests (PR): Todo cambio debe proponerse mediante una Pull Request. Esto permite la revisión de código y asegura que los tests de métricas y lógica de riesgo se ejecuten antes de la fusión.
 
-To learn more about Next.js, take a look at the following resources:
+<img width="870" height="208" alt="image" src="https://github.com/user-attachments/assets/67b06114-3442-4b93-880e-c7ef7287fe04" />
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+📖 Documentación de la API
+La API cuenta con documentación interactiva para facilitar las pruebas de los endpoints (Auth, Proyectos, Métricas).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Swagger UI: Disponible en la ruta /api-docs (o la ruta que hayas configurado).
 
-## Deploy on Vercel
+Aquí puedes probar los cálculos de XP, Score de Riesgo y Workload en tiempo real.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+<img width="1710" height="1032" alt="image" src="https://github.com/user-attachments/assets/de8b8bf9-6ae5-4018-9ffa-3fa9ed494d12" />
