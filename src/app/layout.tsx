@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Figtree } from "next/font/google";
 import "../styles/globals.css";
 import { cn } from "@/lib/utils";
+import SideBarLayout from "./Layout/sidebar";
+import Topbar from "./Layout/topbar";
 
 const figtree = Figtree({subsets:['latin'],variable:'--font-sans'});
 
@@ -27,10 +29,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn("font-sans", figtree.variable)}>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <Topbar />
+        <SideBarLayout>
+          {children}
+        </SideBarLayout>
       </body>
     </html>
   );
