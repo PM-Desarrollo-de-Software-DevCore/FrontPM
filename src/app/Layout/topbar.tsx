@@ -9,7 +9,6 @@ import {
   NavigationMenuLink,
 } from "../../components/ui/navigation-menu"
 import Image from "next/image"
-import logo from "../logo.png" 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
@@ -25,7 +24,7 @@ export default function Topbar() {
 
           <div className="flex items-center gap-3 -ml-5">
             <Image
-              src={logo} 
+              src="/logo.png"
               alt="FrontPM Logo"
               width={170}
               height={160}
@@ -84,7 +83,7 @@ export default function Topbar() {
       <div className="relative">
         {/* FOTO */}
         <Image
-          src="https://i.pravatar.cc/40"
+          src="/persona.png"
           alt="User"
           width={36}
           height={36}
