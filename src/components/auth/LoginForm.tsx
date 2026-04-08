@@ -20,8 +20,6 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { useAuth } from '@/hooks/useAuth'
 
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
-import LoginOutlinedIcon from '@mui/icons-material/LoginOutlined'
 import TextField from '@mui/material/TextField'
 
 export default function LoginForm() {
