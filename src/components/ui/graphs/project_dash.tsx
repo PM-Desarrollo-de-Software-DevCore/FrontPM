@@ -2,7 +2,15 @@
 
 import { Button } from "../Button/button"
 
-const projects = [
+type Status = "green" | "yellow" | "red"
+
+type Project = {
+  id: number
+  name: string
+  status: Status
+}
+
+const projects: Project[] = [
   { id: 1, name: "Payment System", status: "green" },
   { id: 2, name: "Mobile App", status: "yellow" },
   { id: 3, name: "Dashboard", status: "red" },
@@ -13,16 +21,16 @@ const projects = [
   { id: 8, name: "Enviormental Web App", status: "yellow" }
 ]
 
-const getStatusColor = (status) => {
+const getStatusColor = (status: "green" | "yellow" | "red") => {
   switch (status) {
     case "green":
       return "bg-green-500"
     case "yellow":
-      return "bg-yellow-400"
+      return "bg-yellow-500"
     case "red":
       return "bg-red-500"
     default:
-      return "bg-gray-300"
+      return "bg-gray-500"
   }
 }
 
