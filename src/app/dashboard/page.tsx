@@ -16,7 +16,7 @@ export default function DashboardPage() {
 
         <div className="col-span-2 flex flex-col gap-4">
 
-          <Card className="h-[437px]">
+          <Card className="h-[450px]">
             <CardContent className="h-full pt-4 overflow-y-auto">
               <ProjectCard />
             </CardContent>
@@ -44,7 +44,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="h-[450px]">
+          <Card className="h-[462px]">
             <CardContent className="h-full pt-4">
               <ProgressChart />
             </CardContent>
