@@ -6,8 +6,8 @@ import { PanelLeftIcon } from "lucide-react"
 import { Slot } from "radix-ui"
 
 import { cn } from "@/lib/utils"
-import { Button } from "./button"
-import { Input } from "./input"
+import { Button } from "../Button/button"
+import { Input } from "../topbar/input"
 import { Separator } from "./separator"
 
 import { Skeleton } from "./skeleton"

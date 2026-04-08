@@ -9,7 +9,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton
-} from "../../components/ui/sidebar"
+} from "../../components/ui/sidebar/sidebar"
 
 import { 
   LayoutDashboard, 

@@ -1,7 +1,7 @@
 import Image from "next/image";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
-import { Button } from "../../components/ui/button";
-import TaskChart from "../../components/ui/taskResume"
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card/card"
+import { Button } from "../../components/ui/Button/button";
+import TaskChart from "../../components/ui/graphs/taskResume"
 
 
 export default function ProfileDashboard() {
@@ -44,9 +44,6 @@ export default function ProfileDashboard() {
               <div className="flex gap-2 mt-3">
                 <span className="bg-green-100 text-green-600 text-xs px-3 py-1 rounded-full">
                   Completed
-                </span>
-                <span className="bg-red-100 text-red-500 text-xs px-3 py-1 rounded-full">
-                  15:00
                 </span>
               </div>
             </div>
