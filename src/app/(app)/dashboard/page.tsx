@@ -1,9 +1,9 @@
-import TaskChart from "../../components/ui/graphs/TaskChart"
-import DonutChart from "../../components/ui/graphs/DonutChart"
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card/card"
-import ProgressChart from "../../components/ui/graphs/ProgressChart"
-import TotalProgress from "../../components/ui/graphs/totalProgress"
-import ProjectCard from "../../components/ui/graphs/project_dash"
+import TaskChart from "@/components/ui/graphs/TaskChart"
+import DonutChart from "@/components/ui/graphs/DonutChart"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card/card"
+import ProgressChart from "@/components/ui/graphs/ProgressChart"
+import TotalProgress from "@/components/ui/graphs/totalProgress"
+import ProjectCard from "@/components/ui/graphs/project_dash"
 
 export default function DashboardPage() {
   return (
