@@ -24,9 +24,7 @@ export default function Topbar() {
             <Image src="/images/logo/TM_Logo_Color_Pos_RGB.png" alt="FrontPM Logo" width={150} height={36} className="rounded-lg object-cover" />
           </div>
         </div>
-
         <div className="flex items-center gap-6">
-
           <div className="hidden md:flex items-center border border-sidebar-border rounded-xl px-3 py-2 w-80 bg-background">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -44,7 +42,6 @@ export default function Topbar() {
               className="bg-transparent outline-none text-sm w-full placeholder:text-muted-foreground"
             />
           </div>
-
   
           <button className="relative">
             <svg
@@ -70,46 +67,46 @@ export default function Topbar() {
               </p>
             </div>
 
-      <div className="relative">
+            <div className="relative">
 
-        <Image
-          src="/images/persona.png"
-          alt="User"
-          width={36}
-          height={36}
-          onClick={() => setOpen(!open)}
-          className="rounded-full cursor-pointer"
-        />
+              <Image
+                src="/images/persona.png"
+                alt="User"
+                width={36}
+                height={36}
+                onClick={() => setOpen(!open)}
+                className="rounded-full cursor-pointer"
+              />
 
 
-        {open && (
-          <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
-            
-            <button
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded-t-xl"
-              onClick={() => {
-                router.push("/profile")
-                setOpen(false)
-              }}
-            >
-              View Profile
-            </button>
+              {open && (
+                <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+                  
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded-t-xl"
+                    onClick={() => {
+                      router.push("/profile")
+                      setOpen(false)
+                    }}
+                  >
+                    View Profile
+                  </button>
 
-            <button
-              className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100 rounded-b-xl"
-              onClick={() => {
-                console.log("Logout")
-                setOpen(false)
-              }}
-            >
-              Logout
-            </button>
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100 rounded-b-xl"
+                    onClick={() => {
+                      console.log("Logout")
+                      setOpen(false)
+                    }}
+                  >
+                    Logout
+                  </button>
 
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </div>
-      </div>
-      </div>
+        </div>
       </div>
     </header>
   )
