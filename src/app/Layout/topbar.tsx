@@ -81,7 +81,7 @@ export default function Topbar() {
             </div>
 
       <div className="relative">
-        {/* FOTO */}
+
         <Image
           src="/persona.png"
           alt="User"
@@ -91,7 +91,7 @@ export default function Topbar() {
           className="rounded-full cursor-pointer"
         />
 
-        {/* DROPDOWN */}
+
         {open && (
           <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
             

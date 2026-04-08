@@ -34,10 +34,10 @@ export default function TasksChart() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        display: false, // 🔥 oculta leyenda fija
+        display: false, 
       },
       tooltip: {
-        enabled: true, // 🔥 solo tooltip al hover
+        enabled: true, 
         backgroundColor: "#ffffff",
         titleColor: "#0f172a",
         bodyColor: "#1f2937",

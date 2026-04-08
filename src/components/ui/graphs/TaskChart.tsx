@@ -56,7 +56,6 @@ export default function TasksChart() {
     },
   }
 
-  // Plugin para porcentajes
   const percentagePlugin = {
     id: "textCenter",
     beforeDatasetsDraw(chart: any) {
@@ -77,7 +76,7 @@ export default function TasksChart() {
   return (
     <div className="w-full h-full flex flex-col">
 
-      {/* Header limpio */}
+
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-slate-900">
           Tasks
@@ -87,15 +86,13 @@ export default function TasksChart() {
         </p>
       </div>
 
-      {/* Content */}
       <div className="flex flex-1 flex-col lg:flex-row items-center gap-8">
 
-        {/* Chart */}
         <div className="flex-1 h-full">
           <Pie data={data} options={options} plugins={[percentagePlugin as Plugin]} />
         </div>
 
-        {/* Legend */}
+
         <div className="w-full lg:w-[30%]">
           <div className="flex flex-col justify-center gap-4">
             {data.labels.map((label, index) => (

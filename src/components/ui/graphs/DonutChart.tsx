@@ -34,7 +34,7 @@ export default function WorkloadChart() {
   const options = {
     indexAxis: "y" as const,
     responsive: true,
-    maintainAspectRatio: false, // 🔥 importante para que llene la card
+    maintainAspectRatio: false, 
     plugins: {
       legend: {
         display: false,

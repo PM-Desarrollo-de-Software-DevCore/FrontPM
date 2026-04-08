@@ -23,7 +23,7 @@ ChartJS.register(
   Filler
 )
 
-const labels = ["01-01", "02-01", "03-01", "04-01", "05-01", "06-01"]
+const labels = ["01-Jan", "02-Jan", "03-Jan", "04-Jan", "05-Jan", "06-Jan"]
 
 const planned = [10, 20, 40, 60, 80, 100]
 const real = [5, 15, 30, 50, 70, 85]
