@@ -12,7 +12,7 @@ export default function ProfileDashboard() {
         <Card className="rounded-2xl shadow-sm p-6 text-center w-full border border-gray-100">
           <div className="flex flex-col items-center gap-3">
             <div className="w-24 h-24 rounded-full border-[3px] border-pink-500 overflow-hidden">
-              <Image src="/persona.png" alt="profile" width={100} height={100} />
+              <Image src="/images/persona.png" alt="profile" width={100} height={100} />
             </div>
             <h2 className="font-semibold text-lg">Yash Ghori</h2>
             <p className="text-sm text-gray-500">Ahmedabad, Gujarat</p>
@@ -61,7 +61,7 @@ export default function ProfileDashboard() {
               <div key={i} className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <Image
-                    src="/persona.png"
+                    src="/images/persona.png"
                     alt="user"
                     width={36}
                     height={36}
