@@ -48,10 +48,10 @@ export default function LoginForm() {
     }
 
     // Intentar Login
-    await login(email, password)
+    const isSuccess = await login(email, password)
 
     // Si no hubo error, redirigir
-    if(!error) {
+    if (isSuccess) {
       router.push('/dashboard')
     }
   }
