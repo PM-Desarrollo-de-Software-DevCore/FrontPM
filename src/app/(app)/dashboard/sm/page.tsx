@@ -14,7 +14,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
 
-        {/* LEFT COLUMN */}
+
         <div className="flex flex-col gap-4 lg:col-span-2">
 
           <Card className="h-auto lg:h-[450px] overflow-hidden">
@@ -39,7 +39,7 @@ export default function DashboardPage() {
 
         </div>
 
-        {/* RIGHT COLUMN */}
+
         <div className="flex flex-col gap-4 lg:col-span-4">
 
           <Card className="h-auto lg:h-[450px]">
