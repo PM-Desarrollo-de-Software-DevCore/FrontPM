@@ -1,35 +1,30 @@
-"use client"
+'use client'
 
-import LoginForm from '@/components/auth/LoginForm'
-import { useAuth } from '@/hooks/useAuth'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 
-export default function LoginPage() {
+export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { isLoading, isAuthenticated } = useAuth()
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.replace('/dashboard')
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/login')
     }
   }, [isLoading, isAuthenticated, router])
 
   if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-white text-sm text-gray-500">
-        Cargando sesión...
+        Verificando sesión...
       </main>
     )
   }
 
-  if (isAuthenticated) {
+  if (!isAuthenticated) {
     return null
   }
 
-  return (
-    <main>
-      <LoginForm />
-    </main>
-  )
+  return <>{children}</>
 }
