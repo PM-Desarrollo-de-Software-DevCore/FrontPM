@@ -8,21 +8,24 @@
  * - Detectar errores temprano
  */
 
-export type UserRole = 'admin' | 'pm' | 'user'
+export type UserRole = 'admin' | 'developer' | 'scrum_master'
 
 export interface User {
   id: string
   email: string
   name: string
+  lastname: string
   role: UserRole
   avatar?: string
 }
 
 export interface AuthResponse {
   success: boolean
-  message: string
-  token?: string
-  user?: User
+  message?: string
+  data?: {
+    token?: string
+    user?: User
+  }
 }
 
 export interface AuthContext {
@@ -30,6 +33,6 @@ export interface AuthContext {
   isLoading: boolean
   isAuthenticated: boolean
   error: string | null
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<boolean>
   logout: () => void
 }

@@ -47,22 +47,32 @@ export function useAuth() {
 
   // Función Login
   // Llama al servicio loginUser del backend.
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string): Promise<boolean> {
     try {
       setIsLoading(true)
       setError(null)
 
       const response = await loginUser(email, password)
 
-      if (response.success && response.user) {
-        setUser(response.user)
+      if (response.success && response.data?.token) {
+        const currentUser = await getCurrentUser()
+
+        if (!currentUser) {
+          setError('No se pudo obtener la sesión del usuario')
+          return false
+        }
+
+        setUser(currentUser)
         setIsAuthenticated(true)
+        return true
       } else {
-        setError(response.message)
+        setError(response.message || 'Error al iniciar sesión')
+        return false
       }
     } catch (err) {
       setError('Error al iniciar sesión')
       console.error(err)
+      return false
     } finally {
       setIsLoading(false)
     }

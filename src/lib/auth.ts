@@ -10,7 +10,21 @@
 
 import { AuthResponse, User } from '@/types/auth'
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api' /* API con fallback en localhost */
+type BackendLoginResponse = {
+  success: boolean
+  message?: string
+  data?: {
+    token?: string
+  }
+}
+
+type BackendMeResponse = {
+  success: boolean
+  message?: string
+  data?: User
+}
+
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001' /* API con fallback en localhost */
 
 /* Función para iniciar sesión | POST /auth/login */
 export async function loginUser(email: string, password: string): Promise<AuthResponse> {
@@ -22,13 +36,28 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
       },
       body: JSON.stringify({ email, password }),
     })
-    const data: AuthResponse = await response.json()
+    const data: BackendLoginResponse = await response.json()
 
-    if (data.success && data.token) {
-      localStorage.setItem('authToken', data.token)
+    if (!response.ok || !data.success) {
+      return {
+        success: false,
+        message: data.message || 'Credenciales inválidas',
+      }
     }
 
-    return data
+    const token = data.data?.token
+
+    if (token) {
+      localStorage.setItem('authToken', token)
+    }
+
+    return {
+      success: true,
+      message: data.message,
+      data: {
+        token,
+      },
+    }
   } catch (error) {
     console.error('Error en loginUser:', error)
 
@@ -71,9 +100,13 @@ export async function getCurrentUser(): Promise<User | null> {
       return null
     }
 
-    const data = await response.json()
+    const data: BackendMeResponse = await response.json()
 
-    return data.user
+    if (!data.success || !data.data) {
+      return null
+    }
+
+    return data.data
   } catch (error) {
     console.error('Error obtenido usuario:', error)
     return null
