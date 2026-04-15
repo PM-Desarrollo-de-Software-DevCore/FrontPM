@@ -1,18 +1,35 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { getDashboardRouteByRole } from '@/lib/auth'
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const { isLoading, isAuthenticated } = useAuth()
+  const pathname = usePathname()
+  const { isLoading, isAuthenticated, user } = useAuth()
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/login')
+    if (isLoading) {
+      return
     }
-  }, [isLoading, isAuthenticated, router])
+
+    if (!isAuthenticated) {
+      router.replace('/login')
+      return
+    }
+
+    if (pathname.startsWith('/dashboard')) {
+      const allowedDashboardRoute = getDashboardRouteByRole(user?.role)
+      const isOnAllowedDashboard =
+        pathname === allowedDashboardRoute || pathname.startsWith(`${allowedDashboardRoute}/`)
+
+      if (!isOnAllowedDashboard) {
+        router.replace(allowedDashboardRoute)
+      }
+    }
+  }, [isLoading, isAuthenticated, pathname, router, user?.role])
 
   if (isLoading) {
     return (
