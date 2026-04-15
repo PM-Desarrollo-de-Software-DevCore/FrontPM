@@ -1,20 +1,16 @@
 "use client"
 
-import {
-  NavigationMenu,
-  NavigationMenuList,
-  NavigationMenuItem,
-  NavigationMenuTrigger,
-  NavigationMenuContent,
-  NavigationMenuLink,
-} from "../../components/ui/topbar/navigation-menu"
 import Image from "next/image"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/useAuth"
 
 export default function Topbar() {
   const [open, setOpen] = useState(false)
   const router = useRouter()
+  const { user, logout } = useAuth()
+
+  const fullName = [user?.name, user?.lastname].filter(Boolean).join(" ") || "Usuario"
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-sidebar-border bg-sidebar shadow-sm">
@@ -27,7 +23,7 @@ export default function Topbar() {
             alt="FrontPM Logo"
             width={120}
             height={30}
-            className="object-contain sm:w-[150px]"
+            className="object-contain sm:w-37.5"
           />
         </div>
 
@@ -82,10 +78,10 @@ export default function Topbar() {
 
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium text-sidebar-foreground">
-                Anima Agrawal
+                {fullName}
               </p>
               <p className="text-xs text-sidebar-foreground/70">
-                U.P, India
+                {user?.email || ""}
               </p>
             </div>
 
@@ -115,7 +111,8 @@ export default function Topbar() {
                   <button
                     className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100 rounded-b-xl"
                     onClick={() => {
-                      console.log("Logout")
+                      logout()
+                      router.replace("/login")
                       setOpen(false)
                     }}
                   >

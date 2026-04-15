@@ -12,8 +12,8 @@ sin tener que repetir lógica.
 */
 
 import { useEffect, useState } from 'react'
-import { User, UserRole } from '@/types/auth'
-import { loginUser, getCurrentUser, logout as logoutUser } from '@/lib/auth'
+import { LoginResult, User, UserRole } from '@/types/auth'
+import { getCurrentUser, getDashboardRouteByRole, loginUser, logout as logoutUser } from '@/lib/auth'
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
@@ -47,7 +47,7 @@ export function useAuth() {
 
   // Función Login
   // Llama al servicio loginUser del backend.
-  async function login(email: string, password: string): Promise<boolean> {
+  async function login(email: string, password: string): Promise<LoginResult> {
     try {
       setIsLoading(true)
       setError(null)
@@ -59,20 +59,23 @@ export function useAuth() {
 
         if (!currentUser) {
           setError('No se pudo obtener la sesión del usuario')
-          return false
+          return { success: false }
         }
 
         setUser(currentUser)
         setIsAuthenticated(true)
-        return true
+        return {
+          success: true,
+          redirectTo: getDashboardRouteByRole(currentUser.role),
+        }
       } else {
         setError(response.message || 'Error al iniciar sesión')
-        return false
+        return { success: false }
       }
     } catch (err) {
       setError('Error al iniciar sesión')
       console.error(err)
-      return false
+      return { success: false }
     } finally {
       setIsLoading(false)
     }
@@ -91,8 +94,6 @@ export function useAuth() {
   // Verifica si el usuario tiene un rol específico
   function hasRole(requiredRole: UserRole): boolean {
     if (!user) return false
-    
-    if (user.role === 'admin') return true // Admin tiene acceso a todo
 
     return user.role === requiredRole
   }
