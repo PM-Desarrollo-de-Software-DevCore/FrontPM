@@ -22,6 +22,8 @@ import {
 } from "lucide-react"
 
 import Link from "next/link"
+import { useAuth } from "@/hooks/useAuth"
+import { getDashboardRouteByRole } from "@/lib/auth"
 
 
 
@@ -31,6 +33,8 @@ export default function SideBarLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const { user } = useAuth()
+  const dashboardPath = getDashboardRouteByRole(user?.role)
 
   return (
     <SidebarProvider>
@@ -39,9 +43,14 @@ export default function SideBarLayout({
           <SidebarContent className="pt-3">
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton isActive={pathname === "/dashboard"}>
-                  <LayoutDashboard className="w-4 h-4 mr-2" />
-                  Dashboard
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === dashboardPath || pathname.startsWith(`${dashboardPath}/`)}
+                >
+                  <Link href={dashboardPath}>
+                    <LayoutDashboard className="w-4 h-4 mr-2" />
+                    Dashboard
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 

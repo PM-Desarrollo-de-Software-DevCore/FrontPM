@@ -21,7 +21,43 @@ type BackendLoginResponse = {
 type BackendMeResponse = {
   success: boolean
   message?: string
-  data?: User
+  data?: BackendUser
+}
+
+type BackendUser = Omit<User, 'role'> & {
+  role: string
+}
+
+const ROLE_ALIASES: Record<string, User['role']> = {
+  admin: 'project_manager',
+  developer: 'user',
+  pm: 'project_manager',
+  project_manager: 'project_manager',
+  scrum_master: 'scrum_master',
+  sm: 'scrum_master',
+  user: 'user',
+}
+
+export function normalizeUserRole(role?: string | null): User['role'] {
+  if (!role) {
+    return 'user'
+  }
+
+  return ROLE_ALIASES[role.toLowerCase()] ?? 'user'
+}
+
+export function getDashboardRouteByRole(role?: string | null): string {
+  const normalizedRole = normalizeUserRole(role)
+
+  if (normalizedRole === 'project_manager') {
+    return '/dashboard/pm'
+  }
+
+  if (normalizedRole === 'scrum_master') {
+    return '/dashboard/sm'
+  }
+
+  return '/dashboard/user'
 }
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001' /* API con fallback en localhost */
@@ -106,7 +142,10 @@ export async function getCurrentUser(): Promise<User | null> {
       return null
     }
 
-    return data.data
+    return {
+      ...data.data,
+      role: normalizeUserRole(data.data.role),
+    }
   } catch (error) {
     console.error('Error obtenido usuario:', error)
     return null
