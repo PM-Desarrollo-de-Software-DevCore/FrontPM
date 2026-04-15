@@ -55,9 +55,6 @@ export default function TasksChart() {
   }
     return (
     <div className="w-full">
-        <h3 className="text-lg font-semibold text-slate-900 text-center relative top-8 mb-4">
-            Tasks
-        </h3>
         <div className="w-full h-[260px]">
         <Pie data={data} options={options} />
         </div>
