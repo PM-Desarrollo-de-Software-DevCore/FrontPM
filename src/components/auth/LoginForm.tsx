@@ -48,11 +48,11 @@ export default function LoginForm() {
     }
 
     // Intentar Login
-    const isSuccess = await login(email, password)
+    const result = await login(email, password)
 
     // Si no hubo error, redirigir
-    if (isSuccess) {
-      router.push('/dashboard')
+    if (result.success && result.redirectTo) {
+      router.push(result.redirectTo)
     }
   }
 

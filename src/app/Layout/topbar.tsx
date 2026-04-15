@@ -1,20 +1,17 @@
 "use client"
 
-import {
-  NavigationMenu,
-  NavigationMenuList,
-  NavigationMenuItem,
-  NavigationMenuTrigger,
-  NavigationMenuContent,
-  NavigationMenuLink,
-} from "../../components/ui/topbar/navigation-menu"
 import Image from "next/image"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/useAuth"
+import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined"
 
 export default function Topbar() {
   const [open, setOpen] = useState(false)
   const router = useRouter()
+  const { user, logout } = useAuth()
+
+  const fullName = [user?.name, user?.lastname].filter(Boolean).join(" ") || "Usuario"
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-sidebar-border bg-sidebar shadow-sm">
@@ -27,7 +24,7 @@ export default function Topbar() {
             alt="FrontPM Logo"
             width={120}
             height={30}
-            className="object-contain sm:w-[150px]"
+            className="object-contain sm:w-37.5"
           />
         </div>
 
@@ -59,20 +56,7 @@ export default function Topbar() {
           </div>
 
           <button className="relative">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-sidebar-foreground"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 17h5l-1.405-1.405M19 17V11a7 7 0 10-14 0v6l-1.405 1.405M5 17h14"
-              />
-            </svg>
+            <NotificationsNoneOutlinedIcon className="h-5 w-5 text-sidebar-foreground" />
 
             <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full" />
           </button>
@@ -82,10 +66,10 @@ export default function Topbar() {
 
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium text-sidebar-foreground">
-                Anima Agrawal
+                {fullName}
               </p>
               <p className="text-xs text-sidebar-foreground/70">
-                U.P, India
+                {user?.email || ""}
               </p>
             </div>
 
@@ -115,7 +99,8 @@ export default function Topbar() {
                   <button
                     className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100 rounded-b-xl"
                     onClick={() => {
-                      console.log("Logout")
+                      logout()
+                      router.replace("/login")
                       setOpen(false)
                     }}
                   >

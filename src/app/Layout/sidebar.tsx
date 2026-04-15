@@ -1,6 +1,7 @@
 "use client"
 
 import { usePathname } from "next/navigation"
+import type { ComponentType } from "react"
 import {
   SidebarProvider,
   Sidebar,
@@ -14,14 +15,56 @@ import {
 import { 
   LayoutDashboard, 
   FolderKanban, 
-  Flag, 
-  BookCheck, 
-  AlarmClockCheck, 
-  LandPlot, 
-  Settings 
+  AlarmClockCheck,
+  Flag,
+  UserCircle2
 } from "lucide-react"
 
 import Link from "next/link"
+import { useAuth } from "@/hooks/useAuth"
+import { getDashboardRouteByRole } from "@/lib/auth"
+
+type SidebarRole = "project_manager" | "scrum_master" | "user"
+
+type SidebarItem = {
+  label: string
+  href: string
+  icon: ComponentType<{ className?: string }>
+  roles: SidebarRole[]
+}
+
+const sidebarItems: SidebarItem[] = [
+  {
+    label: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+    roles: ["project_manager", "scrum_master", "user"],
+  },
+  {
+    label: "Projects",
+    href: "/projects",
+    icon: FolderKanban,
+    roles: ["project_manager", "scrum_master", "user"],
+  },
+  {
+    label: "Milestones",
+    href: "/milestones",
+    icon: Flag,
+    roles: ["scrum_master", "user"],
+  },
+  {
+    label: "Work Logs",
+    href: "/worklogs",
+    icon: AlarmClockCheck,
+    roles: ["project_manager", "scrum_master", "user"],
+  },
+  {
+    label: "Profile",
+    href: "/profile",
+    icon: UserCircle2,
+    roles: ["project_manager", "scrum_master", "user"],
+  },
+]
 
 
 
@@ -31,6 +74,25 @@ export default function SideBarLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const { user } = useAuth()
+  const dashboardPath = getDashboardRouteByRole(user?.role)
+  const currentRole = user?.role as SidebarRole | undefined
+
+  const visibleItems = sidebarItems.filter((item) => {
+    if (!currentRole) {
+      return false
+    }
+
+    return item.roles.includes(currentRole)
+  })
+
+  const isPathActive = (href: string) => {
+    if (href === "/dashboard") {
+      return pathname === dashboardPath || pathname.startsWith(`${dashboardPath}/`)
+    }
+
+    return pathname === href || pathname.startsWith(`${href}/`)
+  }
 
   return (
     <SidebarProvider>
@@ -38,59 +100,26 @@ export default function SideBarLayout({
         <Sidebar>
           <SidebarContent className="pt-3">
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={pathname === "/dashboard"}>
-                  <LayoutDashboard className="w-4 h-4 mr-2" />
-                  Dashboard
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {visibleItems.map((item) => {
+                const Icon = item.icon
+                const href = item.label === "Dashboard" ? dashboardPath : item.href
 
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={pathname === "/project"}>
-                  <FolderKanban className="w-4 h-4 mr-2" />
-                  Project
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={pathname === "/milestone"}>
-                  <Flag className="w-4 h-4 mr-2" />
-                  Milestone
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={pathname === "/tasks"}>
-                  <BookCheck className="w-4 h-4 mr-2" />
-                  Tasks
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                <SidebarMenuButton isActive={pathname === "/workLogs"}>
-                  <AlarmClockCheck className="w-4 h-4 mr-2" />
-                  Work Logs
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={pathname === "/metrics"}>
-                  <LandPlot className="w-4 h-4 mr-2" />
-                  Metrics & Risks
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={pathname === "/settings"}>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Settings
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={isPathActive(item.href)}>
+                      <Link href={href}>
+                        <Icon className="w-4 h-4 mr-2" />
+                        {item.label}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarContent>
         </Sidebar>
 
-        <main className="flex-1 pt-14">{children}</main>
+        <main className="flex-1 pt-4">{children}</main>
       </div>
     </SidebarProvider>
   )
