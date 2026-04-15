@@ -4,6 +4,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
+import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined"
 
 export default function Topbar() {
   const [open, setOpen] = useState(false)
@@ -55,20 +56,7 @@ export default function Topbar() {
           </div>
 
           <button className="relative">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-sidebar-foreground"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 17h5l-1.405-1.405M19 17V11a7 7 0 10-14 0v6l-1.405 1.405M5 17h14"
-              />
-            </svg>
+            <NotificationsNoneOutlinedIcon className="h-5 w-5 text-sidebar-foreground" />
 
             <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full" />
           </button>
