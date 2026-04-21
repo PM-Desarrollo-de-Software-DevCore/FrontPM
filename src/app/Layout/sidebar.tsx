@@ -17,14 +17,15 @@ import {
   FolderKanban, 
   AlarmClockCheck,
   Flag,
-  UserCircle2
+  UserCircle2,
+  UserPlus
 } from "lucide-react"
 
 import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
 import { getDashboardRouteByRole } from "@/lib/auth"
 
-type SidebarRole = "project_manager" | "scrum_master" | "user"
+type SidebarRole = "project_manager" | "scrum_master" | "user" 
 
 type SidebarItem = {
   label: string
@@ -63,6 +64,12 @@ const sidebarItems: SidebarItem[] = [
     href: "/profile",
     icon: UserCircle2,
     roles: ["project_manager", "scrum_master", "user"],
+  },
+  {
+  label: "Create User",
+  href: "/users/create",
+  icon: UserPlus,
+  roles: ["project_manager"],
   },
 ]
 
