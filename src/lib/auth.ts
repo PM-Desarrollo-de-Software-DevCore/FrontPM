@@ -158,3 +158,29 @@ export function logout(): void {
     localStorage.removeItem('authToken')
   }
 }
+
+/* Función para verificar conexión con el servidor */
+export async function checkServerConnection(): Promise<boolean> {
+  try {
+    // Intentar hacer un fetch simple al endpoint de login
+    // Si el servidor responde, aunque sea con error, significa que está disponible
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000) // Timeout de 5 segundos
+
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeoutId)
+    
+    // Si recibimos alguna respuesta del servidor, está disponible
+    return true
+  } catch (error) {
+    console.error('Error verificando conexión con servidor:', error)
+    return false
+  }
+}
