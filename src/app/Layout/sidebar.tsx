@@ -66,7 +66,7 @@ const sidebarItems: SidebarItem[] = [
     roles: ["project_manager", "scrum_master", "user"],
   },
   {
-  label: "Create User",
+  label: "Users",
   href: "/users/create",
   icon: UserPlus,
   roles: ["project_manager"],
