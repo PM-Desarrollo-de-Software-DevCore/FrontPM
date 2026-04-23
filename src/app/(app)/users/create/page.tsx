@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 type UserPreview = {
   id: number
@@ -11,8 +11,9 @@ type UserPreview = {
   phoneNumber: string
   password: string
   nationality: string
-  designation: string
+  designation: string[]
   skills: string[]
+  role: "user" | "admin"
   createdAt: string
   status?: "Editing" | "Active"
 }
@@ -25,10 +26,20 @@ type UserForm = {
   phoneNumber: string
   password: string
   nationality: string
-  designation: string
+  designation: string[]
   skills: string[]
+  role: "user" | "admin"
   createdAt: string
 }
+
+type EditableFieldName =
+  | "firstName"
+  | "lastName"
+  | "email"
+  | "phoneCode"
+  | "phoneNumber"
+  | "password"
+  | "nationality"
 
 const getTodayDate = () => new Date().toISOString().split("T")[0]
 
@@ -50,8 +61,9 @@ const emptyForm: UserForm = {
   phoneNumber: "",
   password: "",
   nationality: "",
-  designation: "",
+  designation: [],
   skills: [],
+  role: "user",
   createdAt: getTodayDate(),
 }
 
@@ -65,8 +77,9 @@ const initialUsers: UserPreview[] = [
     phoneNumber: "9988776655",
     password: "",
     nationality: "India",
-    designation: "Developer",
+    designation: ["Developer"],
     skills: ["React", "Node.js"],
+    role: "user",
     createdAt: "2026-04-10",
     status: "Editing",
   },
@@ -79,8 +92,9 @@ const initialUsers: UserPreview[] = [
     phoneNumber: "8899776655",
     password: "",
     nationality: "India",
-    designation: "UI Intern",
+    designation: ["UI Intern"],
     skills: ["Figma", "CSS"],
+    role: "admin",
     createdAt: "2026-04-11",
     status: "Active",
   },
@@ -93,8 +107,9 @@ const initialUsers: UserPreview[] = [
     phoneNumber: "8112345678",
     password: "",
     nationality: "Mexico",
-    designation: "Backend Developer",
+    designation: ["Backend Developer"],
     skills: ["SQL", "Java"],
+    role: "user",
     createdAt: "2026-04-12",
     status: "Active",
   },
@@ -107,13 +122,25 @@ export default function CreateUserPage() {
   const [sortOrder, setSortOrder] = useState<"az" | "za">("az")
   const [form, setForm] = useState<UserForm>(emptyForm)
   const [skillInput, setSkillInput] = useState("")
+  const [designationInput, setDesignationInput] = useState("")
   const [isSaving, setIsSaving] = useState(false)
-  const [showSaveAlert, setShowSaveAlert] = useState(false)
+  const [saveAlertMessage, setSaveAlertMessage] = useState<string | null>(null)
   const [errors, setErrors] = useState({
     email: "",
     phone: "",
+    designation: "",
     skills: "",
   })
+
+  useEffect(() => {
+    if (!saveAlertMessage) return
+
+    const timeoutId = window.setTimeout(() => {
+      setSaveAlertMessage(null)
+    }, 5000)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [saveAlertMessage])
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -140,9 +167,11 @@ export default function CreateUserPage() {
       createdAt: getTodayDate(),
     })
     setSkillInput("")
+    setDesignationInput("")
     setErrors({
       email: "",
       phone: "",
+      designation: "",
       skills: "",
     })
   }
@@ -158,14 +187,17 @@ export default function CreateUserPage() {
       phoneNumber: user.phoneNumber,
       password: "",
       nationality: user.nationality,
-      designation: user.designation,
+      designation: [...user.designation],
       skills: [...user.skills],
+      role: user.role,
       createdAt: user.createdAt,
     })
     setSkillInput("")
+    setDesignationInput("")
     setErrors({
       email: "",
       phone: "",
+      designation: "",
       skills: "",
     })
   }
@@ -190,7 +222,7 @@ export default function CreateUserPage() {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value } = e.target
+    const { name, value } = e.target as { name: EditableFieldName; value: string }
     setForm((prev) => ({
       ...prev,
       [name]: value,
@@ -227,11 +259,48 @@ export default function CreateUserPage() {
     }))
   }
 
+  const addDesignation = () => {
+    const value = designationInput.trim()
+    if (!value || form.designation.includes(value)) {
+      setDesignationInput("")
+      return
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      designation: [...prev.designation, value],
+    }))
+    setDesignationInput("")
+    setErrors((prev) => ({ ...prev, designation: "" }))
+  }
+
+  const removeDesignation = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      designation: prev.designation.filter((_, i) => i !== index),
+    }))
+  }
+
+  const handleRoleToggle = () => {
+    const newRole = form.role === "admin" ? "user" : "admin"
+    const confirmed = window.confirm(
+      `Are you sure you want to change the user role to ${newRole}?`
+    )
+
+    if (!confirmed) return
+
+    setForm((prev) => ({
+      ...prev,
+      role: newRole,
+    }))
+  }
+
   const validateForm = () => {
     let valid = true
     const newErrors = {
       email: "",
       phone: "",
+      designation: "",
       skills: "",
     }
 
@@ -249,6 +318,11 @@ export default function CreateUserPage() {
 
     if (form.skills.length === 0) {
       newErrors.skills = "You must add at least one skill"
+      valid = false
+    }
+
+    if (form.designation.length === 0) {
+      newErrors.designation = "You must add at least one designation area"
       valid = false
     }
 
@@ -275,7 +349,7 @@ export default function CreateUserPage() {
 
       setUsers((prev) => [newUser, ...prev])
       resetToCreateMode()
-      setShowSaveAlert(true)
+      setSaveAlertMessage("User created successfully.")
       setIsSaving(false)
       return
     }
@@ -293,7 +367,7 @@ export default function CreateUserPage() {
             : user
         )
       )
-      setShowSaveAlert(true)
+      setSaveAlertMessage("User updated successfully.")
     }
 
     setIsSaving(false)
@@ -301,10 +375,10 @@ export default function CreateUserPage() {
 
   return (
     <div className="min-h-screen bg-white px-6 py-6">
-      <div className="mx-auto w-full max-w-[1400px]">
-        {showSaveAlert && (
+      <div className="mx-auto w-full max-w-350">
+        {saveAlertMessage && (
           <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-green-700 shadow-sm">
-            User saved successfully.
+            {saveAlertMessage}
           </div>
         )}
 
@@ -358,7 +432,14 @@ export default function CreateUserPage() {
                           <p className="text-base font-semibold text-slate-800">
                             {user.firstName} {user.lastName}
                           </p>
-                          <p className="text-sm text-slate-500">{user.designation}</p>
+                          <p className="mt-1 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            {user.role}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            {user.designation.length > 0
+                              ? user.designation.join(", ")
+                              : "-"}
+                          </p>
                           <p className="mt-1 text-xs text-slate-400">
                             Created: {formatDisplayDate(user.createdAt)}
                           </p>
@@ -386,7 +467,7 @@ export default function CreateUserPage() {
           </section>
 
           <section className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
-            <form onSubmit={handleSubmit} className="flex h-full flex-col">
+            <form onSubmit={handleSubmit} autoComplete="off" className="flex h-full flex-col">
               <div className="mb-8 flex items-center justify-between gap-4">
                 <h2 className="text-4xl font-semibold text-slate-800">
                   {formMode === "create" ? "Create User" : "Edit Profile"}
@@ -402,17 +483,29 @@ export default function CreateUserPage() {
                       >
                         Delete User
                       </button>
-
-                      <button
-                        type="button"
-                        onClick={resetToCreateMode}
-                        className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                      >
-                        New User
-                      </button>
                     </>
                   )}
                 </div>
+              </div>
+
+              <div className="mb-6 flex items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+                <span className="text-sm font-medium text-slate-600">User</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={form.role === "admin"}
+                  onClick={handleRoleToggle}
+                  className={`relative h-8 w-14 rounded-full transition-all duration-300 ease-in-out ${
+                    form.role === "admin" ? "bg-indigo-500" : "bg-slate-300"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-all duration-300 ease-in-out ${
+                      form.role === "admin" ? "left-7" : "left-1"
+                    }`}
+                  />
+                </button>
+                <span className="text-sm font-medium text-slate-600">Admin</span>
               </div>
 
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
@@ -439,6 +532,7 @@ export default function CreateUserPage() {
                   <input
                     name="email"
                     type="email"
+                    autoComplete="off"
                     value={form.email}
                     onChange={handleChange}
                     placeholder="email@example.com"
@@ -471,6 +565,7 @@ export default function CreateUserPage() {
                     </label>
                     <input
                       name="phoneNumber"
+                      autoComplete="off"
                       value={form.phoneNumber}
                       onChange={handleChange}
                       placeholder="Phone number"
@@ -493,6 +588,7 @@ export default function CreateUserPage() {
                     formMode === "create" ? "Create password" : "Change password"
                   }
                   type="password"
+                  autoComplete="new-password"
                 />
 
                 <SelectField
@@ -509,22 +605,48 @@ export default function CreateUserPage() {
                   ]}
                 />
 
-                <SelectField
-                  label="Designation"
-                  name="designation"
-                  value={form.designation}
-                  onChange={handleChange}
-                  options={[
-                    { value: "", label: "Select designation" },
-                    { value: "Frontend Developer", label: "Frontend Developer" },
-                    { value: "Backend Developer", label: "Backend Developer" },
-                    { value: "Project Manager", label: "Project Manager" },
-                    { value: "UI/UX Designer", label: "UI/UX Designer" },
-                    { value: "Scrum Master", label: "Scrum Master" },
-                    { value: "Developer", label: "Developer" },
-                    { value: "UI Intern", label: "UI Intern" },
-                  ]}
-                />
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-medium text-slate-500">
+                    Designation Areas
+                  </label>
+                  <div className="flex gap-3">
+                    <input
+                      value={designationInput}
+                      onChange={(e) => setDesignationInput(e.target.value)}
+                      placeholder="Backend Developer, Frontend Developer..."
+                      autoComplete="off"
+                      className={`h-14 w-full rounded-xl border bg-white px-4 text-base outline-none transition focus:border-slate-400 ${
+                        errors.designation ? "border-red-500" : "border-slate-200"
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={addDesignation}
+                      className="h-14 rounded-xl bg-slate-800 px-5 text-white hover:bg-slate-900"
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {errors.designation && (
+                    <p className="mt-1 text-sm text-red-500">{errors.designation}</p>
+                  )}
+
+                  {form.designation.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {form.designation.map((designation, index) => (
+                        <button
+                          key={`${designation}-${index}`}
+                          type="button"
+                          onClick={() => removeDesignation(index)}
+                          className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700 hover:bg-slate-200"
+                        >
+                          {designation} ✕
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <div className="md:col-span-2">
                   <label className="mb-2 block text-sm font-medium text-slate-500">
@@ -535,6 +657,7 @@ export default function CreateUserPage() {
                       value={skillInput}
                       onChange={(e) => setSkillInput(e.target.value)}
                       placeholder="React, SQL, TypeScript..."
+                      autoComplete="off"
                       className={`h-14 w-full rounded-xl border bg-white px-4 text-base outline-none transition focus:border-slate-400 ${
                         errors.skills ? "border-red-500" : "border-slate-200"
                       }`}
@@ -572,7 +695,7 @@ export default function CreateUserPage() {
               <div className="mt-10 flex justify-center">
                 <button
                   type="submit"
-                  className={`min-w-[200px] rounded-2xl px-10 py-4 text-lg font-semibold text-white transition ${
+                  className={`min-w-50 rounded-2xl px-10 py-4 text-lg font-semibold text-white transition ${
                     isSaving
                       ? "scale-95 bg-indigo-400"
                       : "bg-indigo-500 hover:scale-[1.03] hover:bg-indigo-600 active:scale-95"
@@ -600,6 +723,7 @@ type FormFieldProps = {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   placeholder?: string
   type?: string
+  autoComplete?: string
 }
 
 function FormField({
@@ -609,6 +733,7 @@ function FormField({
   onChange,
   placeholder,
   type = "text",
+  autoComplete = "off",
 }: FormFieldProps) {
   return (
     <div>
@@ -618,6 +743,7 @@ function FormField({
       <input
         name={name}
         type={type}
+        autoComplete={autoComplete}
         value={value}
         onChange={onChange}
         placeholder={placeholder}
@@ -651,6 +777,7 @@ function SelectField({
         name={name}
         value={value}
         onChange={onChange}
+        autoComplete="off"
         className="h-14 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-700 outline-none transition focus:border-slate-400"
       >
         {options.map((option) => (
