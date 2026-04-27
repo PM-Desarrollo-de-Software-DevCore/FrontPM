@@ -1,16 +1,39 @@
+"use client"
+
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card/card"
 import TotalProgress from "@/components/ui/graphs/user_projectProg"
 import ProjectCard from "@/components/ui/graphs/user_task"
 import TaskUser from "@/components/ui/graphs/user_taskStatus"
 import Bugs from "@/components/ui/graphs/user_bugs"
 import WeeklyProg from "@/components/ui/graphs/user_weekProg"
+import Filters from "@/components/ui/filters/filters"
 
+type FiltersState = {
+  sprint?: string
+  project?: string
+}
 
 export default function UserDashboard() {
+  const [filters, setFilters] = useState<FiltersState>({
+    sprint: "",
+    project: ""
+  })
   return (
     <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 pt-4 pb-16 space-y-4">
 
-      <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
+
+        <div className="w-full sm:w-auto">
+          <Filters
+            filters={filters}
+            onChange={setFilters}
+            sprints={["Sprint 1", "Sprint 2"]}
+            projects={["API", "Mobile App", "Dashboard"]}
+          />
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
 
