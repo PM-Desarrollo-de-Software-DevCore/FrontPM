@@ -8,7 +8,7 @@
  * - Detectar errores temprano
  */
 
-export type UserRole = 'project_manager' | 'scrum_master' | 'user'
+export type UserRole = 'admin' | 'user'
 
 export interface LoginResult {
   success: boolean

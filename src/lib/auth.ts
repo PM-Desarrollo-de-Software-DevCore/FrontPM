@@ -28,33 +28,19 @@ type BackendUser = Omit<User, 'role'> & {
   role: string
 }
 
-const ROLE_ALIASES: Record<string, User['role']> = {
-  admin: 'project_manager',
-  developer: 'user',
-  pm: 'project_manager',
-  project_manager: 'project_manager',
-  scrum_master: 'scrum_master',
-  sm: 'scrum_master',
-  user: 'user',
-}
-
 export function normalizeUserRole(role?: string | null): User['role'] {
-  if (!role) {
-    return 'user'
-  }
+  if (!role) return 'user'
 
-  return ROLE_ALIASES[role.toLowerCase()] ?? 'user'
+  const r = role.toLowerCase()
+  if (r === 'admin') return 'admin'
+  return 'user'
 }
 
 export function getDashboardRouteByRole(role?: string | null): string {
   const normalizedRole = normalizeUserRole(role)
 
-  if (normalizedRole === 'project_manager') {
-    return '/dashboard/pm'
-  }
-
-  if (normalizedRole === 'scrum_master') {
-    return '/dashboard/sm'
+  if (normalizedRole === 'admin') {
+    return '/dashboard/admin'
   }
 
   return '/dashboard/user'

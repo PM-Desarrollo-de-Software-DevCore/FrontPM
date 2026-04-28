@@ -25,7 +25,7 @@ import Link from "next/link"
 import { useAuth } from "@/hooks/useAuth"
 import { getDashboardRouteByRole } from "@/lib/auth"
 
-type SidebarRole = "project_manager" | "scrum_master" | "user" 
+type SidebarRole = "admin" | "user"
 
 type SidebarItem = {
   label: string
@@ -39,37 +39,37 @@ const sidebarItems: SidebarItem[] = [
     label: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ["project_manager", "scrum_master", "user"],
+    roles: ["admin", "user"],
   },
   {
     label: "Projects",
     href: "/projects",
     icon: FolderKanban,
-    roles: ["project_manager", "scrum_master", "user"],
+    roles: ["admin", "user"],
   },
   {
     label: "Milestones",
     href: "/milestones",
     icon: Flag,
-    roles: ["scrum_master", "user"],
+    roles: ["admin", "user"],
   },
   {
     label: "Work Logs",
     href: "/worklogs",
     icon: AlarmClockCheck,
-    roles: ["project_manager", "scrum_master", "user"],
+    roles: ["admin", "user"],
   },
   {
     label: "Profile",
     href: "/profile",
     icon: UserCircle2,
-    roles: ["project_manager", "scrum_master", "user"],
+    roles: ["admin", "user"],
   },
   {
   label: "Users",
   href: "/users/create",
   icon: UserPlus,
-  roles: ["project_manager"],
+  roles: ["admin"],
   },
 ]
 
