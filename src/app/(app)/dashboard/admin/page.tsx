@@ -1,15 +1,41 @@
+"use client"
+
+import { useState } from "react"
 import Carrousel from "@/components/ui/card/projectCarrousel"
 import { Card, CardContent } from "@/components/ui/card/card"
 import PerformanceChart from "@/components/ui/graphs/performaceChart"
+import Filters from "@/components/ui/filters/filters"
+
+type FiltersState = {
+  sprint?: string
+  project?: string
+}
 
 export default function DashboardPage() {
+
+  const [filters, setFilters] = useState<FiltersState>({
+    sprint: "",
+    project: ""
+  })
+
   return (
     <div className="w-full min-h-screen">
       <div className="w-full px-4 sm:px-6 lg:px-8 pt-4 pb-4 space-y-4">
       
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">
-          Dashboard
-        </h1>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">
+            Dashboard
+          </h1>
+
+          <div className="w-full sm:w-auto">
+            <Filters
+              filters={filters}
+              onChange={setFilters}
+              sprints={["Sprint 1", "Sprint 2"]}
+              projects={["API", "Mobile App", "Dashboard"]}
+            />
+          </div>
+        </div>
 
         <Card className="w-full overflow-hidden">
           <CardContent className="p-0 flex justify-center">
@@ -27,8 +53,12 @@ export default function DashboardPage() {
               <div className="flex-1 overflow-y-auto p-4 sm:p-5 flex flex-col gap-4">
                 {[...Array(8)].map((_, i) => (
                   <div key={i} className="rounded-xl border border-zinc-100 px-4 py-3 shadow-sm bg-white">
-                    <p className="text-sm font-semibold">User updated project settings</p>
-                    <p className="text-xs text-zinc-500 mt-1">Logs · 2 mins ago</p>
+                    <p className="text-sm font-semibold">
+                      User updated project settings
+                    </p>
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Logs · 2 mins ago
+                    </p>
                   </div>
                 ))}
               </div>
