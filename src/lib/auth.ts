@@ -145,28 +145,44 @@ export function logout(): void {
   }
 }
 
-/* Función para verificar conexión con el servidor */
+/* Función para verificar conexión con el servidor con reintentos */
 export async function checkServerConnection(): Promise<boolean> {
-  try {
-    // Intentar hacer un fetch simple al endpoint de login
-    // Si el servidor responde, aunque sea con error, significa que está disponible
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000) // Timeout de 5 segundos
+  const maxRetries = 7 // Máximo de intentos
+  const initialDelay = 1000 // 1 segundo inicial
+  const timeout = 10000 // 10 segundos por petición individual
 
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      signal: controller.signal,
-    })
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), timeout)
 
-    clearTimeout(timeoutId)
-    
-    // Si recibimos alguna respuesta del servidor, está disponible
-    return true
-  } catch (error) {
-    console.error('Error verificando conexión con servidor:', error)
-    return false
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+      
+      // Si recibimos alguna respuesta del servidor, está disponible
+      return true
+    } catch (error) {
+      // Si es el último intento, log del error final
+      if (attempt === maxRetries) {
+        console.error('Error verificando conexión con servidor después de múltiples intentos:', error)
+        return false
+      }
+
+      // Calcular delay progresivo: 1s, 2s, 4s, 8s, 16s (exponencial)
+      const delay = initialDelay * Math.pow(2, attempt - 1)
+      console.log(`Intento ${attempt}/${maxRetries} fallido. Reintentando en ${delay}ms...`)
+      
+      // Esperar antes del siguiente intento
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
   }
+
+  return false
 }
