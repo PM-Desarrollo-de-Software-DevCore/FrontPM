@@ -13,7 +13,7 @@ sin tener que repetir lógica.
 
 import { useEffect, useState } from 'react'
 import { LoginResult, User, UserRole } from '@/types/auth'
-import { getCurrentUser, getDashboardRouteByRole, loginUser, logout as logoutUser } from '@/lib/auth'
+import { getCurrentUser, getDashboardRouteByRole, loginUser, logout as logoutUser, getToken } from '@/lib/auth'
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
@@ -26,10 +26,19 @@ export function useAuth() {
 
   // Verificar sesión al cargar app
   // Este useEffect corre cuando el componente se monta.
-  // Sirve para verificar si ya existe un usuario loggeado.
+  // Solo verifica si hay un token guardado (sesión existente).
+  // Si no hay token, no intenta conectar con el servidor.
   useEffect(() => {
     async function checkUser() {
       try {
+        const token = getToken()
+        
+        // Si no hay token, no intentes verificar sesión
+        if (!token) {
+          setIsLoading(false)
+          return
+        }
+
         const currentUser = await getCurrentUser()
 
         if (currentUser) {

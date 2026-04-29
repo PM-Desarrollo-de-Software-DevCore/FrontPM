@@ -28,33 +28,19 @@ type BackendUser = Omit<User, 'role'> & {
   role: string
 }
 
-const ROLE_ALIASES: Record<string, User['role']> = {
-  admin: 'project_manager',
-  developer: 'user',
-  pm: 'project_manager',
-  project_manager: 'project_manager',
-  scrum_master: 'scrum_master',
-  sm: 'scrum_master',
-  user: 'user',
-}
-
 export function normalizeUserRole(role?: string | null): User['role'] {
-  if (!role) {
-    return 'user'
-  }
+  if (!role) return 'user'
 
-  return ROLE_ALIASES[role.toLowerCase()] ?? 'user'
+  const r = role.toLowerCase()
+  if (r === 'admin') return 'admin'
+  return 'user'
 }
 
 export function getDashboardRouteByRole(role?: string | null): string {
   const normalizedRole = normalizeUserRole(role)
 
-  if (normalizedRole === 'project_manager') {
-    return '/dashboard/pm'
-  }
-
-  if (normalizedRole === 'scrum_master') {
-    return '/dashboard/sm'
+  if (normalizedRole === 'admin') {
+    return '/dashboard/admin'
   }
 
   return '/dashboard/user'
@@ -156,5 +142,31 @@ export async function getCurrentUser(): Promise<User | null> {
 export function logout(): void {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('authToken')
+  }
+}
+
+/* Función para verificar conexión con el servidor */
+export async function checkServerConnection(): Promise<boolean> {
+  try {
+    // Intentar hacer un fetch simple al endpoint de login
+    // Si el servidor responde, aunque sea con error, significa que está disponible
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000) // Timeout de 5 segundos
+
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeoutId)
+    
+    // Si recibimos alguna respuesta del servidor, está disponible
+    return true
+  } catch (error) {
+    console.error('Error verificando conexión con servidor:', error)
+    return false
   }
 }
