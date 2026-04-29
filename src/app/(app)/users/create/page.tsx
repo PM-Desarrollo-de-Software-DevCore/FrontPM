@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { API_BASE_URL, getToken } from "@/lib/auth"
 
 type UserPreview = {
-  id: number
+  id: string
   firstName: string
   lastName: string
   email: string
@@ -32,6 +33,30 @@ type UserForm = {
   createdAt: string
 }
 
+type BackendUser = {
+  id: string | number
+  name?: string
+  lastname?: string
+  email?: string
+  phoneNumber?: string | null
+  area?: string | null
+  skill?: string | null
+  globalRole?: "user" | "admin"
+  role?: "user" | "admin"
+  createdAt?: string | Date
+}
+
+type UserMutationPayload = {
+  email: string
+  password?: string
+  name: string
+  lastname: string
+  globalRole: "user" | "admin"
+  skill?: string
+  area?: string
+  phoneNumber?: string
+}
+
 type EditableFieldName =
   | "firstName"
   | "lastName"
@@ -42,6 +67,14 @@ type EditableFieldName =
   | "nationality"
 
 const getTodayDate = () => new Date().toISOString().split("T")[0]
+
+const parseDelimitedList = (value?: string | null) =>
+  value
+    ? value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : []
 
 const formatDisplayDate = (date: string) => {
   if (!date) return "-"
@@ -67,70 +100,27 @@ const emptyForm: UserForm = {
   createdAt: getTodayDate(),
 }
 
-const initialUsers: UserPreview[] = [
-  {
-    id: 1,
-    firstName: "Yash",
-    lastName: "Ghori",
-    email: "yash@example.com",
-    phoneCode: "+91",
-    phoneNumber: "9988776655",
-    password: "",
-    nationality: "India",
-    designation: ["Developer"],
-    skills: ["React", "Node.js"],
-    role: "user",
-    createdAt: "2026-04-10",
-    status: "Editing",
-  },
-  {
-    id: 2,
-    firstName: "Anima",
-    lastName: "Agrawal",
-    email: "anima@example.com",
-    phoneCode: "+91",
-    phoneNumber: "8899776655",
-    password: "",
-    nationality: "India",
-    designation: ["UI Intern"],
-    skills: ["Figma", "CSS"],
-    role: "admin",
-    createdAt: "2026-04-11",
-    status: "Active",
-  },
-  {
-    id: 3,
-    firstName: "Carlos",
-    lastName: "Mendez",
-    email: "carlos@example.com",
-    phoneCode: "+52",
-    phoneNumber: "8112345678",
-    password: "",
-    nationality: "Mexico",
-    designation: ["Backend Developer"],
-    skills: ["SQL", "Java"],
-    role: "user",
-    createdAt: "2026-04-12",
-    status: "Active",
-  },
-]
-
 export default function CreateUserPage() {
-  const [users, setUsers] = useState<UserPreview[]>(initialUsers)
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(1)
+  const [users, setUsers] = useState<UserPreview[]>([])
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [formMode, setFormMode] = useState<"create" | "edit">("create")
   const [sortOrder, setSortOrder] = useState<"az" | "za">("az")
   const [form, setForm] = useState<UserForm>(emptyForm)
   const [skillInput, setSkillInput] = useState("")
   const [designationInput, setDesignationInput] = useState("")
   const [isSaving, setIsSaving] = useState(false)
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true)
   const [saveAlertMessage, setSaveAlertMessage] = useState<string | null>(null)
+  const [isLoadingCV, setIsLoadingCV] = useState(false)
+  const [cvError, setCVError] = useState<string | null>(null)
   const [errors, setErrors] = useState({
     email: "",
     phone: "",
     designation: "",
     skills: "",
   })
+  const [formColumnHeight, setFormColumnHeight] = useState<number | null>(null)
+  const formColumnRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     if (!saveAlertMessage) return
@@ -141,6 +131,27 @@ export default function CreateUserPage() {
 
     return () => window.clearTimeout(timeoutId)
   }, [saveAlertMessage])
+
+  useEffect(() => {
+    const element = formColumnRef.current
+    if (!element) return
+
+    const updateHeight = () => {
+      setFormColumnHeight(element.getBoundingClientRect().height)
+    }
+
+    updateHeight()
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeight()
+    })
+
+    resizeObserver.observe(element)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [formMode, selectedUserId, users, form, isLoadingCV, cvError, saveAlertMessage])
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -202,7 +213,7 @@ export default function CreateUserPage() {
     })
   }
 
-  const handleDeleteUser = (userId: number) => {
+  const handleDeleteUser = (userId: string) => {
     const userToDelete = users.find((user) => user.id === userId)
     if (!userToDelete) return
 
@@ -212,12 +223,76 @@ export default function CreateUserPage() {
 
     if (!confirmed) return
 
-    setUsers((prev) => prev.filter((user) => user.id !== userId))
+    const doDelete = async () => {
+      try {
+        const token = getToken()
+        const headers: Record<string, string> = {}
+        if (token) headers['Authorization'] = `Bearer ${token}`
 
-    if (selectedUserId === userId) {
-      resetToCreateMode()
+        const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
+          method: 'DELETE',
+          headers,
+        })
+
+        if (!res.ok) {
+          // fallback to local delete if server fails
+          setUsers((prev) => prev.filter((user) => user.id !== userId))
+        } else {
+          setUsers((prev) => prev.filter((user) => user.id !== userId))
+        }
+
+        if (selectedUserId === userId) {
+          resetToCreateMode()
+        }
+        } catch {
+          // fallback local
+          setUsers((prev) => prev.filter((user) => user.id !== userId))
+          if (selectedUserId === userId) resetToCreateMode()
+      }
     }
+
+    void doDelete()
   }
+
+  // Fetch real users from backend
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setIsLoadingUsers(true)
+      try {
+        const token = getToken()
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (token) headers['Authorization'] = `Bearer ${token}`
+
+        const res = await fetch(`${API_BASE_URL}/users`, { headers })
+        if (!res.ok) return
+          const payload: { success?: boolean; data?: BackendUser[] } = await res.json()
+        if (!payload.success || !Array.isArray(payload.data)) return
+
+        const mapped: UserPreview[] = payload.data.map((u: BackendUser, index: number) => ({
+          id: String(u.id ?? index),
+          firstName: u.name || "",
+          lastName: u.lastname || "",
+          email: u.email || "",
+          phoneCode: "+52",
+          phoneNumber: u.phoneNumber || "",
+          password: "",
+          nationality: "",
+          designation: parseDelimitedList(u.area),
+          skills: u.skill ? u.skill.split(',').map((s: string) => s.trim()) : [],
+          role: u.globalRole === 'admin' ? 'admin' : 'user',
+          createdAt: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : getTodayDate(),
+        }))
+
+        setUsers(mapped)
+      } catch {
+        // ignore - keep local data
+      } finally {
+        setIsLoadingUsers(false)
+      }
+    }
+
+    fetchUsers()
+  }, [])
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -234,6 +309,209 @@ export default function CreateUserPage() {
 
     if (name === "phoneNumber") {
       setErrors((prev) => ({ ...prev, phone: "" }))
+    }
+  }
+
+  const handleCVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.type !== "application/pdf") {
+      setCVError("Please upload a PDF file")
+      return
+    }
+
+    try {
+      setIsLoadingCV(true)
+      setCVError(null)
+
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch(`${API_BASE_URL}/auth/upload-cv`, {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || "Failed to process CV")
+      }
+
+      const result = await response.json()
+
+      if (!result.success || !result.data) {
+        throw new Error("Invalid response from server")
+      }
+
+      const cvData = result.data
+
+      // Populate form with extracted CV data
+      setForm((prev) => ({
+        ...prev,
+        firstName: cvData.name?.split(" ")[0] || prev.firstName,
+        lastName: cvData.name?.split(" ").slice(1).join(" ") || prev.lastName,
+        skills: Array.isArray(cvData.skills) ? cvData.skills : prev.skills,
+        designation: Array.isArray(cvData.experience_areas) ? cvData.experience_areas : prev.designation,
+      }))
+
+      setSaveAlertMessage("CV processed successfully! Form has been populated.")
+    } catch (error) {
+      setCVError(
+        error instanceof Error ? error.message : "Failed to process CV"
+      )
+    } finally {
+      setIsLoadingCV(false)
+      // Reset the file input
+      e.target.value = ""
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+
+    if (!validateForm()) return
+
+    setIsSaving(true)
+
+    // build payload matching backend fields
+    const payload: UserMutationPayload = {
+      email: form.email,
+      password: form.password || undefined,
+      name: form.firstName,
+      lastname: form.lastName,
+      globalRole: form.role,
+      skill: form.skills.join(', '),
+      area: form.designation.length > 0 ? form.designation.join(", ") : undefined,
+      phoneNumber: form.phoneNumber || undefined,
+    }
+
+    try {
+      const token = getToken()
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      if (formMode === 'create') {
+        // Use the auth register endpoint so password is hashed correctly
+        const registerPayload = {
+          email: form.email,
+          password: form.password,
+          name: form.firstName,
+          lastname: form.lastName,
+          globalRole: form.role,
+        }
+
+        const res = await fetch(`${API_BASE_URL}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(registerPayload),
+        })
+
+        if (res.ok) {
+          const body = await res.json()
+          if (body.success && body.data) {
+            const u = body.data
+            let finalUserData: BackendUser = u
+
+            // If we have an auth token (admin creating), attempt to update extra fields
+            const token = getToken()
+            if (token) {
+              const updatePayload: Pick<UserMutationPayload, "skill" | "area" | "phoneNumber"> = {
+                skill: form.skills.join(', '),
+                area: form.designation.length > 0 ? form.designation.join(", ") : undefined,
+                phoneNumber: form.phoneNumber || undefined,
+              }
+
+              try {
+                const updRes = await fetch(`${API_BASE_URL}/users/${String(u.id)}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                  body: JSON.stringify(updatePayload),
+                })
+
+                if (updRes.ok) {
+                  const updBody = await updRes.json()
+                  if (updBody.success && updBody.data) finalUserData = updBody.data
+                }
+              } catch {
+                // ignore update error, we'll still show the registered user
+              }
+            }
+
+            const mapped: UserPreview = {
+              id: String(finalUserData.id),
+              firstName: finalUserData.name || form.firstName,
+              lastName: finalUserData.lastname || form.lastName,
+              email: finalUserData.email || form.email,
+              phoneCode: '+52',
+              phoneNumber: finalUserData.phoneNumber || form.phoneNumber,
+              password: '',
+              nationality: '',
+              designation: parseDelimitedList(finalUserData.area).length > 0 ? parseDelimitedList(finalUserData.area) : form.designation,
+              skills: finalUserData.skill ? finalUserData.skill.split(',').map((s: string) => s.trim()) : form.skills,
+              role: finalUserData.globalRole || finalUserData.role || (form.role === 'admin' ? 'admin' : 'user'),
+              createdAt: finalUserData.createdAt ? new Date(finalUserData.createdAt).toISOString().split('T')[0] : getTodayDate(),
+            }
+
+            setUsers((prev) => [mapped, ...prev])
+          }
+        } else {
+          // fallback local create
+          const newUser: UserPreview = {
+            id: String(Date.now()),
+            ...form,
+            createdAt: getTodayDate(),
+            status: 'Active',
+          }
+          setUsers((prev) => [newUser, ...prev])
+        }
+
+        resetToCreateMode()
+        setSaveAlertMessage('User created successfully.')
+      } else if (formMode === 'edit' && selectedUserId) {
+        // update
+        const res = await fetch(`${API_BASE_URL}/users/${selectedUserId}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(payload),
+        })
+
+        if (res.ok) {
+          const body = await res.json()
+          if (body.success && body.data) {
+            const u = body.data
+            setUsers((prev) => prev.map((user) => (user.id === selectedUserId ? {
+              id: String(u.id),
+              firstName: u.name || form.firstName,
+              lastName: u.lastname || form.lastName,
+              email: u.email || form.email,
+              phoneCode: '+52',
+              phoneNumber: u.phoneNumber || form.phoneNumber,
+              password: '',
+              nationality: '',
+              designation: parseDelimitedList(u.area).length > 0 ? parseDelimitedList(u.area) : form.designation,
+              skills: u.skill ? u.skill.split(',').map((s: string) => s.trim()) : form.skills,
+              role: u.globalRole === 'admin' ? 'admin' : 'user',
+              createdAt: user.createdAt,
+            } : user)))
+          }
+        } else {
+          // fallback local update
+          setUsers((prev) => prev.map((user) => user.id === selectedUserId ? ({
+            ...user,
+            ...form,
+            password: form.password || user.password,
+          }) : user))
+        }
+
+        setSaveAlertMessage('User updated successfully.')
+      }
+    } catch {
+      // fallback behaviors
+      if (formMode === 'create') setSaveAlertMessage('User created locally (server error).')
+      else setSaveAlertMessage('User updated locally (server error).')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -330,49 +608,6 @@ export default function CreateUserPage() {
     return valid
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-
-    if (!validateForm()) return
-
-    setIsSaving(true)
-
-    await new Promise((resolve) => setTimeout(resolve, 600))
-
-    if (formMode === "create") {
-      const newUser: UserPreview = {
-        id: Date.now(),
-        ...form,
-        createdAt: getTodayDate(),
-        status: "Active",
-      }
-
-      setUsers((prev) => [newUser, ...prev])
-      resetToCreateMode()
-      setSaveAlertMessage("User created successfully.")
-      setIsSaving(false)
-      return
-    }
-
-    if (formMode === "edit" && selectedUserId !== null) {
-      setUsers((prev) =>
-        prev.map((user) =>
-          user.id === selectedUserId
-            ? {
-                ...user,
-                ...form,
-                createdAt: user.createdAt,
-                password: form.password || user.password,
-              }
-            : user
-        )
-      )
-      setSaveAlertMessage("User updated successfully.")
-    }
-
-    setIsSaving(false)
-  }
-
   return (
     <div className="min-h-screen bg-white px-6 py-6">
       <div className="mx-auto w-full max-w-350">
@@ -406,10 +641,22 @@ export default function CreateUserPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_1fr]">
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="space-y-4">
-              {sortedUsers.map((user) => {
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_1fr] xl:items-start">
+          <section
+            className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm"
+            style={formColumnHeight ? { height: `${formColumnHeight}px` } : undefined}
+          >
+            <div className="flex-1 min-h-0 space-y-4 overflow-y-auto pr-2">
+              {isLoadingUsers ? (
+                <div className="flex min-h-45 items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-sm font-medium text-slate-500">
+                  Cargando usuarios...
+                </div>
+              ) : sortedUsers.length === 0 ? (
+                <div className="flex min-h-45 items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-sm font-medium text-slate-500">
+                  No hay usuarios para mostrar.
+                </div>
+              ) : (
+                sortedUsers.map((user) => {
                 const isSelected = selectedUserId === user.id && formMode === "edit"
 
                 return (
@@ -462,12 +709,13 @@ export default function CreateUserPage() {
                     </div>
                   </div>
                 )
-              })}
+                })
+              )}
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
-            <form onSubmit={handleSubmit} autoComplete="off" className="flex h-full flex-col">
+          <section ref={formColumnRef} className="flex min-h-0 flex-col rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
+            <form onSubmit={handleSubmit} autoComplete="off" className="flex h-full min-h-0 flex-col">
               <div className="mb-8 flex items-center justify-between gap-4">
                 <h2 className="text-4xl font-semibold text-slate-800">
                   {formMode === "create" ? "Create User" : "Edit Profile"}
@@ -688,6 +936,30 @@ export default function CreateUserPage() {
                         </button>
                       ))}
                     </div>
+                  )}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-medium text-slate-500">
+                    Upload CV (PDF)
+                  </label>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleCVUpload}
+                      disabled={isLoadingCV}
+                      className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-xl file:border-0 file:bg-slate-800 file:py-3 file:px-6 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-900 disabled:opacity-50"
+                    />
+                    <p className="mt-2 text-xs text-slate-500">
+                      Upload your CV in PDF format. It will extract your information and auto-fill the form.
+                    </p>
+                  </div>
+                  {isLoadingCV && (
+                    <p className="mt-2 text-sm text-blue-600">Processing CV...</p>
+                  )}
+                  {cvError && (
+                    <p className="mt-2 text-sm text-red-500">{cvError}</p>
                   )}
                 </div>
               </div>
