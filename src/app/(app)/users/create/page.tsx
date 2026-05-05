@@ -667,15 +667,14 @@ export default function CreateUserPage() {
                       isSelected
                         ? "border-slate-700 bg-slate-50"
                         : "border-slate-200 bg-white"
-                    }`}
+                    } overflow-hidden`}
                   >
-                    <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-slate-700">
-                          {user.firstName.charAt(0)}
-                          {user.lastName.charAt(0)}
-                        </div>
-
+                    <div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-center">
+                      <div className="flex shrink-0 h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-slate-700">
+                        {user.firstName.charAt(0)}
+                        {user.lastName.charAt(0)}
+                      </div>
+                      <div className="flex min-w-0 w-full items-center justify-between gap-5">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 ">
                             <p className="text-base font-semibold text-slate-800">
@@ -686,7 +685,7 @@ export default function CreateUserPage() {
                             </p>
                           </div>
                           <p
-                            className="truncate text-sm text-slate-500 sm:max-w-50 md:max-w-60"
+                            className="truncate text-sm text-slate-500"
                             title={user.designation.join(", ")}
                           >
                             {user.designation.length > 0
@@ -697,21 +696,21 @@ export default function CreateUserPage() {
                             Created: {formatDisplayDate(user.createdAt)}
                           </p>
                         </div>
-                      </div>
 
-                      <div className="flex flex-wrap items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => loadUserIntoForm(user)}
-                          aria-label="Edit user"
-                          className={`rounded-full border px-5 py-2 text-sm font-semibold transition ${
-                            isSelected
+                        <div className="flex flex-wrap items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => loadUserIntoForm(user)}
+                            aria-label="Edit user"
+                            className={`rounded-full border px-5 py-2 text-sm font-semibold transition ${
+                              isSelected
                               ? "border-slate-700 bg-slate-700 text-white"
                               : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
-                          }`}
-                        >
-                          <EditIcon fontSize="small" />
-                        </button>
+                            }`}
+                            >
+                            <EditIcon fontSize="small" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
