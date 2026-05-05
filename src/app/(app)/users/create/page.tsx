@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import EditIcon from "@mui/icons-material/Edit"
 import { API_BASE_URL, getToken } from "@/lib/auth"
 
 type UserPreview = {
@@ -624,7 +625,7 @@ export default function CreateUserPage() {
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as "az" | "za")}
-              className="h-14 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-400"
+              className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-small text-slate-700 outline-none transition focus:border-slate-400"
             >
               <option value="az">Alphabetical: A-Z</option>
               <option value="za">Alphabetical: Z-A</option>
@@ -633,9 +634,9 @@ export default function CreateUserPage() {
             <button
               type="button"
               onClick={resetToCreateMode}
-              className="flex h-14 items-center justify-center gap-3 rounded-2xl bg-slate-900 px-7 text-base font-semibold text-white transition hover:bg-slate-800"
+              className="flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-1 text-base font-semibold text-white transition hover:bg-slate-800"
             >
-              <span className="text-2xl leading-none">+</span>
+              <span className="text-xl leading-none">+</span>
               <span>Create User</span>
             </button>
           </div>
@@ -668,24 +669,29 @@ export default function CreateUserPage() {
                         : "border-slate-200 bg-white"
                     }`}
                   >
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                       <div className="flex items-center gap-4">
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-slate-700">
                           {user.firstName.charAt(0)}
                           {user.lastName.charAt(0)}
                         </div>
 
-                        <div>
-                          <p className="text-base font-semibold text-slate-800">
-                            {user.firstName} {user.lastName}
-                          </p>
-                          <p className="mt-1 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                            {user.role}
-                          </p>
-                          <p className="text-sm text-slate-500">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 ">
+                            <p className="text-base font-semibold text-slate-800">
+                              {user.firstName} {user.lastName}
+                            </p>
+                            <p className="mt-1 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                              {user.role}
+                            </p>
+                          </div>
+                          <p
+                            className="truncate text-sm text-slate-500 sm:max-w-50 md:max-w-60"
+                            title={user.designation.join(", ")}
+                          >
                             {user.designation.length > 0
                               ? user.designation.join(", ")
-                              : "-"}
+                              : "No Role Assigned"}
                           </p>
                           <p className="mt-1 text-xs text-slate-400">
                             Created: {formatDisplayDate(user.createdAt)}
@@ -697,13 +703,14 @@ export default function CreateUserPage() {
                         <button
                           type="button"
                           onClick={() => loadUserIntoForm(user)}
+                          aria-label="Edit user"
                           className={`rounded-full border px-5 py-2 text-sm font-semibold transition ${
                             isSelected
                               ? "border-slate-700 bg-slate-700 text-white"
                               : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
                           }`}
                         >
-                          Edit Profile
+                          <EditIcon fontSize="small" />
                         </button>
                       </div>
                     </div>
