@@ -3,9 +3,7 @@ import { getToken } from '@/lib/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-/**
- * Obtiene los headers con autenticación
- */
+
 function getAuthHeaders(): Record<string, string> {
   const token = getToken();
   return {
@@ -14,9 +12,7 @@ function getAuthHeaders(): Record<string, string> {
   };
 }
 
-/**
- * Convierte datos del formato camelCase (frontend) a snake_case (backend)
- */
+
 function projectToBackendFormat(project: any) {
   return {
     name: project.name,
@@ -28,9 +24,7 @@ function projectToBackendFormat(project: any) {
   };
 }
 
-/**
- * Convierte datos del formato snake_case (backend) a camelCase (frontend)
- */
+
 function projectFromBackendFormat(data: any): Project {
   return {
     id: data.id,
@@ -47,34 +41,22 @@ function projectFromBackendFormat(data: any): Project {
   };
 }
 
-/**
- * GET /projects - Obtiene todos los proyectos
- */
 export async function getProjects(): Promise<Project[]> {
-  console.log('🔍 Obteniendo proyectos del backend...');
   const response = await fetch(`${API_URL}/projects`, {
     method: 'GET',
     headers: getAuthHeaders(),
     cache: 'no-store',
   });
 
-  console.log('📡 Respuesta GET /projects:', response.status);
-
   if (!response.ok) {
-    console.error('❌ Error al obtener proyectos:', response.statusText);
     throw new Error('No se pudieron obtener los proyectos');
   }
 
   const data = await response.json();
-  console.log('✅ Proyectos obtenidos:', data);
-  // Manejo flexible de respuestas (array directo o con propiedad data)
   const projects = Array.isArray(data) ? data : data.data || [];
   return projects.map(projectFromBackendFormat);
 }
 
-/**
- * GET /projects/:id - Obtiene un proyecto por ID
- */
 export async function getProjectById(projectId: string): Promise<Project> {
   const response = await fetch(`${API_URL}/projects/${projectId}`, {
     method: 'GET',
@@ -91,38 +73,25 @@ export async function getProjectById(projectId: string): Promise<Project> {
   return projectFromBackendFormat(project);
 }
 
-/**
- * POST /projects - Crea un nuevo proyecto
- * Espera: { name, description, start_date, end_date, priority, status }
- */
 export async function createProject(project: Omit<Project, 'id' | 'progress' | 'tasks' | 'owner' | 'team'>): Promise<Project> {
   const backendData = projectToBackendFormat(project);
-  
-  console.log('📤 Enviando proyecto al backend:', backendData);
-  
+
   const response = await fetch(`${API_URL}/projects`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(backendData),
   });
 
-  console.log('📡 Respuesta del servidor:', response.status, response.statusText);
-
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    console.error('❌ Error al crear proyecto:', error);
     throw new Error(error.message || 'No se pudo crear el proyecto');
   }
 
   const data = await response.json();
-  console.log('✅ Proyecto creado exitosamente:', data);
   const createdProject = data.data || data;
   return projectFromBackendFormat(createdProject);
 }
 
-/**
- * PATCH /projects/:id - Actualiza un proyecto completo
- */
 export async function updateProject(projectId: string, project: Partial<Project>): Promise<Project> {
   const backendData = projectToBackendFormat(project);
   
@@ -141,9 +110,6 @@ export async function updateProject(projectId: string, project: Partial<Project>
   return projectFromBackendFormat(updatedProject);
 }
 
-/**
- * PATCH /projects/:id/status - Actualiza solo el estado del proyecto
- */
 export async function updateProjectStatus(
   projectId: string,
   status: Project['status']
@@ -163,9 +129,6 @@ export async function updateProjectStatus(
   return projectFromBackendFormat(updatedProject);
 }
 
-/**
- * DELETE /projects/:id - Elimina un proyecto
- */
 export async function deleteProject(projectId: string): Promise<void> {
   const response = await fetch(`${API_URL}/projects/${projectId}`, {
     method: 'DELETE',
