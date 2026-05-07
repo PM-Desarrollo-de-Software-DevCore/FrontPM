@@ -6,6 +6,7 @@ import {
   ProjectPriority,
   ProjectStatus,
 } from "@/types/project";
+import { createProject } from "@/services/projectService";
 
 interface CreateProjectModalProps {
   onCreate: (project: Project) => void;
@@ -14,64 +15,76 @@ interface CreateProjectModalProps {
 interface ProjectFormState {
   name: string;
   description: string;
-  owner: string;
   startDate: string;
   endDate: string;
   priority: ProjectPriority;
   status: ProjectStatus;
-  team: string;
 }
 
 export default function CreateProjectModal({
   onCreate,
 }: CreateProjectModalProps) {
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState<ProjectFormState>({
     name: "",
     description: "",
-    owner: "",
     startDate: "",
     endDate: "",
     priority: "Medium",
     status: "Planning",
-    team: "",
   });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-    const newProject: Project = {
-      id: form.name.toLowerCase().trim().replace(/\s+/g, "-"),
-      name: form.name,
-      description: form.description,
-      owner: form.owner,
-      startDate: form.startDate,
-      endDate: form.endDate,
-      priority: form.priority,
-      status: form.status,
-      tasks: 0,
-      progress: 0,
-      team: form.team
-        .split(",")
-        .map((member) => member.trim())
-        .filter(Boolean),
-    };
+    try {
+      // Validar que la fecha de inicio sea anterior a la de fin
+      const startDate = new Date(form.startDate);
+      const endDate = new Date(form.endDate);
+      
+      if (startDate >= endDate) {
+        setError("La fecha de inicio debe ser anterior a la fecha de fin");
+        setLoading(false);
+        return;
+      }
 
-    onCreate(newProject);
+      console.log('📝 Datos del formulario:', form);
 
-    setForm({
-      name: "",
-      description: "",
-      owner: "",
-      startDate: "",
-      endDate: "",
-      priority: "Medium",
-      status: "Planning",
-      team: "",
-    });
+      // Crear el proyecto usando el endpoint
+      const newProject = await createProject({
+        name: form.name,
+        description: form.description,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        priority: form.priority,
+        status: form.status,
+      });
 
-    setOpen(false);
+      console.log('✅ Proyecto creado en el frontend:', newProject);
+      onCreate(newProject);
+
+      setForm({
+        name: "",
+        description: "",
+        startDate: "",
+        endDate: "",
+        priority: "Medium",
+        status: "Planning",
+      });
+
+      setOpen(false);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error al crear el proyecto";
+      setError(errorMessage);
+      console.error("❌ Error creating project:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -97,6 +110,12 @@ export default function CreateProjectModal({
               Create Project
             </h2>
 
+            {error && (
+              <div className="rounded-md bg-red-50 p-3 text-sm text-red-700 border border-red-200">
+                {error}
+              </div>
+            )}
+
             <input
               value={form.name}
               placeholder="Project Name"
@@ -105,16 +124,7 @@ export default function CreateProjectModal({
               }
               className="w-full rounded border p-3"
               required
-            />
-
-            <input
-              value={form.owner}
-              placeholder="Project Manager"
-              onChange={(e) =>
-                setForm({ ...form, owner: e.target.value })
-              }
-              className="w-full rounded border p-3"
-              required
+              disabled={loading}
             />
 
             <textarea
@@ -125,6 +135,7 @@ export default function CreateProjectModal({
               }
               className="w-full rounded border p-3"
               required
+              disabled={loading}
             />
 
             <div>
@@ -139,6 +150,7 @@ export default function CreateProjectModal({
                 }
                 className="w-full rounded border p-3"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -154,18 +166,9 @@ export default function CreateProjectModal({
                 }
                 className="w-full rounded border p-3"
                 required
+                disabled={loading}
               />
             </div>
-
-            <input
-              value={form.team}
-              placeholder="Team Members (comma separated)"
-              onChange={(e) =>
-                setForm({ ...form, team: e.target.value })
-              }
-              className="w-full rounded border p-3"
-              required
-            />
 
             <select
               value={form.priority}
@@ -176,6 +179,7 @@ export default function CreateProjectModal({
                 })
               }
               className="w-full rounded border p-3"
+              disabled={loading}
             >
               <option value="High">High Priority</option>
               <option value="Medium">Medium Priority</option>
@@ -191,6 +195,7 @@ export default function CreateProjectModal({
                 })
               }
               className="w-full rounded border p-3"
+              disabled={loading}
             >
               <option value="Planning">Planning</option>
               <option value="In Progress">In Progress</option>
@@ -200,17 +205,22 @@ export default function CreateProjectModal({
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                className="w-full rounded border px-4 py-3"
+                onClick={() => {
+                  setOpen(false);
+                  setError(null);
+                }}
+                className="w-full rounded border px-4 py-3 disabled:opacity-50"
+                disabled={loading}
               >
                 Cancel
               </button>
 
               <button
                 type="submit"
-                className="w-full rounded bg-black px-4 py-3 text-white"
+                className="w-full rounded bg-black px-4 py-3 text-white disabled:opacity-50"
+                disabled={loading}
               >
-                Create Project
+                {loading ? "Creating..." : "Create Project"}
               </button>
             </div>
           </form>
