@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import CreateProjectModal from "@/components/project/CreateProjectModal";
 import { Project, ProjectPriority, ProjectStatus } from "@/types/project";
+import { getProjects } from "@/services/projectService";
 
 const initialProjects: Project[] = [
   {
@@ -261,6 +262,30 @@ function getStatusClasses(status: Project["status"]) {
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Cargar proyectos del backend al montar el componente
+  useEffect(() => {
+    const loadProjects = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getProjects();
+        setProjects(data);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Error al cargar proyectos";
+        setError(errorMessage);
+        console.error("❌ Error loading projects:", err);
+        // Mantener los datos iniciales en caso de error
+        setProjects(initialProjects);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProjects();
+  }, []);
 
   const handleCreateProject = (project: Project) => {
     setProjects((prevProjects) => [project, ...prevProjects]);
@@ -286,7 +311,23 @@ export default function ProjectsPage() {
           <CreateProjectModal onCreate={handleCreateProject} />
         </div>
 
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {error && (
+          <div className="mb-5 rounded-md bg-red-50 p-4 text-sm text-red-700 border border-red-200">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="mb-3 inline-block">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-300 border-t-black"></div>
+              </div>
+              <p className="text-zinc-600">Cargando proyectos...</p>
+            </div>
+          </div>
+        ) : (
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {projects.map((project) => (
             <article
               key={project.id}
@@ -389,6 +430,7 @@ export default function ProjectsPage() {
             </article>
           ))}
         </section>
+        )}
       </div>
 
       <EditProjectModal
