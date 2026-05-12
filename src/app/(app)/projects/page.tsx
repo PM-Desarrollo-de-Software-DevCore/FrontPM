@@ -276,7 +276,7 @@ export default function ProjectsPage() {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error al cargar proyectos";
         setError(errorMessage);
-        console.error("❌ Error loading projects:", err);
+        console.error("Error loading projects:", err);
         // Mantener los datos iniciales en caso de error
         setProjects(initialProjects);
       } finally {
@@ -301,8 +301,8 @@ export default function ProjectsPage() {
   };
 
   return (
-    <main className="min-h-screen w-full bg-white px-5 py-6">
-      <div className="w-full">
+    <main className="min-h-screen w-full flex-1 bg-white px-8 py-8">
+        <div className="w-full">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-700">Projects</h1>
@@ -327,7 +327,7 @@ export default function ProjectsPage() {
             </div>
           </div>
         ) : (
-          <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <section className="grid w-full grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {projects.map((project) => (
             <article
               key={project.id}
