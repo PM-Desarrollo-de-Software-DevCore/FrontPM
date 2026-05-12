@@ -53,7 +53,7 @@ export default function CreateProjectModal({
         return;
       }
 
-      console.log('📝 Datos del formulario:', form);
+      console.log('Datos del formulario:', form);
 
       // Crear el proyecto usando el endpoint
       const newProject = await createProject({
@@ -65,7 +65,7 @@ export default function CreateProjectModal({
         status: form.status,
       });
 
-      console.log('✅ Proyecto creado en el frontend:', newProject);
+      console.log('Proyecto creado en el frontend:', newProject);
       onCreate(newProject);
 
       setForm({
@@ -81,7 +81,7 @@ export default function CreateProjectModal({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error al crear el proyecto";
       setError(errorMessage);
-      console.error("❌ Error creating project:", err);
+      console.error("Error creating project:", err);
     } finally {
       setLoading(false);
     }
