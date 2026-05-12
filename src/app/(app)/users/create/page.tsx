@@ -643,7 +643,7 @@ export default function CreateUserPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.8fr_1fr] xl:items-start">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.6fr_0.7fr] xl:items-start">
           <section
             className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm"
             style={formColumnHeight ? { height: `${formColumnHeight}px` } : undefined}
