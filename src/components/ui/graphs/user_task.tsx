@@ -2,111 +2,103 @@
 
 import { useState } from "react"
 import { Button } from "../Button/button"
+import { useUserTasks, UserTask } from "@/hooks/useDashboardStats"
 
-type Status = "completed" | "onhold" | "onprogress" | "pending"
-type Priority = "low" | "med" | "high"
+type FilterStatus = "all" | "pending" | "in_progress" | "completed" | "on_hold"
 
-type Project = {
-  id: number
-  name: string
-  status: Status
-  priority: Priority
-}
-
-const projects: Project[] = [
-  { id: 1, name: "Endpoints Dashboard", status: "completed", priority: "high" },
-  { id: 2, name: "API", status: "onprogress", priority: "med" },
-  { id: 3, name: "Deployment", status: "onhold", priority: "high" },
-  { id: 4, name: "Front of Profile", status: "completed", priority: "low" },
-  { id: 5, name: "Settings", status: "pending", priority: "med" },
-  { id: 6, name: "Database connection", status: "onhold", priority: "high" },
-  { id: 7, name: "Endpoints Profile", status: "completed", priority: "low" },
-  { id: 8, name: "Login", status: "onprogress", priority: "med" }
-]
-
-const getStatusColor = (status: Status) => {
+const getStatusColor = (status: UserTask["status"], isOverdue: boolean) => {
+  if (isOverdue) return "bg-red-500"
   switch (status) {
-    case "completed":
-      return "bg-green-500"
-    case "onhold":
-      return "bg-red-500"
-    case "onprogress":
-      return "bg-blue-500"
-    case "pending":
-      return "bg-yellow-500"
-    default:
-      return "bg-gray-500"
+    case "completed":   return "bg-green-500"
+    case "on_hold":     return "bg-red-500"
+    case "in_progress": return "bg-blue-500"
+    case "pending":     return "bg-yellow-500"
+    default:            return "bg-gray-500"
   }
 }
 
-const getPriorityStyles = (priority: Priority) => {
+const getPriorityStyles = (priority: UserTask["priority"]) => {
   switch (priority) {
-    case "high":
-      return "bg-red-100 text-red-600"
-    case "med":
-      return "bg-yellow-100 text-yellow-700"
-    case "low":
-      return "bg-green-100 text-green-600"
+    case "high":   return "bg-red-100 text-red-600"
+    case "medium": return "bg-yellow-100 text-yellow-700"
+    case "low":    return "bg-green-100 text-green-600"
   }
 }
 
-const formatLabel = (text: string) =>
-  text.charAt(0).toUpperCase() + text.slice(1)
-
-const formatStatus = (status: Status) => {
+const formatStatus = (status: UserTask["status"], isOverdue: boolean) => {
+  if (isOverdue) return "Overdue"
   switch (status) {
-    case "onhold":
-      return "On Hold"
-    case "onprogress":
-      return "In Progress"
-    case "completed":
-      return "Completed"
-    case "pending":
-      return "Pending"
+    case "on_hold":     return "On Hold"
+    case "in_progress": return "In Progress"
+    case "completed":   return "Completed"
+    case "pending":     return "Pending"
   }
 }
 
-export default function ProjectsList() {
-  const [filter, setFilter] = useState<Status | "all">("all")
+const formatPriority = (priority: UserTask["priority"]) =>
+  priority.charAt(0).toUpperCase() + priority.slice(1)
 
-  const priorityOrder = { high: 0, med: 1, low: 2 }
+type Props = {
+  filters?: { sprint?: string; project?: string }
+}
 
-  const filteredProjects =
-    (filter === "all"
-      ? projects
-      : projects.filter((p) => p.status === filter)
-    ).sort(
-      (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]
+export default function ProjectsList({ filters }: Props) {
+  const [filter, setFilter] = useState<FilterStatus>("all")
+  const { data, loading, error } = useUserTasks(filters)
+
+  const tasks = data?.tasks ?? []
+
+  const filteredTasks = filter === "all"
+    ? tasks
+    : tasks.filter((t) => t.status === filter)
+
+  const countByStatus = (status: UserTask["status"]) =>
+    tasks.filter((t) => t.status === status).length
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h2 className="text-xl font-semibold">Tasks</h2>
+        <div className="flex flex-col gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />
+          ))}
+        </div>
+      </div>
     )
+  }
 
-  const countByStatus = (status: Status) =>
-    projects.filter((p) => p.status === status).length
+  if (error) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h2 className="text-xl font-semibold">Tasks</h2>
+        <p className="text-sm text-red-500">{error}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      
 
       <div>
         <h2 className="text-xl font-semibold">Tasks</h2>
       </div>
 
-
       <div className="flex flex-wrap gap-2">
         {[
-          { key: "all", label: "All" },
-          { key: "completed", label: `Completed (${countByStatus("completed")})` },
-          { key: "onprogress", label: `In Progress (${countByStatus("onprogress")})` },
-          { key: "pending", label: `Pending (${countByStatus("pending")})` },
-          { key: "onhold", label: `On Hold (${countByStatus("onhold")})` },
+          { key: "all",         label: "All" },
+          { key: "completed",   label: `Completed (${countByStatus("completed")})` },
+          { key: "in_progress", label: `In Progress (${countByStatus("in_progress")})` },
+          { key: "pending",     label: `Pending (${countByStatus("pending")})` },
+          { key: "on_hold",     label: `On Hold (${countByStatus("on_hold")})` },
         ].map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setFilter(tab.key as any)}
+            onClick={() => setFilter(tab.key as FilterStatus)}
             className={`px-3 py-1.5 text-sm rounded-full border transition
-              ${
-                filter === tab.key
-                  ? "bg-gray-200 text-gray-800 border-gray-300"
-                  : "bg-white text-gray-600 hover:bg-gray-100"
+              ${filter === tab.key
+                ? "bg-gray-200 text-gray-800 border-gray-300"
+                : "bg-white text-gray-600 hover:bg-gray-100"
               }`}
           >
             {tab.label}
@@ -114,52 +106,37 @@ export default function ProjectsList() {
         ))}
       </div>
 
-
       <div className="flex flex-col gap-3">
-        {filteredProjects.map((project) => (
-          <Button
-            key={project.id}
-            variant="outline"
-            className="flex items-center justify-between rounded-xl border border-gray-100 px-4 py-4 shadow-sm hover:shadow-md transition w-full"
+        {filteredTasks.map((task) => (
+          <div
+            key={task.id_task}
+            className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-4 shadow-sm hover:shadow-md transition w-full min-w-0 cursor-pointer"
           >
- 
-            <span className="font-medium text-sm">
-              {project.name}
-            </span>
+
+            <div className="flex flex-col items-start gap-1 min-w-0 flex-1 pr-3">
+              <span className="font-medium text-sm text-left truncate w-full">{task.title}</span>
+              <span className="text-xs text-gray-400 text-left truncate w-full">{task.project.name}</span>
+            </div>
 
 
-            <div className="flex items-center gap-3 relative group">
-              
-
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full font-medium ${getPriorityStyles(
-                  project.priority
-                )}`}
-              >
-                {formatLabel(project.priority)}
+            <div className="flex items-center gap-3 flex-shrink-0 relative group">
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getPriorityStyles(task.priority)}`}>
+                {formatPriority(task.priority)}
               </span>
 
-
-              <div
-                className={`w-3 h-3 rounded-full ${getStatusColor(
-                  project.status
-                )}`}
-              />
-
+              <div className={`w-3 h-3 rounded-full ${getStatusColor(task.status, task.isOverdue)}`} />
 
               <div className="absolute right-0 top-8 translate-y-1 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 ease-out pointer-events-none z-10">
-                <div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-md">
-                  Priority: {formatLabel(project.priority)} | Status: {formatStatus(project.status)}
+                <div className="bg-black text-white text-xs px-3 py-1.5 rounded-md shadow-md whitespace-nowrap">
+                  Priority: {formatPriority(task.priority)} | Status: {formatStatus(task.status, task.isOverdue)}
                 </div>
               </div>
-
             </div>
-          </Button>
+          </div>
         ))}
       </div>
 
-
-      {filteredProjects.length === 0 && (
+      {filteredTasks.length === 0 && (
         <div className="text-sm text-gray-400 text-center py-6">
           No tasks found
         </div>
