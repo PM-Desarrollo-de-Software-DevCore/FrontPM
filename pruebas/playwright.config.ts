@@ -8,12 +8,17 @@ export default defineConfig({
   reporter: [['list'], ['html', { outputFolder: 'playwright-report' }]],
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
-    headless: true,
+    headless: process.env.HEADLESS !== 'false',
     viewport: { width: 1280, height: 720 },
     actionTimeout: 5000,
     trace: 'on-first-retry'
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } }
-  ]
+  ],
+  webServer: {
+    command: 'echo "Asegúrate de que la app esté corriendo en http://localhost:3000"',
+    port: 3000,
+    reuseExistingServer: true
+  }
 });
