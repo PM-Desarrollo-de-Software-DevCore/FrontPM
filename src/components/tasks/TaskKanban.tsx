@@ -24,10 +24,16 @@ export default function TaskKanban({
 
   useEffect(() => {
     loadTasks()
-  }, [])
+  }, [projectId, token])
 
   async function loadTasks() {
     try {
+      if (!token) {
+        setTasks([])
+        setLoading(false)
+        return
+      }
+
       setLoading(true)
 
       const data = await getProjectTasks(
@@ -193,7 +199,7 @@ function TaskColumn({
       <div className="space-y-5">
         {tasks.map((task) => (
           <TaskCard
-            key={task.id}
+            key={task.id || task.title}
             task={task}
             onStatusChange={
               onStatusChange

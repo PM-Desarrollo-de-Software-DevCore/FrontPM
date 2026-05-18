@@ -1,6 +1,29 @@
 import { Task } from "@/types/task"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+
+type BackendTask = Omit<Task, "id"> & {
+  id_task?: string
+  task_number?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+function mapBackendTask(task: BackendTask): Task {
+  return {
+    id: task.id_task || "",
+    title: task.title,
+    description: task.description,
+    progress: task.progress,
+    assignedTo: task.assignedTo,
+    end_date: task.end_date,
+    priority: task.priority,
+    status: task.status,
+    id_sprint: task.id_sprint,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+  }
+}
 
 export async function getProjectTasks(
   projectId: string,
@@ -19,7 +42,9 @@ export async function getProjectTasks(
     throw new Error("Error fetching tasks")
   }
 
-  return response.json()
+  const data = await response.json()
+  const tasks = Array.isArray(data) ? data : data.data || []
+  return tasks.map(mapBackendTask)
 }
 
 export async function createTask(
