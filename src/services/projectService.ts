@@ -3,6 +3,12 @@ import { getToken } from '@/lib/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+function convertDateToISO(dateString: string): string {
+  if (!dateString) return "";
+  if (dateString.includes("T")) return dateString;
+  const date = new Date(`${dateString}T00:00:00Z`);
+  return date.toISOString();
+}
 
 function getAuthHeaders(): Record<string, string> {
   const token = getToken();
@@ -12,13 +18,12 @@ function getAuthHeaders(): Record<string, string> {
   };
 }
 
-
 function projectToBackendFormat(project: any) {
   return {
     name: project.name,
     description: project.description,
-    start_date: project.startDate,
-    end_date: project.endDate,
+    start_date: convertDateToISO(project.startDate),
+    end_date: convertDateToISO(project.endDate),
     priority: project.priority?.toLowerCase(),
     status: project.status?.toLowerCase(),
   };
@@ -27,7 +32,7 @@ function projectToBackendFormat(project: any) {
 
 function projectFromBackendFormat(data: any): Project {
   return {
-    id: data.id,
+    id: data.id || data.id_project,
     name: data.name,
     description: data.description,
     startDate: data.start_date,
@@ -96,7 +101,7 @@ export async function updateProject(projectId: string, project: Partial<Project>
   const backendData = projectToBackendFormat(project);
   
   const response = await fetch(`${API_URL}/projects/${projectId}`, {
-    method: 'PATCH',
+    method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(backendData),
   });
