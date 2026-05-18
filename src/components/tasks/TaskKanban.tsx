@@ -22,9 +22,6 @@ export default function TaskKanban({
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
 
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-
   useEffect(() => {
     loadTasks()
   }, [])
@@ -71,24 +68,29 @@ export default function TaskKanban({
     }
   }
 
-  async function handleDelete(taskId: string) {
+  async function handleDelete(
+    taskId: string
+  ) {
     try {
       await deleteTask(taskId, token)
 
       setTasks((prev) =>
-        prev.filter((task) => task.id !== taskId)
+        prev.filter(
+          (task) => task.id !== taskId
+        )
       )
     } catch (error) {
       console.error(error)
     }
   }
 
-  const pendingTasks = tasks.filter(
+  const backlogTasks = tasks.filter(
     (task) => task.status === "pending"
   )
 
   const progressTasks = tasks.filter(
-    (task) => task.status === "in_progress"
+    (task) =>
+      task.status === "in_progress"
   )
 
   const completedTasks = tasks.filter(
@@ -97,7 +99,7 @@ export default function TaskKanban({
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-[300px]">
+      <div className="flex justify-center items-center h-[400px]">
         <p className="text-gray-500">
           Loading tasks...
         </p>
@@ -106,36 +108,35 @@ export default function TaskKanban({
   }
 
   return (
-    <div className="w-full mt-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">
-          Tasks Board
-        </h2>
-
-        <p className="text-gray-500 mt-1">
-          Manage project tasks
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full">
+    <div className="w-full">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 w-full">
         <TaskColumn
-          title="Pending"
-          tasks={pendingTasks}
-          onStatusChange={handleStatusChange}
+          title="Backlog"
+          color="border-l-gray-400"
+          tasks={backlogTasks}
+          onStatusChange={
+            handleStatusChange
+          }
           onDelete={handleDelete}
         />
 
         <TaskColumn
           title="In Progress"
+          color="border-l-yellow-500"
           tasks={progressTasks}
-          onStatusChange={handleStatusChange}
+          onStatusChange={
+            handleStatusChange
+          }
           onDelete={handleDelete}
         />
 
         <TaskColumn
           title="Completed"
+          color="border-l-green-500"
           tasks={completedTasks}
-          onStatusChange={handleStatusChange}
+          onStatusChange={
+            handleStatusChange
+          }
           onDelete={handleDelete}
         />
       </div>
@@ -145,47 +146,61 @@ export default function TaskKanban({
 
 interface TaskColumnProps {
   title: string
+  color: string
   tasks: Task[]
+
   onStatusChange: (
     taskId: string,
     status: Task["status"]
   ) => void
-  onDelete: (taskId: string) => void
+
+  onDelete: (
+    taskId: string
+  ) => void
 }
 
 function TaskColumn({
   title,
+  color,
   tasks,
   onStatusChange,
   onDelete,
 }: TaskColumnProps) {
   return (
-    <div className="bg-[#f5f5f5] rounded-2xl p-4 min-h-[600px] w-full">
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-lg font-bold">
-          {title}
-        </h3>
+    <div className="bg-white border border-gray-200 rounded-3xl p-5 min-h-[700px] shadow-sm">
+      <div
+        className={`flex items-center justify-between border border-gray-200 rounded-2xl p-4 mb-5 border-l-4 ${color}`}
+      >
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold">
+            {title}
+          </h2>
 
-        <span className="bg-black text-white text-xs px-2 py-1 rounded-full">
-          {tasks.length}
-        </span>
+          <span className="w-10 h-10 rounded-full border flex items-center justify-center text-sm font-semibold">
+            {tasks.length}
+          </span>
+        </div>
+
+        <button className="text-gray-400 text-2xl">
+          ...
+        </button>
       </div>
 
-      <div className="space-y-4">
+      <button className="border-2 border-dashed border-red-500 hover:border-red-600 hover:bg-red-50 transition rounded-2xl h-16 flex items-center justify-center text-red-500 hover:text-red-600 text-3xl font-bold mb-5 w-full">
+        +
+      </button>
+
+      <div className="space-y-5">
         {tasks.map((task) => (
           <TaskCard
             key={task.id}
             task={task}
-            onStatusChange={onStatusChange}
+            onStatusChange={
+              onStatusChange
+            }
             onDelete={onDelete}
           />
         ))}
-
-        {tasks.length === 0 && (
-          <div className="border border-dashed rounded-xl p-6 text-center text-gray-400">
-            No tasks
-          </div>
-        )}
       </div>
     </div>
   )
@@ -193,11 +208,15 @@ function TaskColumn({
 
 interface TaskCardProps {
   task: Task
+
   onStatusChange: (
     taskId: string,
     status: Task["status"]
   ) => void
-  onDelete: (taskId: string) => void
+
+  onDelete: (
+    taskId: string
+  ) => void
 }
 
 function TaskCard({
@@ -206,49 +225,56 @@ function TaskCard({
   onDelete,
 }: TaskCardProps) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-      <div className="flex items-start justify-between">
-        <h4 className="font-semibold text-black">
+    <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition">
+      <div className="flex justify-between items-start">
+        <h3 className="text-3xl font-bold">
           {task.title}
-        </h4>
+        </h3>
 
-        <button
-          onClick={() => onDelete(task.id)}
-          className="text-red-500 text-sm"
-        >
-          Delete
-        </button>
+        <span className="text-gray-400 text-sm">
+          Due today
+        </span>
       </div>
 
-      <p className="text-sm text-gray-500 mt-2">
+      <p className="text-gray-500 mt-4 text-lg leading-relaxed">
         {task.description}
       </p>
 
-      <div className="mt-4 flex items-center justify-between">
-        <span
-          className={`text-xs px-2 py-1 rounded-full ${
-            task.priority === "high"
-              ? "bg-red-100 text-red-600"
-              : task.priority === "medium"
-              ? "bg-yellow-100 text-yellow-700"
-              : "bg-green-100 text-green-600"
-          }`}
-        >
-          {task.priority}
-        </span>
+      <div className="mt-5">
+        <div className="flex justify-between text-sm mb-2">
+          <span className="text-gray-500">
+            Progress
+          </span>
 
+          <span className="font-semibold">
+            {task.progress}%
+          </span>
+        </div>
+
+        <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-black rounded-full"
+            style={{
+              width: `${task.progress}%`,
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between mt-6">
         <select
           value={task.status}
           onChange={(e) =>
             onStatusChange(
               task.id,
-              e.target.value as Task["status"]
+              e.target
+                .value as Task["status"]
             )
           }
-          className="border rounded-lg px-2 py-1 text-sm"
+          className="border border-gray-200 rounded-xl px-4 py-2 text-sm"
         >
           <option value="pending">
-            Pending
+            Backlog
           </option>
 
           <option value="in_progress">
@@ -259,22 +285,39 @@ function TaskCard({
             Completed
           </option>
         </select>
+
+        <button
+          onClick={() =>
+            onDelete(task.id)
+          }
+          className="text-red-500 hover:text-red-700 text-sm font-medium"
+        >
+          Delete
+        </button>
       </div>
 
-      <div className="mt-4">
-        <div className="flex justify-between text-xs mb-1">
-          <span>Progress</span>
+      <div className="flex items-center justify-between mt-6">
+        <span
+          className={`px-4 py-2 rounded-full text-sm font-medium ${
+            task.priority === "high"
+              ? "bg-red-100 text-red-600"
+              : task.priority ===
+                "medium"
+              ? "bg-yellow-100 text-yellow-700"
+              : "bg-green-100 text-green-600"
+          }`}
+        >
+          {task.priority}
+        </span>
 
-          <span>{task.progress}%</span>
-        </div>
+        <div className="flex -space-x-2">
+          <div className="w-10 h-10 rounded-full bg-yellow-200 border flex items-center justify-center text-xs font-bold">
+            A
+          </div>
 
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div
-            className="bg-black h-2 rounded-full"
-            style={{
-              width: `${task.progress}%`,
-            }}
-          />
+          <div className="w-10 h-10 rounded-full bg-orange-200 border flex items-center justify-center text-xs font-bold">
+            B
+          </div>
         </div>
       </div>
     </div>
