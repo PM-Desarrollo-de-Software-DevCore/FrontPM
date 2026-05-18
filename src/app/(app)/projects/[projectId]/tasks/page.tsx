@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useParams } from "next/navigation"
 
 import TaskKanban from "@/components/tasks/TaskKanban"
+import { getToken } from "@/lib/auth"
 
 import {
   createTask,
@@ -34,8 +35,7 @@ export default function ProjectTasksPage() {
     useState(false)
 
   useEffect(() => {
-    const storedToken =
-      localStorage.getItem("token") || ""
+    const storedToken = getToken() || ""
 
     setToken(storedToken)
   }, [])
