@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card/card"
 import {
   Chart as ChartJS,
@@ -10,189 +10,290 @@ import {
   Plugin,
 } from "chart.js"
 import { Doughnut } from "react-chartjs-2"
-import { Flag, Check } from "lucide-react"
+import { Check, Flag } from "lucide-react"
+import {
+  type BackendProject,
+  type BackendProjectMember,
+  type BackendProjectPriority,
+  type BackendProjectStatsItem,
+  type BackendProjectStatus,
+  type BackendSprint,
+  type BackendSprintStatus,
+  type BackendUser,
+  getMilestoneProjects,
+  getProjectMembers,
+  getProjectSprints,
+  getProjectsStats,
+  getUsers,
+} from "@/services/milestonesService"
 
 ChartJS.register(ArcElement, Tooltip)
 
-// Dummy projects data
-const initialProjects = [
-  {
-    id: "apollo-control",
-    name: "Apollo Control",
-    description: "Real-time project management platform for planning, tracking, and delivery.",
-    status: "In Progress" as const,
-    progress: 70,
-    tasks: 18,
-    owner: "DevCore Team",
-    startDate: "2026-04-01",
-    endDate: "2026-05-15",
-    priority: "High" as const,
-    team: ["Frontend", "Backend", "QA"],
-  },
-  {
-    id: "mobile-app",
-    name: "Mobile App",
-    description: "Mobile application for task tracking and team collaboration.",
-    status: "Completed" as const,
-    progress: 100,
-    tasks: 10,
-    owner: "UX Team",
-    startDate: "2026-04-10",
-    endDate: "2026-06-01",
-    priority: "Medium" as const,
-    team: ["UX", "Frontend"],
-  },
-  {
-    id: "risk-engine",
-    name: "Risk Engine",
-    description: "Risk calculation and analytics module for project insights.",
-    status: "Completed" as const,
-    progress: 100,
-    tasks: 24,
-    owner: "Backend Team",
-    startDate: "2026-03-01",
-    endDate: "2026-04-05",
-    priority: "High" as const,
-    team: ["Backend", "Data"],
-  },
-  {
-    id: "dashboard-ui",
-    name: "Dashboard UI",
-    description: "Design and implementation of the main dashboard interface.",
-    status: "In Progress" as const,
-    progress: 55,
-    tasks: 12,
-    owner: "Frontend Team",
-    startDate: "2026-04-05",
-    endDate: "2026-05-20",
-    priority: "Medium" as const,
-    team: ["Frontend", "Design"],
-  },
-  {
-    id: "api-integration",
-    name: "API Integration",
-    description: "Frontend and backend integration for project workflows.",
-    status: "Planning" as const,
-    progress: 10,
-    tasks: 8,
-    owner: "Fullstack Team",
-    startDate: "2026-04-15",
-    endDate: "2026-06-10",
-    priority: "High" as const,
-    team: ["Frontend", "Backend"],
-  },
-  {
-    id: "client-portal",
-    name: "Client Portal",
-    description: "Portal for client visibility, updates, and milestone tracking.",
-    status: "Planning" as const,
-    progress: 15,
-    tasks: 14,
-    owner: "Product Team",
-    startDate: "2026-04-22",
-    endDate: "2026-06-18",
-    priority: "Low" as const,
-    team: ["Product", "Frontend"],
-  },
-]
+type FrontProjectStatus = "Planning" | "In Progress" | "Completed"
+type FrontProjectPriority = "High" | "Medium" | "Low"
+type FrontSprintStatus = "planned" | "active" | "finished"
 
-const sprints = [
-  {
-    id: 1,
-    name: "Sprint 1: Foundation",
-    progress: 85,
-    status: "completed",
-  },
-  {
-    id: 2,
-    name: "Sprint 2: Core Features",
-    progress: 72,
-    status: "in-progress",
-  },
-  {
-    id: 3,
-    name: "Sprint 3: UI/UX Polish",
-    progress: 45,
-    status: "in-progress",
-  },
-  {
-    id: 4,
-    name: "Sprint 4: Testing & QA",
-    progress: 20,
-    status: "pending",
-  },
-  {
-    id: 5,
-    name: "Sprint 5: Deployment",
-    progress: 0,
-    status: "pending",
-  },
-]
+interface MilestoneTeamMember {
+  id: string
+  label: string
+  initials: string
+}
 
-const milestones = [
-  {
-    id: 1,
-    date: "2026-04-01",
-    description: "Project kickoff and team alignment",
-    sprint: "Sprint 1",
-  },
-  {
-    id: 2,
-    date: "2026-04-05",
-    description: "Database schema finalized",
-    sprint: "Sprint 1",
-  },
-  {
-    id: 3,
-    date: "2026-04-08",
-    description: "Authentication system implemented",
-    sprint: "Sprint 1",
-  },
-  {
-    id: 4,
-    date: "2026-04-12",
-    description: "API endpoints documentation complete",
-    sprint: "Sprint 2",
-  },
-  {
-    id: 5,
-    date: "2026-04-15",
-    description: "Frontend dashboard MVP delivered",
-    sprint: "Sprint 2",
-  },
-  {
-    id: 6,
-    date: "2026-04-18",
-    description: "Integration testing phase started",
-    sprint: "Sprint 2",
-  },
-  {
-    id: 7,
-    date: "2026-04-22",
-    description: "UI components library completed",
-    sprint: "Sprint 3",
-  },
-  {
-    id: 8,
-    date: "2026-04-25",
-    description: "Design review and refinements",
-    sprint: "Sprint 3",
-  },
-  {
-    id: 9,
-    date: "2026-04-28",
-    description: "Performance optimization completed",
-    sprint: "Sprint 3",
-  },
-]
+interface MilestoneSprint {
+  id: string
+  name: string
+  startDate: string
+  endDate: string
+  status: FrontSprintStatus
+  progress: number
+}
 
-function SprintProgressChart({ sprint }: { sprint: (typeof sprints)[0] }) {
+interface MilestoneProjectView {
+  id: string
+  name: string
+  description: string
+  status: FrontProjectStatus
+  priority: FrontProjectPriority
+  owner: string
+  startDate: string
+  endDate: string | null
+  progress: number
+  tasks: number
+  teamMembers: MilestoneTeamMember[]
+  sprints: MilestoneSprint[]
+}
+
+interface MilestoneTimelineItem {
+  id: string
+  date: string
+  title: string
+  description: string
+  sprint: string
+  kind: "start" | "end"
+}
+
+function mapProjectStatus(status: BackendProjectStatus): FrontProjectStatus {
+  switch (status) {
+    case "planning":
+      return "Planning"
+    case "in_progress":
+      return "In Progress"
+    case "completed":
+      return "Completed"
+    default:
+      return "Planning"
+  }
+}
+
+function mapProjectPriority(priority: BackendProjectPriority): FrontProjectPriority {
+  switch (priority) {
+    case "high":
+      return "High"
+    case "medium":
+      return "Medium"
+    case "low":
+      return "Low"
+    default:
+      return "Medium"
+  }
+}
+
+function mapSprintStatus(status: BackendSprintStatus): FrontSprintStatus {
+  switch (status) {
+    case "planned":
+      return "planned"
+    case "active":
+      return "active"
+    case "finished":
+      return "finished"
+    default:
+      return "planned"
+  }
+}
+
+function formatDate(date: string | null, locale = "en-GB") {
+  if (!date) return "TBD"
+
+  return new Date(date).toLocaleDateString(locale, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  })
+}
+
+function formatShortDate(date: string) {
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  })
+}
+
+function formatRoleLabel(role: BackendProjectMember["role"]) {
+  switch (role) {
+    case "project_manager":
+      return "Project Manager"
+    case "scrum_master":
+      return "Scrum Master"
+    case "developer":
+      return "Developer"
+    default:
+      return "Member"
+  }
+}
+
+function getInitials(label: string) {
+  return label
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
+}
+
+function getProjectStatusClasses(status: FrontProjectStatus) {
+  switch (status) {
+    case "Completed":
+      return "bg-emerald-100 text-emerald-700"
+    case "In Progress":
+      return "bg-blue-100 text-blue-700"
+    case "Planning":
+      return "bg-zinc-100 text-zinc-700"
+    default:
+      return "bg-zinc-100 text-zinc-700"
+  }
+}
+
+function getProjectPriorityClasses(priority: FrontProjectPriority) {
+  switch (priority) {
+    case "High":
+      return "bg-rose-100 text-rose-700"
+    case "Medium":
+      return "bg-amber-100 text-amber-800"
+    case "Low":
+      return "bg-emerald-100 text-emerald-700"
+    default:
+      return "bg-zinc-100 text-zinc-700"
+  }
+}
+
+function getSprintStatusClasses(status: FrontSprintStatus) {
+  switch (status) {
+    case "finished":
+      return "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+    case "active":
+      return "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+    case "planned":
+      return "bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100"
+    default:
+      return "bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100"
+  }
+}
+
+function calculateSprintProgress(sprint: MilestoneSprint) {
+  if (sprint.status === "finished") return 100
+  if (sprint.status === "planned") return 0
+
+  const start = new Date(sprint.startDate).getTime()
+  const end = new Date(sprint.endDate).getTime()
+  const now = Date.now()
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+    return 0
+  }
+
+  if (now <= start) return 0
+  if (now >= end) return 100
+
+  const progress = ((now - start) / (end - start)) * 100
+  return Math.max(0, Math.min(100, Math.round(progress)))
+}
+
+function buildTimelineItems(sprints: MilestoneSprint[]): MilestoneTimelineItem[] {
+  return sprints
+    .flatMap((sprint) => [
+      {
+        id: `${sprint.id}-start`,
+        date: sprint.startDate,
+        title: `${sprint.name} kickoff`,
+        description: "Sprint window opened and execution started",
+        sprint: sprint.name,
+        kind: "start" as const,
+      },
+      {
+        id: `${sprint.id}-end`,
+        date: sprint.endDate,
+        title: `${sprint.name} closure`,
+        description:
+          sprint.status === "finished"
+            ? "Sprint delivered and closed"
+            : "Target closing date for this sprint",
+        sprint: sprint.name,
+        kind: "end" as const,
+      },
+    ])
+    .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())
+}
+
+function toProjectView(
+  project: BackendProject,
+  stats: BackendProjectStatsItem | undefined,
+  members: BackendProjectMember[],
+  usersById: Map<string, BackendUser>,
+  sprints: BackendSprint[]
+): MilestoneProjectView {
+  const ownerUser = usersById.get(project.createdBy)
+  const owner = ownerUser ? `${ownerUser.name} ${ownerUser.lastname}`.trim() : `User ${project.createdBy.slice(0, 8)}`
+
+  const teamMembers = members.map((member) => {
+    const user = usersById.get(member.id_user)
+    const label = user ? `${user.name} ${user.lastname}`.trim() : formatRoleLabel(member.role)
+
+    return {
+      id: member.id_mp,
+      label,
+      initials: getInitials(label),
+    }
+  })
+
+  const sprintViews = sprints.map((sprint) => ({
+    id: sprint.id_sprint,
+    name: sprint.name,
+    startDate: sprint.start_date,
+    endDate: sprint.end_date,
+    status: mapSprintStatus(sprint.status),
+    progress: calculateSprintProgress({
+      id: sprint.id_sprint,
+      name: sprint.name,
+      startDate: sprint.start_date,
+      endDate: sprint.end_date,
+      status: mapSprintStatus(sprint.status),
+      progress: 0,
+    }),
+  }))
+
+  return {
+    id: project.id_project,
+    name: project.name,
+    description: project.description ?? "No description available.",
+    status: mapProjectStatus(project.status),
+    priority: mapProjectPriority(project.priority),
+    owner,
+    startDate: project.start_date,
+    endDate: project.end_date,
+    progress: stats?.completionPercentage ?? 0,
+    tasks: stats?.totalTasks ?? 0,
+    teamMembers,
+    sprints: sprintViews,
+  }
+}
+
+function SprintProgressChart({ sprint }: { sprint: MilestoneSprint }) {
   const data = {
     labels: ["Complete", "Remaining"],
     datasets: [
       {
         data: [sprint.progress, 100 - sprint.progress],
-        backgroundColor: ["#3b82f6", "#e5e7eb"],
+        backgroundColor: ["#2563eb", "#e5e7eb"],
         borderWidth: 0,
       },
     ],
@@ -214,286 +315,401 @@ function SprintProgressChart({ sprint }: { sprint: (typeof sprints)[0] }) {
         borderWidth: 1,
         padding: 10,
         callbacks: {
-          label: function (context: { parsed: number }) {
-            return context.parsed + "%"
+          label(context) {
+            return `${context.parsed}%`
           },
         },
       },
     },
   }
 
-  const percentagePlugin: Plugin<"pie"> = {
+  const percentagePlugin: Plugin<"doughnut"> = {
     id: "textCenter",
-    beforeDatasetsDraw(chart: { width: number; height: number; ctx: CanvasRenderingContext2D }) {
-      const { ctx } = chart
+    beforeDatasetsDraw(chart) {
+      const { ctx, width, height } = chart
       ctx.save()
 
-      const width = chart.width
-      const height = chart.height
       ctx.font = "bold 28px Arial"
       ctx.textAlign = "center"
       ctx.textBaseline = "middle"
-      ctx.fillStyle = "#1f2937"
+      ctx.fillStyle = "#0f172a"
       ctx.fillText(`${sprint.progress}%`, width / 2, height / 2)
 
       ctx.font = "14px Arial"
-      ctx.fillStyle = "#6b7280"
+      ctx.fillStyle = "#64748b"
       ctx.fillText("Progress", width / 2, height / 2 + 25)
 
       ctx.restore()
     },
   }
 
-  return (
-    <Doughnut data={data} options={options} plugins={[percentagePlugin as Plugin<"doughnut">]} />
-  )
+  return <Doughnut data={data} options={options} plugins={[percentagePlugin]} />
 }
 
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  })
-}
-
-function getProjectStatusClasses(status: string) {
-  switch (status) {
-    case "Completed":
-      return "bg-green-100 text-green-700"
-    case "In Progress":
-      return "bg-red-100 text-red-700"
-    case "Planning":
-      return "bg-zinc-200 text-zinc-700"
-    default:
-      return "bg-zinc-200 text-zinc-700"
-  }
-}
-
-function ProjectCard({ project }: { project: (typeof initialProjects)[0] }) {
+function ProjectButton({
+  project,
+  isSelected,
+  onSelect,
+}: {
+  project: MilestoneProjectView
+  isSelected: boolean
+  onSelect: () => void
+}) {
   return (
     <button
       type="button"
-      className="w-full rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:shadow-md text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+      aria-pressed={isSelected}
+      onClick={onSelect}
+      className={`w-full rounded-2xl border p-4 text-left shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+        isSelected
+          ? "border-blue-500 bg-blue-50 shadow-md"
+          : "border-zinc-200 bg-white hover:border-blue-200 hover:shadow-md"
+      }`}
     >
-      <div className="mb-2 flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <h3 className="text-lg font-semibold text-zinc-900 truncate">
-            {project.name}
-          </h3>
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-lg font-semibold text-zinc-900">{project.name}</h3>
+          <p className="mt-1 text-xs text-zinc-500">Owner: {project.owner}</p>
         </div>
 
-        <span
-          className={`rounded-md px-2 py-0.5 text-[10px] font-semibold shrink-0 ${getProjectStatusClasses(
-            project.status
-          )}`}
-        >
-          {project.status}
-        </span>
-      </div>
-
-      <div className="mb-3 h-px bg-zinc-300" />
-
-      <p className="mb-4 text-xs leading-5 text-zinc-500 line-clamp-2">
-        {project.description}
-      </p>
-
-      <div className="mb-4">
-        <p className="text-xs font-semibold text-red-400">
-          Deadline : {formatDate(project.endDate).toUpperCase()}
-        </p>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex -space-x-2">
-          {project.team.slice(0, 4).map((member, index) => (
-            <div
-              key={`${project.id}-${member}-${index}`}
-              className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-amber-300 text-[10px] font-semibold text-zinc-800"
-              title={member}
-            >
-              {member.slice(0, 2).toUpperCase()}
-            </div>
-          ))}
-
-          {project.team.length > 4 && (
-            <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-rose-100 text-[10px] font-semibold text-rose-500">
-              +{project.team.length - 4}
-            </div>
-          )}
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${getProjectStatusClasses(project.status)}`}>
+            {project.status}
+          </span>
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${getProjectPriorityClasses(project.priority)}`}>
+            {project.priority}
+          </span>
         </div>
+      </div>
 
-        <div className="flex items-center gap-1 text-xs text-zinc-400">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-3.5 w-3.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+      <p className="line-clamp-2 text-xs leading-5 text-zinc-500">{project.description}</p>
+
+      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-zinc-500">
+        <span>{project.tasks} tasks</span>
+        <span>{project.progress}% complete</span>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {project.teamMembers.slice(0, 4).map((member) => (
+          <span
+            key={member.id}
+            title={member.label}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white bg-zinc-900 text-[10px] font-semibold text-white"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 12h6m-6 4h6M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"
-            />
-          </svg>
-          <span>{project.tasks} issues</span>
-        </div>
+            {member.initials || "?"}
+          </span>
+        ))}
+
+        {project.teamMembers.length > 4 && (
+          <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-white bg-zinc-100 px-2 text-[10px] font-semibold text-zinc-600">
+            +{project.teamMembers.length - 4}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-zinc-400">
+        <span>Deadline: {formatDate(project.endDate, "en-GB").toUpperCase()}</span>
+        {isSelected && <span className="font-semibold text-blue-700">Active</span>}
       </div>
     </button>
   )
 }
 
 export default function MilestonesPage() {
+  const [projects, setProjects] = useState<MilestoneProjectView[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const [selectedSprint, setSelectedSprint] = useState(sprints[1])
-  const getSprintStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-      case "in-progress":
-        return "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-      case "pending":
-        return "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
-      default:
-        return "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
+  useEffect(() => {
+    let isCancelled = false
+
+    async function loadMilestoneData() {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        const [projectList, projectStats, users] = await Promise.all([
+          getMilestoneProjects(),
+          getProjectsStats(),
+          getUsers(),
+        ])
+
+        const usersById = new Map(users.map((user) => [user.id, user]))
+        const statsByProjectId = new Map(projectStats.map((item) => [item.id_project, item]))
+
+        const details = await Promise.all(
+          projectList.map(async (project) => {
+            const [members, sprints] = await Promise.all([
+              getProjectMembers(project.id_project),
+              getProjectSprints(project.id_project),
+            ])
+
+            return toProjectView(
+              project,
+              statsByProjectId.get(project.id_project),
+              members,
+              usersById,
+              sprints
+            )
+          })
+        )
+
+        if (isCancelled) return
+
+        setProjects(details)
+      } catch (loadError) {
+        if (isCancelled) return
+
+        setError(loadError instanceof Error ? loadError.message : "No se pudieron cargar los milestones")
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false)
+        }
+      }
     }
-  }
+
+    void loadMilestoneData()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!projects.length) {
+      setSelectedProjectId(null)
+      setSelectedSprintId(null)
+      return
+    }
+
+    setSelectedProjectId((currentProjectId) => {
+      if (currentProjectId && projects.some((project) => project.id === currentProjectId)) {
+        return currentProjectId
+      }
+
+      return projects[0]?.id ?? null
+    })
+  }, [projects])
+
+  useEffect(() => {
+    const selectedProject = projects.find((project) => project.id === selectedProjectId)
+
+    if (!selectedProject) {
+      setSelectedSprintId(null)
+      return
+    }
+
+    if (!selectedProject.sprints.length) {
+      setSelectedSprintId(null)
+      return
+    }
+
+    setSelectedSprintId((currentSprintId) => {
+      if (currentSprintId && selectedProject.sprints.some((sprint) => sprint.id === currentSprintId)) {
+        return currentSprintId
+      }
+
+      return selectedProject.sprints.find((sprint) => sprint.status === "active")?.id
+        ?? selectedProject.sprints[0]?.id
+        ?? null
+    })
+  }, [projects, selectedProjectId])
+
+  const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? null
+  const selectedSprint = selectedProject?.sprints.find((sprint) => sprint.id === selectedSprintId)
+    ?? selectedProject?.sprints[0]
+    ?? null
+  const selectedTimeline = selectedProject ? buildTimelineItems(selectedProject.sprints) : []
 
   return (
-    <main className="min-h-screen w-full bg-white px-5 py-6">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-700">Milestones</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Track project progress and key deliverables across sprints
+    <main className="min-h-screen w-full bg-linear-to-br from-slate-50 via-white to-blue-50 px-5 py-6 text-slate-900">
+      <div className="mb-8 flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Milestones</h1>
+        <p className="max-w-2xl text-sm text-slate-500">
+          Selecciona un proyecto para cambiar la vista superior, la progresión del sprint y la línea de tiempo sin salir de la página.
         </p>
       </div>
 
-      {/* Grid with 2 rows */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* ROW 1: Main content cards */}
-        {/* CARD 1: Progress Chart (Top Left) */}
-        <Card className="col-span-1">
-          <CardContent className="pt-4">
-            <div className="mb-8">
-              <h3 className="text-sm font-semibold text-gray-900">
-                {selectedSprint.name}
-              </h3>
-              <p className="text-xs text-gray-500 mt-1">Sprint Progress</p>
-            </div>
-
-            <div className="w-full h-60">
-              <SprintProgressChart sprint={selectedSprint} />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* CARD 2: Sprint Selector (Top Center) */}
-        <div className="col-span-1 flex flex-col gap-3">
-          <div className="text-sm font-semibold text-gray-900 pt-4">
-            Select Sprint
-          </div>
-          {sprints.map((sprint) => (
-            <button
-              key={sprint.id}
-              onClick={() => setSelectedSprint(sprint)}
-              className={`
-                w-full rounded-lg border-2 px-4 py-3 text-left transition-all
-                ${
-                  selectedSprint.id === sprint.id
-                    ? "border-blue-500 bg-blue-50 shadow-sm"
-                    : `border-gray-200 bg-white ${getSprintStatusColor(sprint.status)}`
-                }
-              `}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {sprint.name}
-                  </p>
-                  <p className="text-xs text-gray-600 mt-0.5">
-                    {sprint.progress}% complete
-                  </p>
-                </div>
-                {sprint.status === "completed" && (
-                  <Check className="h-4 w-4 shrink-0" />
-                )}
-              </div>
-            </button>
-          ))}
+      {isLoading && (
+        <div className="rounded-2xl border border-slate-200 bg-white/80 p-6 text-sm text-slate-500 shadow-sm">
+          Loading milestone data from backend...
         </div>
+      )}
 
-        {/* CARD 3: Milestones Log (Top Right, spans 1 column) */}
-        <Card className="col-span-1">
-          <CardContent className="pt-4">
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                <Flag className="h-4 w-4" />
-                Milestone Timeline
-              </h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Key deliverables and achievements
-              </p>
-            </div>
+      {!isLoading && error && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700 shadow-sm">
+          {error}
+        </div>
+      )}
 
-            <div className="space-y-4 overflow-y-auto max-h-80">
-              {milestones.map((milestone, index) => (
-                <div key={milestone.id} className="relative">
-                  {/* Timeline line */}
-                  {index < milestones.length - 1 && (
-                    <div className="absolute left-3 top-8 w-0.5 h-10 bg-gray-200" />
-                  )}
+      {!isLoading && !error && selectedProject && (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <Card className="col-span-1 border-slate-200 bg-white/90 shadow-sm">
+            <CardContent className="pt-4">
+              <div className="mb-6 flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-sm font-semibold text-slate-900">{selectedProject.name}</h3>
+                  <p className="mt-1 text-xs text-slate-500">Sprint Progress</p>
+                </div>
 
-                  {/* Timeline dot and content */}
-                  <div className="flex gap-3">
-                    <div className="flex flex-col items-center shrink-0 pt-1">
-                      <div className="w-5 h-5 rounded-full bg-blue-500 border-3 border-white shadow-sm" />
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${getProjectStatusClasses(selectedProject.status)}`}>
+                  {selectedProject.status}
+                </span>
+              </div>
+
+              {selectedSprint ? (
+                <div className="h-60 w-full">
+                  <SprintProgressChart sprint={selectedSprint} />
+                </div>
+              ) : (
+                <div className="flex h-60 w-full items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
+                  No sprint data available for this project yet.
+                </div>
+              )}
+
+              <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <p className="text-slate-500">Project progress</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{selectedProject.progress}%</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <p className="text-slate-500">Tasks</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{selectedProject.tasks}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <p className="text-slate-500">Owner</p>
+                  <p className="mt-1 line-clamp-1 text-sm font-semibold text-slate-900">{selectedProject.owner}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <p className="text-slate-500">Deadline</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{formatDate(selectedProject.endDate).toUpperCase()}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="col-span-1 flex flex-col gap-3">
+            <div className="pt-1 text-sm font-semibold text-slate-900">Select Project Sprint</div>
+            {selectedProject.sprints.length ? (
+              selectedProject.sprints.map((sprint) => (
+                <button
+                  key={sprint.id}
+                  type="button"
+                  onClick={() => setSelectedSprintId(sprint.id)}
+                  className={`w-full rounded-2xl border px-4 py-3 text-left transition-all ${
+                    selectedSprint?.id === sprint.id
+                      ? "border-blue-500 bg-blue-50 shadow-sm"
+                      : getSprintStatusClasses(sprint.status)
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-slate-900">{sprint.name}</p>
+                      <p className="mt-0.5 text-xs text-slate-600">{sprint.progress}% complete</p>
                     </div>
 
-                    <div className="flex-1 pb-1 min-w-0">
-                      <div className="flex items-baseline justify-between gap-2 flex-wrap">
-                        <p className="text-xs font-semibold text-gray-900 flex-1">
-                          {milestone.description}
-                        </p>
-                        <span className="text-xs text-gray-500 shrink-0">
-                          {new Date(milestone.date).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {milestone.sprint}
-                      </p>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                        {sprint.status}
+                      </span>
+                      {sprint.status === "finished" && <Check className="h-4 w-4 shrink-0" />}
                     </div>
                   </div>
-                </div>
+
+                  <div className="mt-3 text-xs text-slate-500">
+                    {formatShortDate(sprint.startDate)} - {formatShortDate(sprint.endDate)}
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
+                Este proyecto todavía no tiene sprints cargados.
+              </div>
+            )}
+          </div>
+
+          <Card className="col-span-1 border-slate-200 bg-white/90 shadow-sm">
+            <CardContent className="pt-4">
+              <div className="mb-4">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <Flag className="h-4 w-4" />
+                  Milestone Timeline
+                </h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Milestones generados desde los sprints del proyecto seleccionado
+                </p>
+              </div>
+
+              <div className="max-h-80 space-y-4 overflow-y-auto pr-1">
+                {selectedTimeline.length ? (
+                  selectedTimeline.map((item, index) => (
+                    <div key={item.id} className="relative">
+                      {index < selectedTimeline.length - 1 && (
+                        <div className="absolute left-3 top-8 h-10 w-0.5 bg-slate-200" />
+                      )}
+
+                      <div className="flex gap-3">
+                        <div className="flex shrink-0 flex-col items-center pt-1">
+                          <div
+                            className={`h-5 w-5 rounded-full border-2 border-white shadow-sm ${
+                              item.kind === "start" ? "bg-blue-500" : "bg-emerald-500"
+                            }`}
+                          />
+                        </div>
+
+                        <div className="min-w-0 flex-1 pb-1">
+                          <div className="flex flex-wrap items-baseline justify-between gap-2">
+                            <p className="flex-1 text-xs font-semibold text-slate-900">{item.title}</p>
+                            <span className="shrink-0 text-xs text-slate-500">{formatShortDate(item.date)}</span>
+                          </div>
+
+                          <p className="mt-0.5 text-xs text-slate-500">{item.description}</p>
+                          <p className="mt-1 text-xs text-slate-400">{item.sprint}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                    Sin milestones para mostrar en este proyecto.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="col-span-1 md:col-span-3">
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">Related Projects</h3>
+                <p className="mt-1 text-xs text-slate-500">Los botones funcionan como tabs y actualizan toda la vista superior.</p>
+              </div>
+              <div className="text-xs text-slate-500">
+                {projects.length} projects loaded from backend
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {projects.map((project) => (
+                <ProjectButton
+                  key={project.id}
+                  project={project}
+                  isSelected={selectedProject.id === project.id}
+                  onSelect={() => setSelectedProjectId(project.id)}
+                />
               ))}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* ROW 2: Projects Carousel */}
-        <div className="col-span-1 md:col-span-3">
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-gray-900">
-              Related Projects
-            </h3>
-            <p className="text-xs text-gray-500 mt-1">
-              Click to view project details
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-max">
-            {initialProjects.map((project) => (
-              <div key={project.id}>
-                <ProjectCard project={project} />
-              </div>
-            ))}
           </div>
         </div>
-      </div>
+      )}
+
+      {!isLoading && !error && !selectedProject && (
+        <div className="rounded-2xl border border-slate-200 bg-white/80 p-6 text-sm text-slate-500 shadow-sm">
+          No hay proyectos disponibles para mostrar.
+        </div>
+      )}
     </main>
   )
 }
