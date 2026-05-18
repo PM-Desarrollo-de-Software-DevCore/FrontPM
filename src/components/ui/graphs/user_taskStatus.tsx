@@ -9,22 +9,55 @@ import {
   Plugin,
 } from "chart.js"
 import { Pie } from "react-chartjs-2"
+import { DashboardData } from "@/hooks/useDashboardStats"
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
-export default function TasksChart() {
+
+const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  completed:   { label: "Completed",   color: "#22c55e" },
+  on_hold:     { label: "On Hold",     color: "#ef4444" },
+  in_progress: { label: "On Progress", color: "#3b82f6" },
+  pending:     { label: "Pending",     color: "#eab308" },
+}
+
+type Props = {
+  dashboardData: DashboardData | null
+  loading?: boolean
+  error?: string | null
+}
+
+export default function TasksChart({ dashboardData, loading, error }: Props) {
+
+
+  const rawItems = dashboardData?.tasksByStatus?.filter((s) => s.count > 0).length
+    ? dashboardData.tasksByStatus
+        .filter((s) => s.count > 0)
+        .map((s) => ({
+          label: STATUS_CONFIG[s.status]?.label ?? s.status,
+          color: STATUS_CONFIG[s.status]?.color ?? "#94a3b8",
+          count: s.count,
+        }))
+    : dashboardData
+    ? [
+        { label: "Completed",   color: "#22c55e", count: dashboardData.summary.completedTasks  },
+        { label: "On Hold",     color: "#ef4444", count: dashboardData.summary.overdueTasks    },
+        { label: "On Progress", color: "#3b82f6", count: dashboardData.summary.inProgressTasks },
+        { label: "Pending",     color: "#eab308", count: dashboardData.summary.pendingTasks    },
+      ].filter((i) => i.count > 0)
+    : []
+
+  const total = rawItems.reduce((sum, i) => sum + i.count, 0)
+
 
   const data = {
-    labels: ["Completed", "On Hold", "On Progress", "Pending"],
+    labels: rawItems.map((i) => i.label),
     datasets: [
       {
-        data: [3, 2, 2, 1],
-        backgroundColor: [
-          "#22c55e",
-          "#ef4444",
-          "#3b82f6",
-          "#eab308",
-        ],
+        data: rawItems.map((i) =>
+          total > 0 ? Math.round((i.count / total) * 100) : 0
+        ),
+        backgroundColor: rawItems.map((i) => i.color),
         borderWidth: 0,
       },
     ],
@@ -73,9 +106,38 @@ export default function TasksChart() {
     },
   }
 
+
+  if (loading) {
+    return (
+      <div className="w-full h-full flex flex-col">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-slate-900">Tasks</h3>
+          <p className="text-sm text-gray-500">Task status</p>
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-500" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="w-full h-full flex flex-col">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-slate-900">Tasks</h3>
+          <p className="text-sm text-gray-500">Task status</p>
+        </div>
+        <div className="flex flex-1 items-center justify-center text-sm text-red-500">
+          {error}
+        </div>
+      </div>
+    )
+  }
+
+
   return (
     <div className="w-full h-full flex flex-col">
-
 
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-slate-900">
@@ -91,7 +153,6 @@ export default function TasksChart() {
         <div className="flex-1 h-full">
           <Pie data={data} options={options} plugins={[percentagePlugin as Plugin]} />
         </div>
-
 
         <div className="w-full lg:w-[30%]">
           <div className="flex flex-col justify-center gap-4">

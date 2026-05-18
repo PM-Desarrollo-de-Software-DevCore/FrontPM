@@ -8,18 +8,21 @@ import TaskUser from "@/components/ui/graphs/user_taskStatus"
 import Bugs from "@/components/ui/graphs/user_bugs"
 import WeeklyProg from "@/components/ui/graphs/user_weekProg"
 import Filters from "@/components/ui/filters/filters"
+import { useDashboardStats } from "@/hooks/useDashboardStats" // 👈 nuevo
 
 type FiltersState = {
   sprint?: string
   project?: string
 }
 
-
 export default function UserDashboard() {
   const [filters, setFilters] = useState<FiltersState>({
     sprint: "",
     project: ""
   })
+
+  const { data, loading, error } = useDashboardStats(filters) // 👈 nuevo
+
   return (
     <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 pt-4 pb-16 space-y-4">
 
@@ -38,18 +41,17 @@ export default function UserDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
 
-
         <div className="flex flex-col gap-4 lg:col-span-2">
 
-          <Card className="h-auto lg:h-[450px] overflow-hidden">
-            <CardContent className="h-full pt-4 overflow-auto">
-              <ProjectCard />
+          <Card className="h-[450px] overflow-hidden">
+            <CardContent className="h-full pt-4 overflow-y-auto overflow-x-hidden">
+              <ProjectCard filters={filters} />
             </CardContent>
           </Card>
 
           <Card className="h-auto lg:h-[200px]">
             <CardContent className="h-full pt-5">
-              <TotalProgress />
+              <TotalProgress dashboardData={data} loading={loading} error={error} />
             </CardContent>
           </Card>
 
@@ -63,12 +65,11 @@ export default function UserDashboard() {
 
         </div>
 
-   
         <div className="flex flex-col gap-4 lg:col-span-4">
 
           <Card className="h-auto lg:h-[450px]">
             <CardContent className="h-full pt-4">
-              <TaskUser />
+              <TaskUser dashboardData={data} loading={loading} error={error} />
             </CardContent>
           </Card>
 
