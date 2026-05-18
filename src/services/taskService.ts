@@ -33,6 +33,7 @@ export async function getProjectTasks(
   const response = await fetch(
     `${API_URL}/projects/${projectId}/tasks`,
     {
+      method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -53,6 +54,7 @@ export async function getSprintTasks(
   const response = await fetch(
     `${API_URL}/sprints/${sprintId}/tasks`,
     {
+      method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -73,6 +75,7 @@ export async function getTaskById(
   const response = await fetch(
     `${API_URL}/tasks/${taskId}`,
     {
+      method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -140,14 +143,20 @@ export async function getMyTasks(
 
   const queryParams = new URLSearchParams()
 
-  if (status) queryParams.append("status", status)
-  if (priority) queryParams.append("priority", priority)
+  if (status) {
+    queryParams.append("status", status)
+  }
+
+  if (priority) {
+    queryParams.append("priority", priority)
+  }
 
   if (queryParams.toString()) {
     url += `?${queryParams.toString()}`
   }
 
   const response = await fetch(url, {
+    method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
     },
