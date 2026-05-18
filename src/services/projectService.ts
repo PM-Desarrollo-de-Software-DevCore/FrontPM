@@ -1,13 +1,55 @@
 import type { Project } from '@/types/project';
+import { getToken } from '@/lib/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+function convertDateToISO(dateString: string): string {
+  if (!dateString) return "";
+  if (dateString.includes("T")) return dateString;
+  const date = new Date(`${dateString}T00:00:00Z`);
+  return date.toISOString();
+}
+
+function getAuthHeaders(): Record<string, string> {
+  const token = getToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+}
+
+function projectToBackendFormat(project: any) {
+  return {
+    name: project.name,
+    description: project.description,
+    start_date: convertDateToISO(project.startDate),
+    end_date: convertDateToISO(project.endDate),
+    priority: project.priority?.toLowerCase(),
+    status: project.status?.toLowerCase(),
+  };
+}
+
+
+function projectFromBackendFormat(data: any): Project {
+  return {
+    id: data.id || data.id_project,
+    name: data.name,
+    description: data.description,
+    startDate: data.start_date,
+    endDate: data.end_date,
+    priority: data.priority?.charAt(0).toUpperCase() + data.priority?.slice(1) || 'Medium',
+    status: data.status?.charAt(0).toUpperCase() + data.status?.slice(1) || 'Planning',
+    progress: data.progress || 0,
+    tasks: data.tasks || 0,
+    owner: data.owner || '',
+    team: data.team || [],
+  };
+}
 
 export async function getProjects(): Promise<Project[]> {
   const response = await fetch(`${API_URL}/projects`, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: getAuthHeaders(),
     cache: 'no-store',
   });
 
@@ -15,23 +57,62 @@ export async function getProjects(): Promise<Project[]> {
     throw new Error('No se pudieron obtener los proyectos');
   }
 
-  return response.json();
+  const data = await response.json();
+  const projects = Array.isArray(data) ? data : data.data || [];
+  return projects.map(projectFromBackendFormat);
 }
 
-export async function createProject(project: Omit<Project, 'id'>): Promise<Project> {
-  const response = await fetch(`${API_URL}/projects`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(project),
+export async function getProjectById(projectId: string): Promise<Project> {
+  const response = await fetch(`${API_URL}/projects/${projectId}`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+    cache: 'no-store',
   });
 
   if (!response.ok) {
-    throw new Error('No se pudo crear el proyecto');
+    throw new Error('No se pudo obtener el proyecto');
   }
 
-  return response.json();
+  const data = await response.json();
+  const project = data.data || data;
+  return projectFromBackendFormat(project);
+}
+
+export async function createProject(project: Omit<Project, 'id' | 'progress' | 'tasks' | 'owner' | 'team'>): Promise<Project> {
+  const backendData = projectToBackendFormat(project);
+
+  const response = await fetch(`${API_URL}/projects`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(backendData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'No se pudo crear el proyecto');
+  }
+
+  const data = await response.json();
+  const createdProject = data.data || data;
+  return projectFromBackendFormat(createdProject);
+}
+
+export async function updateProject(projectId: string, project: Partial<Project>): Promise<Project> {
+  const backendData = projectToBackendFormat(project);
+  
+  const response = await fetch(`${API_URL}/projects/${projectId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(backendData),
+  });
+
+  if (!response.ok) {
+    throw new Error('No se pudo actualizar el proyecto');
+  }
+
+  const data = await response.json();
+  const updatedProject = data.data || data;
+  return projectFromBackendFormat(updatedProject);
 }
 
 export async function updateProjectStatus(
@@ -40,15 +121,26 @@ export async function updateProjectStatus(
 ): Promise<Project> {
   const response = await fetch(`${API_URL}/projects/${projectId}/status`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ status }),
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ status: status.toLowerCase() }),
   });
 
   if (!response.ok) {
     throw new Error('No se pudo actualizar el estado del proyecto');
   }
 
-  return response.json();
+  const data = await response.json();
+  const updatedProject = data.data || data;
+  return projectFromBackendFormat(updatedProject);
+}
+
+export async function deleteProject(projectId: string): Promise<void> {
+  const response = await fetch(`${API_URL}/projects/${projectId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error('No se pudo eliminar el proyecto');
+  }
 }
