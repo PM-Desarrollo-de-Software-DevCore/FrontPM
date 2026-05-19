@@ -1,9 +1,34 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Card } from "@/components/ui/card/card";
 import { Button } from "@/components/ui/Button/button";
 import TaskChart from "@/components/ui/graphs/taskResume";
+import { getGlobalLeaderboard, LeaderboardEntry } from "@/services/leaderboardService";
 
 export default function ProfileDashboard() {
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getGlobalLeaderboard(5)
+      .then((data) => {
+        if (!cancelled) setLeaderboard(data);
+      })
+      .catch((err: Error) => {
+        if (!cancelled) setLeaderboardError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLeaderboardLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="w-full px-4 sm:px-6 lg:px-10 pt-0 pb-4 max-w-[1400px] mx-auto overflow-x-hidden">
 
@@ -13,12 +38,12 @@ export default function ProfileDashboard() {
 
           <Card className="rounded-2xl shadow-sm p-4 sm:p-6 text-center border border-gray-100">
             <div className="flex flex-col items-center gap-3">
-              
+
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-[3px] border-pink-500 overflow-hidden">
-                <Image 
-                  src="/images/persona.png" 
-                  alt="profile" 
-                  width={100} 
+                <Image
+                  src="/images/persona.png"
+                  alt="profile"
+                  width={100}
                   height={100}
                   className="object-cover"
                 />
@@ -79,34 +104,42 @@ export default function ProfileDashboard() {
         <div className="md:col-span-6 lg:col-span-3 flex flex-col gap-4">
 
           <Card className="rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100">
-            
+
             <h2 className="font-semibold mb-4 text-sm sm:text-base">
               Leaderboard
             </h2>
 
-            <div className="flex flex-col gap-3 sm:gap-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex justify-between items-center">
-                  
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <Image
-                      src="/images/persona.png"
-                      alt="user"
-                      width={36}
-                      height={36}
-                      className="rounded-full w-8 h-8 sm:w-9 sm:h-9"
-                    />
-                    <span className="text-xs sm:text-sm">
-                      Yash Ghori
+            {leaderboardLoading ? (
+              <p className="text-xs sm:text-sm text-gray-500">Cargando...</p>
+            ) : leaderboardError ? (
+              <p className="text-xs sm:text-sm text-red-500">{leaderboardError}</p>
+            ) : leaderboard.length === 0 ? (
+              <p className="text-xs sm:text-sm text-gray-500">Sin datos todavía</p>
+            ) : (
+              <div className="flex flex-col gap-3 sm:gap-4">
+                {leaderboard.map((entry) => (
+                  <div key={entry.userId} className="flex justify-between items-center">
+
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <Image
+                        src={entry.profileImageUrl ?? "/images/persona.png"}
+                        alt={`${entry.name} ${entry.lastname}`}
+                        width={36}
+                        height={36}
+                        className="rounded-full w-8 h-8 sm:w-9 sm:h-9 object-cover"
+                      />
+                      <span className="text-xs sm:text-sm">
+                        {entry.name} {entry.lastname}
+                      </span>
+                    </div>
+
+                    <span className="text-xs sm:text-sm font-medium">
+                      {entry.points}
                     </span>
                   </div>
-
-                  <span className="text-xs sm:text-sm font-medium">
-                    19200
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </Card>
 
           <Card className="rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex flex-col items-center">
