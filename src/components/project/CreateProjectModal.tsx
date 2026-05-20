@@ -434,7 +434,7 @@ export default function CreateProjectModal({
             </div>
 
             <div>
-              <label className="mb-1 block text-sm text-zinc-600">
+              <label className="mb-1 block text-sm text-muted">
                 End Date
               </label>
               <input
@@ -443,7 +443,7 @@ export default function CreateProjectModal({
                 onChange={(e) =>
                   setForm({ ...form, endDate: e.target.value })
                 }
-                className="w-full rounded border p-3"
+                className="w-full rounded border border-border bg-card p-3 text-card-foreground"
                 required
                 disabled={loading}
               />
@@ -474,7 +474,7 @@ export default function CreateProjectModal({
                         key={user.id}
                         type="button"
                         onClick={() => handleSelectUser(user)}
-                        className="flex w-full items-center justify-between border-b border-zinc-100 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-zinc-50"
+                        className="flex w-full items-center justify-between border-b border-border px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted"
                       >
                         <span>{`${user.name} ${user.lastname}`.trim()}</span>
                         <span className="text-zinc-500">{user.email}</span>
@@ -493,7 +493,7 @@ export default function CreateProjectModal({
                   {selectedUsers.map((user) => (
                     <span
                       key={user.id}
-                      className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-700"
+                      className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground"
                     >
                       {`${user.name} ${user.lastname}`.trim() || user.email}
                       <select
@@ -501,7 +501,7 @@ export default function CreateProjectModal({
                         onChange={(e) =>
                           handleRoleChange(user.id, e.target.value as ProjectMemberRole)
                         }
-                        className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] text-zinc-700"
+                        className="rounded border border-border bg-card px-2 py-0.5 text-[11px] text-card-foreground"
                         disabled={loading}
                       >
                         <option value="developer">Developer</option>
@@ -511,7 +511,7 @@ export default function CreateProjectModal({
                       <button
                         type="button"
                         onClick={() => handleRemoveUser(user.id)}
-                        className="text-zinc-500 hover:text-zinc-800"
+                        className="text-muted hover:text-foreground"
                         aria-label={`Quitar ${user.name}`}
                         disabled={loading}
                       >

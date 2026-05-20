@@ -620,13 +620,13 @@ export default function CreateUserPage() {
         )}
 
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <h1 className="text-4xl font-bold text-slate-800">Users</h1>
+          <h1 className="text-4xl font-bold text-strong">Users</h1>
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as "az" | "za")}
-              className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-small text-slate-700 outline-none transition focus:border-slate-400"
+              className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-small text-muted outline-none transition focus:border-slate-400"
             >
               <option value="az">Alphabetical: A-Z</option>
               <option value="za">Alphabetical: Z-A</option>

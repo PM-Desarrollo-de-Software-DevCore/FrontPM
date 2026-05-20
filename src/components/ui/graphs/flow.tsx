@@ -91,10 +91,10 @@ export default function BurndownChart() {
     <div className="w-full h-full flex flex-col">
 
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">
+        <h3 className="text-lg font-semibold text-strong">
           Burndown
         </h3>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted">
           Progress of remaining tasks vs. ideal plan
         </p>
       </div>
