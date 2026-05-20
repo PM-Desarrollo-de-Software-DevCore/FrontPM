@@ -33,7 +33,7 @@ type Props = {
 
 export default function ThroughputChart({ filters }: Props) {
   const chartRef = useRef<any>(null)
-  const { data, loading, error } = useWeeklyProgress(filters)
+  const { data, loading, error } = useWeeklyProgress()
 
 
   const completedTasks = DAY_ORDER.map((day) => {
