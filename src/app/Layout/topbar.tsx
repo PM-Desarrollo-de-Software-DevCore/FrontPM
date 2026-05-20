@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth"
 import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined"
 import { getUserCompletedTodayCount } from "@/services/taskService"
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
+import { getUserProfileDetails } from "@/services/userService"
 
 export default function Topbar() {
   const [open, setOpen] = useState(false)
@@ -15,6 +16,7 @@ export default function Topbar() {
 
   const fullName = [user?.name, user?.lastname].filter(Boolean).join(" ") || "Usuario"
   const [completedToday, setCompletedToday] = useState<number>(0)
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -35,6 +37,30 @@ export default function Topbar() {
       cancelled = true
     }
   }, [user])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchProfileImage() {
+      if (!user?.id) {
+        setProfileImageUrl(null)
+        return
+      }
+
+      try {
+        const details = await getUserProfileDetails(user.id)
+        if (!cancelled) setProfileImageUrl(details.profileImageUrl)
+      } catch {
+        if (!cancelled) setProfileImageUrl(null)
+      }
+    }
+
+    fetchProfileImage()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-sidebar-border bg-sidebar shadow-sm">
@@ -99,7 +125,7 @@ export default function Topbar() {
             <div className="relative">
                 <button type="button" onClick={() => setOpen(!open)} className="block">
                   <FramedAvatar
-                    src={user?.avatar ?? "/images/persona.png"}
+                    src={profileImageUrl ?? user?.avatar ?? "/images/persona.png"}
                     alt="User"
                     size={36}
                     completedTodayCount={completedToday}

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import EditIcon from "@mui/icons-material/Edit"
 import DocumentScannerIcon from "@mui/icons-material/DocumentScanner"
 import { API_BASE_URL, getToken } from "@/lib/auth"
+import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
+import { deleteUserProfileImage, uploadUserProfileImage } from "@/services/userService"
 
 type UserPreview = {
   id: string
@@ -18,6 +20,7 @@ type UserPreview = {
   skills: string[]
   role: "user" | "admin"
   createdAt: string
+  profileImageUrl?: string | null
   status?: "Editing" | "Active"
 }
 
@@ -46,6 +49,7 @@ type BackendUser = {
   globalRole?: "user" | "admin"
   role?: "user" | "admin"
   createdAt?: string | Date
+  profileImageUrl?: string | null
 }
 
 type UserMutationPayload = {
@@ -115,6 +119,10 @@ export default function CreateUserPage() {
   const [saveAlertMessage, setSaveAlertMessage] = useState<string | null>(null)
   const [isLoadingCV, setIsLoadingCV] = useState(false)
   const [cvError, setCVError] = useState<string | null>(null)
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null)
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
+  const [profileImageError, setProfileImageError] = useState<string | null>(null)
+  const [profileImageObjectUrl, setProfileImageObjectUrl] = useState<string | null>(null)
   const [errors, setErrors] = useState({
     email: "",
     phone: "",
@@ -133,6 +141,14 @@ export default function CreateUserPage() {
 
     return () => window.clearTimeout(timeoutId)
   }, [saveAlertMessage])
+
+  useEffect(() => {
+    return () => {
+      if (profileImageObjectUrl) {
+        URL.revokeObjectURL(profileImageObjectUrl)
+      }
+    }
+  }, [profileImageObjectUrl])
 
   useEffect(() => {
     const element = formColumnRef.current
@@ -187,6 +203,13 @@ export default function CreateUserPage() {
       designation: "",
       skills: "",
     })
+    if (profileImageObjectUrl) {
+      URL.revokeObjectURL(profileImageObjectUrl)
+      setProfileImageObjectUrl(null)
+    }
+    setProfileImageFile(null)
+    setProfileImagePreview(null)
+    setProfileImageError(null)
   }
 
   const loadUserIntoForm = (user: UserPreview) => {
@@ -213,6 +236,13 @@ export default function CreateUserPage() {
       designation: "",
       skills: "",
     })
+    if (profileImageObjectUrl) {
+      URL.revokeObjectURL(profileImageObjectUrl)
+      setProfileImageObjectUrl(null)
+    }
+    setProfileImageFile(null)
+    setProfileImagePreview(user.profileImageUrl ?? null)
+    setProfileImageError(null)
   }
 
   const handleDeleteUser = (userId: string) => {
@@ -283,6 +313,7 @@ export default function CreateUserPage() {
           skills: u.skill ? u.skill.split(',').map((s: string) => s.trim()) : [],
           role: u.globalRole === 'admin' ? 'admin' : 'user',
           createdAt: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : getTodayDate(),
+          profileImageUrl: u.profileImageUrl ?? null,
         }))
 
         setUsers(mapped)
@@ -366,6 +397,76 @@ export default function CreateUserPage() {
       setIsLoadingCV(false)
       // Reset the file input
       e.target.value = ""
+    }
+  }
+
+  const handleProfileImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp"]
+    if (!allowedMimeTypes.includes(file.type)) {
+      setProfileImageError("Please upload a JPG, PNG, or WEBP image")
+      e.target.value = ""
+      return
+    }
+
+    if (profileImageObjectUrl) {
+      URL.revokeObjectURL(profileImageObjectUrl)
+    }
+
+    const objectUrl = URL.createObjectURL(file)
+    setProfileImageObjectUrl(objectUrl)
+    setProfileImageFile(file)
+    setProfileImagePreview(objectUrl)
+    setProfileImageError(null)
+
+    e.target.value = ""
+  }
+
+  const handleRemoveProfileImage = async () => {
+    setProfileImageError(null)
+
+    if (profileImageObjectUrl) {
+      URL.revokeObjectURL(profileImageObjectUrl)
+      setProfileImageObjectUrl(null)
+    }
+
+    // Create mode: only clear local preview/file
+    if (formMode === "create" || !selectedUserId) {
+      setProfileImageFile(null)
+      setProfileImagePreview(null)
+      return
+    }
+
+    // Edit mode with unsaved file: revert to saved image without backend call
+    if (profileImageFile) {
+      const currentUser = users.find((user) => user.id === selectedUserId)
+      setProfileImageFile(null)
+      setProfileImagePreview(currentUser?.profileImageUrl ?? null)
+      return
+    }
+
+    try {
+      const updated = await deleteUserProfileImage(selectedUserId)
+
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === selectedUserId
+            ? {
+                ...user,
+                profileImageUrl: updated.profileImageUrl,
+              }
+            : user
+        )
+      )
+
+      setProfileImagePreview(updated.profileImageUrl)
+      setSaveAlertMessage("Profile image removed successfully.")
+    } catch (error) {
+      setProfileImageError(
+        error instanceof Error ? error.message : "Profile image could not be removed"
+      )
     }
   }
 
@@ -453,6 +554,16 @@ export default function CreateUserPage() {
               skills: finalUserData.skill ? finalUserData.skill.split(',').map((s: string) => s.trim()) : form.skills,
               role: finalUserData.globalRole || finalUserData.role || (form.role === 'admin' ? 'admin' : 'user'),
               createdAt: finalUserData.createdAt ? new Date(finalUserData.createdAt).toISOString().split('T')[0] : getTodayDate(),
+              profileImageUrl: finalUserData.profileImageUrl ?? null,
+            }
+
+            if (profileImageFile && token) {
+              try {
+                const updatedProfile = await uploadUserProfileImage(mapped.id, profileImageFile)
+                mapped.profileImageUrl = updatedProfile.profileImageUrl
+              } catch {
+                setProfileImageError("Profile image could not be uploaded")
+              }
             }
 
             setUsers((prev) => [mapped, ...prev])
@@ -463,6 +574,7 @@ export default function CreateUserPage() {
             id: String(Date.now()),
             ...form,
             createdAt: getTodayDate(),
+            profileImageUrl: profileImagePreview,
             status: 'Active',
           }
           setUsers((prev) => [newUser, ...prev])
@@ -482,6 +594,17 @@ export default function CreateUserPage() {
           const body = await res.json()
           if (body.success && body.data) {
             const u = body.data
+
+            let uploadedImageUrl: string | null | undefined = u.profileImageUrl ?? null
+            if (profileImageFile) {
+              try {
+                const updatedProfile = await uploadUserProfileImage(selectedUserId, profileImageFile)
+                uploadedImageUrl = updatedProfile.profileImageUrl
+              } catch {
+                setProfileImageError("Profile image could not be uploaded")
+              }
+            }
+
             setUsers((prev) => prev.map((user) => (user.id === selectedUserId ? {
               id: String(u.id),
               firstName: u.name || form.firstName,
@@ -495,7 +618,15 @@ export default function CreateUserPage() {
               skills: u.skill ? u.skill.split(',').map((s: string) => s.trim()) : form.skills,
               role: u.globalRole === 'admin' ? 'admin' : 'user',
               createdAt: user.createdAt,
+              profileImageUrl: uploadedImageUrl,
             } : user)))
+
+            if (profileImageObjectUrl) {
+              URL.revokeObjectURL(profileImageObjectUrl)
+              setProfileImageObjectUrl(null)
+            }
+            setProfileImageFile(null)
+            setProfileImagePreview(uploadedImageUrl ?? null)
           }
         } else {
           // fallback local update
@@ -503,6 +634,7 @@ export default function CreateUserPage() {
             ...user,
             ...form,
             password: form.password || user.password,
+            profileImageUrl: profileImagePreview,
           }) : user))
         }
 
@@ -671,9 +803,13 @@ export default function CreateUserPage() {
                     } overflow-hidden`}
                   >
                     <div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-center">
-                      <div className="flex shrink-0 h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-slate-700">
-                        {user.firstName.charAt(0)}
-                        {user.lastName.charAt(0)}
+                      <div className="shrink-0">
+                        <FramedAvatar
+                          src={user.profileImageUrl ?? "/images/persona.png"}
+                          alt={`${user.firstName} ${user.lastName}`}
+                          size={48}
+                          frameSize="large"
+                        />
                       </div>
                       <div className="flex min-w-0 w-full items-center justify-between gap-5">
                         <div className="min-w-0">
@@ -782,32 +918,71 @@ export default function CreateUserPage() {
                   />
                 </div>
 
-                <div className="flex min-h-20 flex-col">
-                  <label className="mb-2 block text-sm font-medium text-slate-500">
-                    Upload CV (PDF)
-                  </label>
-                  <label className="flex w-full cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center transition hover:border-slate-400 hover:bg-slate-100">
-                    <DocumentScannerIcon className="mb-4 text-5xl text-slate-700" fontSize="inherit" />
-                    <span className="text-base font-semibold text-slate-800">
-                      Upload CV
-                    </span>
-                    <span className="mt-2 text-sm text-slate-500">
-                      PDF only. It will extract your information and auto-fill the form.
-                    </span>
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      onChange={handleCVUpload}
-                      disabled={isLoadingCV}
-                      className="sr-only"
-                    />
-                  </label>
-                  {isLoadingCV && (
-                    <p className="mt-2 text-sm text-blue-600">Processing CV...</p>
-                  )}
-                  {cvError && (
-                    <p className="mt-2 text-sm text-red-500">{cvError}</p>
-                  )}
+                <div className="md:col-span-2 grid grid-cols-1 gap-5 lg:grid-cols-2">
+                  <div className="flex min-h-20 flex-col">
+                    <label className="mb-2 block text-sm font-medium text-slate-500">
+                      Upload CV (PDF)
+                    </label>
+                    <label className="flex w-full cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center transition hover:border-slate-400 hover:bg-slate-100">
+                      <DocumentScannerIcon className="mb-4 text-5xl text-slate-700" fontSize="inherit" />
+                      <span className="text-base font-semibold text-slate-800">
+                        Upload CV
+                      </span>
+                      <span className="mt-2 text-sm text-slate-500">
+                        PDF only. It will extract your information and auto-fill the form.
+                      </span>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={handleCVUpload}
+                        disabled={isLoadingCV}
+                        className="sr-only"
+                      />
+                    </label>
+                    {isLoadingCV && (
+                      <p className="mt-2 text-sm text-blue-600">Processing CV...</p>
+                    )}
+                    {cvError && (
+                      <p className="mt-2 text-sm text-red-500">{cvError}</p>
+                    )}
+                  </div>
+
+                  <div className="flex min-h-20 flex-col">
+                    <label className="mb-2 block text-sm font-medium text-slate-500">
+                      Upload Profile Image
+                    </label>
+                    <label className="flex w-full cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center transition hover:border-slate-400 hover:bg-slate-100">
+                      <FramedAvatar
+                        src={profileImagePreview ?? "/images/persona.png"}
+                        alt="Profile Preview"
+                        size={64}
+                        frameSize="large"
+                      />
+                      <span className="mt-4 text-base font-semibold text-slate-800">
+                        Upload Profile Image
+                      </span>
+                      <span className="mt-2 text-sm text-slate-500">
+                        JPG, PNG or WEBP. Recommended square image.
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleProfileImageUpload}
+                        className="sr-only"
+                      />
+                    </label>
+                    {profileImageError && (
+                      <p className="mt-2 text-sm text-red-500">{profileImageError}</p>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleRemoveProfileImage}
+                      className="mt-3 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                    >
+                      Remove Profile Image
+                    </button>
+                  </div>
                 </div>
 
                 <div>
