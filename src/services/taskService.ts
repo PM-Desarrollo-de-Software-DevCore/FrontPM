@@ -60,6 +60,30 @@ function mapBackendTask(
   }
 }
 
+async function readBackendErrorMessage(response: Response, fallbackMessage: string) {
+  const text = await response.text()
+
+  if (!text) {
+    return fallbackMessage
+  }
+
+  try {
+    const parsedBody = JSON.parse(text) as Record<string, unknown>
+    const messageFromBody =
+      typeof parsedBody.message === "string"
+        ? parsedBody.message
+        : null
+    const errorFromBody =
+      typeof parsedBody.error === "string"
+        ? parsedBody.error
+        : null
+
+    return messageFromBody || errorFromBody || fallbackMessage
+  } catch {
+    return text || fallbackMessage
+  }
+}
+
 export async function getProjectTasks(
   projectId: string,
   token: string
@@ -199,21 +223,15 @@ export async function updateTask(
     }
   )
 
-  const text =
-    await response.text()
-
-  console.log(
-    "UPDATE TASK RESPONSE:",
-    text
-  )
-
   if (!response.ok) {
-    throw new Error(
-      "Error updating task"
-    )
+    const backendMessage = await readBackendErrorMessage(response, "Error updating task")
+    throw new Error(backendMessage)
   }
 
-  return JSON.parse(text)
+  const text = await response.text()
+  console.log("UPDATE TASK RESPONSE:", text)
+
+  return text ? JSON.parse(text) : null
 }
 
 export async function deleteTask(
@@ -232,9 +250,8 @@ export async function deleteTask(
   )
 
   if (!response.ok) {
-    throw new Error(
-      "Error deleting task"
-    )
+    const backendMessage = await readBackendErrorMessage(response, "Error deleting task")
+    throw new Error(backendMessage)
   }
 
   return response.json()
