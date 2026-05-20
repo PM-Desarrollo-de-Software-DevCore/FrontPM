@@ -9,6 +9,9 @@ type BackendUser = {
   email?: string;
   globalRole?: string;
   role?: string;
+  profileImageUrl?: string | null;
+  skill?: string | null;
+  area?: string | null;
 };
 
 export interface UserOption {
@@ -83,6 +86,14 @@ function getAuthHeaders(): Record<string, string> {
   };
 }
 
+function getMultipartAuthHeaders(): Record<string, string> {
+  const token = getToken();
+
+  return {
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+}
+
 export async function getNonAdminUsers(): Promise<UserOption[]> {
   const response = await fetch(`${API_URL}/users`, {
     method: "GET",
@@ -151,6 +162,60 @@ export async function getUserTechnologies(userId: string): Promise<UserTechnolog
 
   const data = await response.json();
   return Array.isArray(data) ? data : data.data || [];
+}
+
+export async function uploadUserProfileImage(userId: string, imageFile: File): Promise<UserProfileDetails> {
+  const formData = new FormData();
+  formData.append("image", imageFile);
+
+  const response = await fetch(`${API_URL}/users/${userId}/profile-image`, {
+    method: "POST",
+    headers: getMultipartAuthHeaders(),
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorPayload = await response.json().catch(() => ({}));
+    throw new Error(errorPayload.message || "No se pudo subir la imagen de perfil");
+  }
+
+  const data = await response.json();
+  const user = data.data || data;
+
+  return {
+    id: user.id,
+    name: user.name ?? "",
+    lastname: user.lastname ?? "",
+    email: user.email ?? "",
+    skill: user.skill ?? null,
+    area: user.area ?? null,
+    profileImageUrl: user.profileImageUrl ?? null,
+  };
+}
+
+export async function deleteUserProfileImage(userId: string): Promise<UserProfileDetails> {
+  const response = await fetch(`${API_URL}/users/${userId}/profile-image`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorPayload = await response.json().catch(() => ({}));
+    throw new Error(errorPayload.message || "No se pudo eliminar la imagen de perfil");
+  }
+
+  const data = await response.json();
+  const user = data.data || data;
+
+  return {
+    id: user.id,
+    name: user.name ?? "",
+    lastname: user.lastname ?? "",
+    email: user.email ?? "",
+    skill: user.skill ?? null,
+    area: user.area ?? null,
+    profileImageUrl: user.profileImageUrl ?? null,
+  };
 }
 
 export async function getProjectMembers(
