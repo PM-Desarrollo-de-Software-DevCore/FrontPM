@@ -271,6 +271,42 @@ type CompletedTodayCountItem = {
   count?: number
 }
 
+type TaskListResponse = {
+  success?: boolean
+  data?: unknown[]
+  tasks?: unknown[]
+}
+
+export async function getMyTasks() {
+  try {
+    const token = getToken()
+    if (!token) {
+      return []
+    }
+
+    const response = await fetch(`${API_URL}/users/me/tasks`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      return []
+    }
+
+    const data: TaskListResponse = await response.json()
+    const tasks = Array.isArray(data) ? data : data.data || data.tasks || []
+
+    return tasks.map((task) => mapBackendTask(task as BackendTask))
+  } catch (error) {
+    console.error("GET MY TASKS ERROR:", error)
+    return []
+  }
+}
+
 /*
   Obtener el número de tareas completadas hoy por el usuario autenticado.
   Usa `/users/me/tasks`, que es el endpoint real del backend.
