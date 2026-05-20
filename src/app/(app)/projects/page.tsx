@@ -218,6 +218,7 @@ export default function ProjectsPage() {
         open={Boolean(editingProject)}
         onClose={() => setEditingProject(null)}
         onUpdate={handleSaveProject}
+        showTrigger={false}
       />
     </main>
   );
