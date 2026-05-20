@@ -1,13 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { DragDropContext } from "@hello-pangea/dnd"
+import { useCallback, useEffect, useState } from "react"
+import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
 import { useParams } from "next/navigation"
 
 import SprintBoard from "@/components/sprints/SprintBoard"
 import CreateSprintModal from "@/components/sprints/CreateSprintModal"
 import CreateTaskModal from "@/components/tasks/CreateTaskModal"
 import TaskDetailsModal from "@/components/tasks/TaskDetailsModal"
+import { useNotification } from "@/components/ui/notifications/NotificationProvider"
 
 import { getProjects } from "@/services/projectService"
 import {
@@ -27,19 +28,40 @@ import { slugify } from "@/lib/slug"
 import { Sprint } from "@/types/sprint"
 import { Task } from "@/types/task"
 
+interface ProjectMember {
+  id: string
+  name: string
+  lastname: string
+}
+
+interface CreateTaskContext {
+  sprintId: string | null
+  status: Task["status"]
+}
+
 export default function TasksPage() {
+  const { notifyError, notifySuccess } = useNotification()
   const params = useParams()
   const projectId = params.projectId as string
 
   const [resolvedProjectId, setResolvedProjectId] = useState("")
   const [tasks, setTasks] = useState<Task[]>([])
   const [sprints, setSprints] = useState<Sprint[]>([])
-  const [users, setUsers] = useState<any[]>([])
-  const [token, setToken] = useState("")
+  const [users, setUsers] = useState<ProjectMember[]>([])
+  const [token] = useState(() => {
+    if (typeof window === "undefined") {
+      return ""
+    }
+
+    return localStorage.getItem("authToken") || ""
+  })
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isCreateSprintModalOpen, setIsCreateSprintModalOpen] = useState(false)
+  const [createTaskContext, setCreateTaskContext] = useState<CreateTaskContext>({
+    sprintId: null,
+    status: "pending",
+  })
 
   useEffect(() => {
     const resolveProject = async () => {
@@ -64,21 +86,11 @@ export default function TasksPage() {
     resolveProject()
   }, [projectId])
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem("authToken")
-
-    if (storedToken) {
-      setToken(storedToken)
+  const loadData = useCallback(async () => {
+    if (!token || !resolvedProjectId) {
+      return
     }
-  }, [])
 
-  useEffect(() => {
-    if (token && resolvedProjectId) {
-      loadData()
-    }
-  }, [token, resolvedProjectId])
-
-  const loadData = async () => {
     try {
       const [taskData, sprintData, memberData] = await Promise.all([
         getProjectTasks(resolvedProjectId, token),
@@ -90,34 +102,51 @@ export default function TasksPage() {
       setSprints(sprintData)
       setUsers(memberData)
     } catch (error) {
-      console.error(error)
+      notifyError("Data could not be loaded", "Please try again.")
     }
-  }
+  }, [notifyError, resolvedProjectId, token])
 
-  const handleDragEnd = async (result: any) => {
+  useEffect(() => {
+    void loadData()
+  }, [loadData])
+
+  const handleDragEnd = async (result: DropResult) => {
     if (!result.destination) return
 
     const taskId = result.draggableId
     const destination = result.destination.droppableId
-    const [sprintId, status] = destination.split(":")
+    const [sprintId, statusRaw] = destination.split(":")
 
-    const targetSprint = sprints.find((sprint) => sprint.id === sprintId)
-    if (targetSprint?.status === "completed") {
-      alert("Tasks cannot be moved into a completed sprint. Please move the task to an active sprint instead.")
+    if (
+      statusRaw !== "pending" &&
+      statusRaw !== "in_progress" &&
+      statusRaw !== "completed"
+    ) {
       return
     }
 
-    const updatedTasks = tasks.map((task) =>
-      task.id === taskId
-        ? {
-            ...task,
-            status,
-            id_sprint: sprintId === "backlog" ? null : sprintId,
-          }
-        : task
-    )
+    const status: Task["status"] = statusRaw
 
-    setTasks(updatedTasks)
+    const targetSprint = sprints.find((sprint) => sprint.id === sprintId)
+    if (targetSprint?.status === "completed") {
+      notifyError(
+        "Cannot move task",
+        "Tasks cannot be moved into a completed sprint."
+      )
+      return
+    }
+
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              status,
+              id_sprint: sprintId === "backlog" ? null : sprintId,
+            }
+          : task
+      )
+    )
 
     try {
       await updateTask(
@@ -129,39 +158,72 @@ export default function TasksPage() {
         token
       )
     } catch (error) {
-      console.error(error)
-      loadData()
+      await loadData()
+      notifyError(
+        "Task could not be moved",
+        error instanceof Error ? error.message : "Please try again."
+      )
     }
   }
 
   const handleCreateTask = async (taskData: Partial<Task>) => {
     try {
-      const cleanedTaskData = {
-        title: taskData.title,
+      const trimmedTitle = (taskData.title || "").trim()
+      if (!trimmedTitle) {
+        notifyError("Task not created", "Task title is required.")
+        return
+      }
+
+      const shouldCreateInBacklog = !taskData.assignedTo || !taskData.end_date
+
+      const cleanedTaskData: Partial<Task> = {
+        title: trimmedTitle,
         description: taskData.description,
         priority: taskData.priority,
-        status: taskData.status,
-        progress: taskData.progress,
-        end_date: taskData.end_date,
-        ...(taskData.id_sprint ? { id_sprint: taskData.id_sprint } : {}),
+        status: shouldCreateInBacklog ? "pending" : taskData.status,
+        progress: taskData.progress ?? 0,
+        ...(taskData.end_date ? { end_date: taskData.end_date } : {}),
+        ...(shouldCreateInBacklog ? { id_sprint: null } : {}),
+        ...(!shouldCreateInBacklog && taskData.id_sprint ? { id_sprint: taskData.id_sprint } : {}),
         ...(taskData.assignedTo ? { assignedTo: taskData.assignedTo } : {}),
       }
 
       await createTask(resolvedProjectId, cleanedTaskData, token)
       setIsCreateModalOpen(false)
-      loadData()
+      await loadData()
+      notifySuccess(
+        "Task created",
+        shouldCreateInBacklog
+          ? "Created in backlog because it is missing assignment or due date."
+          : "Task was created successfully."
+      )
     } catch (error) {
-      console.error(error)
+      notifyError(
+        "Task could not be created",
+        error instanceof Error ? error.message : "Please try again."
+      )
     }
+  }
+
+  const handleOpenCreateTask = (sprintId: string, status: Task["status"]) => {
+    setCreateTaskContext({
+      sprintId: sprintId === "backlog" ? null : sprintId,
+      status,
+    })
+    setIsCreateModalOpen(true)
   }
 
   const handleCreateSprint = async (sprintData: Partial<Sprint>) => {
     try {
       await createSprint(resolvedProjectId, sprintData, token)
       setIsCreateSprintModalOpen(false)
-      loadData()
+      await loadData()
+      notifySuccess("Sprint created", "The sprint was created successfully.")
     } catch (error) {
-      console.error(error)
+      notifyError(
+        "Sprint could not be created",
+        error instanceof Error ? error.message : "Please try again."
+      )
     }
   }
 
@@ -174,13 +236,14 @@ export default function TasksPage() {
 
     try {
       await deleteTask(taskId, token)
-      setTasks(tasks.filter((task) => task.id !== taskId))
-      setIsTaskModalOpen(false)
+      setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId))
       setSelectedTask(null)
-      alert("Task deleted successfully.")
+      notifySuccess("Task deleted", "The task was removed successfully.")
     } catch (error) {
-      console.error(error)
-      alert("An error occurred while deleting the task.")
+      notifyError(
+        "Task could not be deleted",
+        error instanceof Error ? error.message : "An unexpected error occurred."
+      )
     }
   }
 
@@ -194,26 +257,34 @@ export default function TasksPage() {
         token
       )
 
-      setTasks(
-        tasks.map((task) =>
+      setTasks((currentTasks) =>
+        currentTasks.map((task) =>
           task.id === taskId ? { ...task, assignedTo: userId } : task
         )
       )
+      notifySuccess("Task updated", "The assignee was updated successfully.")
     } catch (error) {
-      console.error(error)
+      notifyError(
+        "Task could not be updated",
+        error instanceof Error ? error.message : "Please try again."
+      )
     }
   }
 
   const handleUpdateSprint = async (sprintId: string, data: Partial<Sprint>) => {
     try {
       await updateSprint(sprintId, data, token)
-      setSprints(
-        sprints.map((sprint) =>
+      setSprints((currentSprints) =>
+        currentSprints.map((sprint) =>
           sprint.id === sprintId ? { ...sprint, ...data } : sprint
         )
       )
+      notifySuccess("Sprint updated", "The sprint was updated successfully.")
     } catch (error) {
-      console.error(error)
+      notifyError(
+        "Sprint could not be updated",
+        error instanceof Error ? error.message : "Please try again."
+      )
     }
   }
 
@@ -238,21 +309,24 @@ export default function TasksPage() {
       }
 
       await updateSprint(sprintId, { status: "completed" }, token)
-      setSprints(
-        sprints.map((sprint) =>
+      setSprints((currentSprints) =>
+        currentSprints.map((sprint) =>
           sprint.id === sprintId ? { ...sprint, status: "completed" } : sprint
         )
       )
 
-      loadData()
+      await loadData()
+      notifySuccess("Sprint completed", "The sprint was completed successfully.")
     } catch (error) {
-      console.error(error)
+      notifyError(
+        "Sprint could not be completed",
+        error instanceof Error ? error.message : "Please try again."
+      )
     }
   }
 
   const handleOpenTask = (task: Task) => {
     setSelectedTask(task)
-    setIsTaskModalOpen(true)
   }
 
   return (
@@ -276,10 +350,11 @@ export default function TasksPage() {
           tasks={tasks}
           users={users}
           onTaskClickAction={handleOpenTask}
-          onCreateTaskAction={() => setIsCreateModalOpen(true)}
+          onCreateTaskAction={handleOpenCreateTask}
           onTaskMoveAction={handleDragEnd}
           onUpdateSprintAction={handleUpdateSprint}
           onCompleteSprintAction={handleCompleteSprint}
+          collapseStorageKey={`tasks-collapsed:${resolvedProjectId || projectId}`}
         />
       </DragDropContext>
 
@@ -287,6 +362,8 @@ export default function TasksPage() {
         open={isCreateModalOpen}
         projectId={resolvedProjectId}
         users={users}
+        initialSprintId={createTaskContext.sprintId}
+        initialStatus={createTaskContext.status}
         onCloseAction={() => setIsCreateModalOpen(false)}
         onSubmitAction={handleCreateTask}
       />
@@ -303,7 +380,6 @@ export default function TasksPage() {
           projectId={resolvedProjectId}
           users={users}
           onCloseAction={() => {
-            setIsTaskModalOpen(false)
             setSelectedTask(null)
           }}
           onDeleteAction={handleDeleteTask}

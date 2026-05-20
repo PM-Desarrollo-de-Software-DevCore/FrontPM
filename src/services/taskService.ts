@@ -60,6 +60,30 @@ function mapBackendTask(
   }
 }
 
+async function readBackendErrorMessage(response: Response, fallbackMessage: string) {
+  const text = await response.text()
+
+  if (!text) {
+    return fallbackMessage
+  }
+
+  try {
+    const parsedBody = JSON.parse(text) as Record<string, unknown>
+    const messageFromBody =
+      typeof parsedBody.message === "string"
+        ? parsedBody.message
+        : null
+    const errorFromBody =
+      typeof parsedBody.error === "string"
+        ? parsedBody.error
+        : null
+
+    return messageFromBody || errorFromBody || fallbackMessage
+  } catch {
+    return text || fallbackMessage
+  }
+}
+
 export async function getProjectTasks(
   projectId: string,
   token: string
@@ -137,17 +161,35 @@ export async function createTask(
     const text =
       await response.text()
 
-    if (!response.ok) {
-      console.error(
-        text
-      )
-
-      throw new Error(
-        "Error creating task"
-      )
+    let parsedBody: Record<string, unknown> | null = null
+    try {
+      parsedBody = text ? JSON.parse(text) : null
+    } catch {
+      parsedBody = null
     }
 
-    return JSON.parse(text)
+    if (!response.ok) {
+      console.error(text)
+
+      const messageFromBody =
+        typeof parsedBody?.message === "string"
+          ? parsedBody.message
+          : null
+
+      const errorFromBody =
+        typeof parsedBody?.error === "string"
+          ? parsedBody.error
+          : null
+
+      const backendMessage =
+        messageFromBody ||
+        errorFromBody ||
+        "Error creating task"
+
+      throw new Error(backendMessage)
+    }
+
+    return parsedBody ?? text
   } catch (error) {
     console.error(
       "CREATE TASK ERROR:",
@@ -181,21 +223,15 @@ export async function updateTask(
     }
   )
 
-  const text =
-    await response.text()
-
-  console.log(
-    "UPDATE TASK RESPONSE:",
-    text
-  )
-
   if (!response.ok) {
-    throw new Error(
-      "Error updating task"
-    )
+    const backendMessage = await readBackendErrorMessage(response, "Error updating task")
+    throw new Error(backendMessage)
   }
 
-  return JSON.parse(text)
+  const text = await response.text()
+  console.log("UPDATE TASK RESPONSE:", text)
+
+  return text ? JSON.parse(text) : null
 }
 
 export async function deleteTask(
@@ -214,9 +250,8 @@ export async function deleteTask(
   )
 
   if (!response.ok) {
-    throw new Error(
-      "Error deleting task"
-    )
+    const backendMessage = await readBackendErrorMessage(response, "Error deleting task")
+    throw new Error(backendMessage)
   }
 
   return response.json()
@@ -237,7 +272,56 @@ function isSameCalendarDay(dateValue?: string | null) {
 
 type MeTaskResponse = {
   success?: boolean
-  data?: any[]
+  data?: unknown[]
+}
+
+type CompletedTodayTask = {
+  status?: string
+  completedAt?: string | null
+  completed_at?: string | null
+  updatedAt?: string | null
+  updated_at?: string | null
+}
+
+type CompletedTodayCountItem = {
+  userId?: string
+  count?: number
+}
+
+type TaskListResponse = {
+  success?: boolean
+  data?: unknown[]
+  tasks?: unknown[]
+}
+
+export async function getMyTasks() {
+  try {
+    const token = getToken()
+    if (!token) {
+      return []
+    }
+
+    const response = await fetch(`${API_URL}/users/me/tasks`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      return []
+    }
+
+    const data: TaskListResponse = await response.json()
+    const tasks = Array.isArray(data) ? data : data.data || data.tasks || []
+
+    return tasks.map((task) => mapBackendTask(task as BackendTask))
+  } catch (error) {
+    console.error("GET MY TASKS ERROR:", error)
+    return []
+  }
 }
 
 /*
@@ -267,7 +351,7 @@ export async function getUserCompletedTodayCount() {
     const data: MeTaskResponse = await response.json()
     const tasks = Array.isArray(data) ? data : data.data || []
 
-    const completedToday = tasks.filter((t) => {
+    const completedToday = (tasks as CompletedTodayTask[]).filter((t) => {
       const status = String(t.status || "").toLowerCase()
       const updatedAt =
         t.completedAt ||
@@ -313,7 +397,7 @@ export async function getUserCompletedTodayCountById(userId: string) {
     const data: MeTaskResponse = await response.json()
     const tasks = Array.isArray(data) ? data : data.data || []
 
-    const completedToday = tasks.filter((t) => {
+    const completedToday = (tasks as CompletedTodayTask[]).filter((t) => {
       const status = String(t.status || "").toLowerCase()
       const updatedAt =
         t.completedAt ||
@@ -361,8 +445,10 @@ export async function getMultipleUsersCompletedTodayCount(userIds: string[]): Pr
       
       // Si es un array, mapear por userId
       if (Array.isArray(counts)) {
-        counts.forEach((item: any) => {
-          result.set(item.userId, item.count || 0)
+        counts.forEach((item) => {
+          const row = item as CompletedTodayCountItem
+          if (!row.userId) return
+          result.set(row.userId, row.count || 0)
         })
       } else if (typeof counts === "object") {
         // Si es un objeto, usar como Map directo
