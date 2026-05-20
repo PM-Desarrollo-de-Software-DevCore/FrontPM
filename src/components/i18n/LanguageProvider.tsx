@@ -59,6 +59,7 @@ const esToEnEntries: Array<[string, string]> = [
   ["Comparativa entre proyectos", "Project comparison"],
   ["Cargando datos globales...", "Loading global data..."],
   ["Compara la actividad de todos tus proyectos desde el mismo panel.", "Compare activity across all your projects from one panel."],
+  ["Selecciona un proyecto para cambiar la vista superior, la progresión del sprint y la línea de tiempo sin salir de la página.", "Select a project to change the top view, sprint progression, and timeline without leaving the page."],
   ["Proyecto con más completadas", "Project with most completed tasks"],
   ["tareas completadas", "completed tasks"],
   ["Tareas completadas por proyecto en tu espacio de trabajo", "Tasks completed by project in your workspace"],
