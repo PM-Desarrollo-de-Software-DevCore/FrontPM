@@ -77,10 +77,10 @@ export default function VelocityChart() {
 
 
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">
+        <h3 className="text-lg font-semibold text-strong">
           Velocity
         </h3>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted">
           Work completed per sprint
         </p>
       </div>

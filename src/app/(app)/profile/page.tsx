@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getUserCompletedTodayCount, getMultipleUsersCompletedTodayCount } from "@/services/taskService";
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar";
 import LeaderboardAvatar from "@/components/ui/avatar/LeaderboardAvatar";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 export default function ProfileDashboard() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -100,6 +101,9 @@ export default function ProfileDashboard() {
               <p className="text-xs sm:text-sm text-gray-500">
                 Ahmedabad, Gujarat
               </p>
+              <div className="mt-3">
+                <ThemeToggle />
+              </div>
             </div>
           </Card>
 

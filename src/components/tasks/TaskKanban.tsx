@@ -106,7 +106,7 @@ export default function TaskKanban({
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[400px]">
-        <p className="text-gray-500">
+        <p className="text-muted">
           Loading tasks...
         </p>
       </div>
@@ -173,9 +173,9 @@ function TaskColumn({
   onDelete,
 }: TaskColumnProps) {
   return (
-    <div className="bg-white border border-gray-200 rounded-3xl p-5 min-h-[700px] shadow-sm">
+    <div className="bg-card border border-border rounded-3xl p-5 min-h-[700px] shadow-sm">
       <div
-        className={`flex items-center justify-between border border-gray-200 rounded-2xl p-4 mb-5 border-l-4 ${color}`}
+        className={`flex items-center justify-between border border-border rounded-2xl p-4 mb-5 border-l-4 ${color}`}
       >
         <div className="flex items-center gap-3">
           <h2 className="text-2xl font-bold">
@@ -187,7 +187,7 @@ function TaskColumn({
           </span>
         </div>
 
-        <button className="text-gray-400 text-2xl">
+        <button className="text-muted text-2xl\">
           ...
         </button>
       </div>
@@ -231,24 +231,24 @@ function TaskCard({
   onDelete,
 }: TaskCardProps) {
   return (
-    <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition">
-      <div className="flex justify-between items-start">
-        <h3 className="text-3xl font-bold">
+    <div className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md transition\">
+      <div className="flex justify-between items-start\">
+        <h3 className="text-3xl font-bold\">
           {task.title}
         </h3>
 
-        <span className="text-gray-400 text-sm">
+        <span className="text-muted text-sm\">
           Due today
         </span>
       </div>
 
-      <p className="text-gray-500 mt-4 text-lg leading-relaxed">
+      <p className="text-muted mt-4 text-lg leading-relaxed\">
         {task.description}
       </p>
 
-      <div className="mt-5">
-        <div className="flex justify-between text-sm mb-2">
-          <span className="text-gray-500">
+      <div className="mt-5\">
+        <div className="flex justify-between text-sm mb-2\">
+          <span className="text-muted\">
             Progress
           </span>
 
@@ -257,9 +257,9 @@ function TaskCard({
           </span>
         </div>
 
-        <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+        <div className="w-full h-3 bg-muted rounded-full overflow-hidden\">
           <div
-            className="h-full bg-black rounded-full"
+            className="h-full bg-primary rounded-full\"
             style={{
               width: `${task.progress}%`,
             }}
@@ -277,7 +277,7 @@ function TaskCard({
                 .value as Task["status"]
             )
           }
-          className="border border-gray-200 rounded-xl px-4 py-2 text-sm"
+          className="border border-border bg-card text-card-foreground rounded-xl px-4 py-2 text-sm\"
         >
           <option value="pending">
             Backlog
