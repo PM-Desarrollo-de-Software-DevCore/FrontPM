@@ -17,6 +17,8 @@ type BackendTask =
     createdAt?: string
 
     updatedAt?: string
+
+    completedAt?: string | null
   }
 
 function mapBackendTask(
@@ -52,6 +54,9 @@ function mapBackendTask(
 
     updatedAt:
       task.updatedAt,
+
+    completedAt:
+      task.completedAt,
   }
 }
 

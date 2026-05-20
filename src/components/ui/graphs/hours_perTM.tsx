@@ -5,29 +5,44 @@ import {
   BarElement,
   CategoryScale,
   LinearScale,
+  TooltipItem,
   Tooltip,
 } from "chart.js"
 import { Bar } from "react-chartjs-2"
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip)
 
-export default function HoursChart() {
+type HoursChartProps = {
+  title?: string
+  description?: string
+  labels?: string[]
+  values?: number[]
+  valueSuffix?: string
+  max?: number
+}
 
+export default function HoursChart({
+  title = "Hours Worked",
+  description = "Total hours worked per team member",
+  labels = ["Ana", "Luis", "Carlos", "Sofia"],
+  values = [198, 175, 162, 158, 148, 145, 156],
+  valueSuffix = "h",
+  max,
+}: HoursChartProps) {
   const data = {
-    labels: ["Ana", "Luis", "Carlos", "Sofia"],
+    labels,
     datasets: [
       {
-        label: "Horas",
-        data: [198, 175, 162, 158, 148, 145, 156],
-        backgroundColor: "#22c55e", 
+        label: title,
+        data: values,
+        backgroundColor: "#2563eb",
         borderRadius: 8,
-        barThickness: 14,
+        barThickness: 18,
       },
     ],
   }
 
   const options = {
-    indexAxis: "y" as const,
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -42,8 +57,8 @@ export default function HoursChart() {
         borderWidth: 1,
         padding: 10,
         callbacks: {
-          label: function (context: any) {
-            return `${context.raw}h trabajadas`
+          label: function (context: TooltipItem<"bar">) {
+            return `${context.raw}${valueSuffix}`
           },
         },
       },
@@ -51,13 +66,12 @@ export default function HoursChart() {
     scales: {
       x: {
         beginAtZero: true,
-        max: 220,
+        suggestedMax: max,
         grid: {
           color: "rgba(0,0,0,0.05)",
         },
         ticks: {
           color: "#64748b",
-          callback: (value: any) => `${value}h`,
         },
       },
       y: {
@@ -80,10 +94,10 @@ export default function HoursChart() {
 
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-slate-900">
-          Hours Worked
+          {title}
         </h3>
         <p className="text-sm text-gray-500">
-          Total hours worked per team member 
+          {description}
         </p>
       </div>
 
