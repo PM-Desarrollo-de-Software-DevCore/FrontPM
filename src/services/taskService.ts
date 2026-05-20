@@ -137,17 +137,35 @@ export async function createTask(
     const text =
       await response.text()
 
-    if (!response.ok) {
-      console.error(
-        text
-      )
-
-      throw new Error(
-        "Error creating task"
-      )
+    let parsedBody: Record<string, unknown> | null = null
+    try {
+      parsedBody = text ? JSON.parse(text) : null
+    } catch {
+      parsedBody = null
     }
 
-    return JSON.parse(text)
+    if (!response.ok) {
+      console.error(text)
+
+      const messageFromBody =
+        typeof parsedBody?.message === "string"
+          ? parsedBody.message
+          : null
+
+      const errorFromBody =
+        typeof parsedBody?.error === "string"
+          ? parsedBody.error
+          : null
+
+      const backendMessage =
+        messageFromBody ||
+        errorFromBody ||
+        "Error creating task"
+
+      throw new Error(backendMessage)
+    }
+
+    return parsedBody ?? text
   } catch (error) {
     console.error(
       "CREATE TASK ERROR:",
@@ -237,7 +255,20 @@ function isSameCalendarDay(dateValue?: string | null) {
 
 type MeTaskResponse = {
   success?: boolean
-  data?: any[]
+  data?: unknown[]
+}
+
+type CompletedTodayTask = {
+  status?: string
+  completedAt?: string | null
+  completed_at?: string | null
+  updatedAt?: string | null
+  updated_at?: string | null
+}
+
+type CompletedTodayCountItem = {
+  userId?: string
+  count?: number
 }
 
 /*
@@ -267,7 +298,7 @@ export async function getUserCompletedTodayCount() {
     const data: MeTaskResponse = await response.json()
     const tasks = Array.isArray(data) ? data : data.data || []
 
-    const completedToday = tasks.filter((t) => {
+    const completedToday = (tasks as CompletedTodayTask[]).filter((t) => {
       const status = String(t.status || "").toLowerCase()
       const updatedAt =
         t.completedAt ||
@@ -313,7 +344,7 @@ export async function getUserCompletedTodayCountById(userId: string) {
     const data: MeTaskResponse = await response.json()
     const tasks = Array.isArray(data) ? data : data.data || []
 
-    const completedToday = tasks.filter((t) => {
+    const completedToday = (tasks as CompletedTodayTask[]).filter((t) => {
       const status = String(t.status || "").toLowerCase()
       const updatedAt =
         t.completedAt ||
@@ -361,8 +392,10 @@ export async function getMultipleUsersCompletedTodayCount(userIds: string[]): Pr
       
       // Si es un array, mapear por userId
       if (Array.isArray(counts)) {
-        counts.forEach((item: any) => {
-          result.set(item.userId, item.count || 0)
+        counts.forEach((item) => {
+          const row = item as CompletedTodayCountItem
+          if (!row.userId) return
+          result.set(row.userId, row.count || 0)
         })
       } else if (typeof counts === "object") {
         // Si es un objeto, usar como Map directo

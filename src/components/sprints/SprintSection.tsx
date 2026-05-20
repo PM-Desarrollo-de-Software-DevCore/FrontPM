@@ -6,6 +6,7 @@ import { useMemo, useState } from "react"
 
 import {
   Droppable,
+  type DropResult,
 } from "@hello-pangea/dnd"
 
 import {
@@ -34,10 +35,13 @@ interface Props {
     task: Task
   ) => void
 
-  onCreateTaskAction: () => void
+  onCreateTaskAction: (
+    sprintId: string,
+    status: Task["status"]
+  ) => void
 
   onTaskMoveAction: (
-    result: any
+    result: DropResult
   ) => void
 
   onUpdateSprintAction: (
@@ -46,6 +50,12 @@ interface Props {
   ) => void
 
   onCompleteSprintAction: (
+    sprintId: string
+  ) => void
+
+  isCollapsed?: boolean
+
+  onToggleCollapseAction?: (
     sprintId: string
   ) => void
 }
@@ -65,6 +75,10 @@ export default function SprintSection({
   onUpdateSprintAction,
 
   onCompleteSprintAction,
+
+  isCollapsed: isCollapsedFromProps,
+
+  onToggleCollapseAction,
 
 }: Props) {
 
@@ -103,6 +117,33 @@ export default function SprintSection({
     sprint.end_date
       ?.split("T")[0]
   )
+
+  const [
+    isCollapsedLocal,
+
+    setIsCollapsedLocal,
+
+  ] = useState(false)
+
+  const isCollapsed =
+    isCollapsedFromProps ??
+    isCollapsedLocal
+
+  const toggleCollapse =
+    () => {
+      if (
+        onToggleCollapseAction
+      ) {
+        onToggleCollapseAction(
+          sprint.id
+        )
+        return
+      }
+
+      setIsCollapsedLocal(
+        (prev) => !prev
+      )
+    }
 
   const groupedTasks =
     useMemo(() => {
@@ -319,6 +360,13 @@ export default function SprintSection({
 
         <div className="flex items-center gap-3">
 
+          <button
+            onClick={toggleCollapse}
+            className="rounded-2xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+          >
+            {isCollapsed ? "Expand" : "Collapse"}
+          </button>
+
           {sprint.id !==
             "backlog" &&
             sprint.status !== "completed" && (
@@ -369,6 +417,9 @@ export default function SprintSection({
           </div>
         </div>
       </div>
+
+      {isCollapsed ? null : (
+        <>
 
       {/* PROGRESS */}
 
@@ -422,7 +473,7 @@ export default function SprintSection({
 
                   {...provided.droppableProps}
 
-                  className="min-h-[250px] rounded-[30px] border border-gray-200 bg-[#fcfcfc] p-4"
+                  className="min-h-62.5 rounded-[30px] border border-gray-200 bg-[#fcfcfc] p-4"
                 >
 
                   {/* COLUMN HEADER */}
@@ -499,8 +550,11 @@ export default function SprintSection({
                     {/* ADD TASK */}
 
                     <button
-                      onClick={
-                        onCreateTaskAction
+                      onClick={() =>
+                        onCreateTaskAction(
+                          sprint.id,
+                          column.id as Task["status"]
+                        )
                       }
                       className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border-2 border-dashed border-red-300 text-lg font-semibold text-red-400 transition hover:bg-red-50"
                     >
@@ -513,6 +567,8 @@ export default function SprintSection({
           )
         )}
       </div>
+        </>
+      )}
     </div>
   )
 }
