@@ -25,7 +25,7 @@ export interface Task {
 
   status: TaskStatus
 
-  id_sprint?: string
+  id_sprint?: string | null
 
   createdAt?: string
 

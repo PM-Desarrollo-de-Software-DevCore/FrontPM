@@ -59,3 +59,110 @@ export async function getNonAdminUsers(): Promise<UserOption[]> {
     .map(userFromBackendFormat)
     .filter((user: UserOption) => user.role === "user");
 }
+
+export async function getProjectMembers(
+  projectId: string
+): Promise<UserOption[]> {
+
+  // GET MEMBERS
+
+  const membersResponse =
+    await fetch(
+      `${API_URL}/projects/${projectId}/members`,
+      {
+        method: "GET",
+
+        headers:
+          getAuthHeaders(),
+
+        cache: "no-store",
+      }
+    )
+
+  if (!membersResponse.ok) {
+    throw new Error(
+      "No se pudieron obtener los miembros"
+    )
+  }
+
+  const membersData =
+    await membersResponse.json()
+
+  const members =
+    Array.isArray(
+      membersData
+    )
+      ? membersData
+      : membersData.data ||
+        []
+
+  // GET USERS
+
+  const usersResponse =
+    await fetch(
+      `${API_URL}/users`,
+      {
+        method: "GET",
+
+        headers:
+          getAuthHeaders(),
+
+        cache: "no-store",
+      }
+    )
+
+  if (!usersResponse.ok) {
+    throw new Error(
+      "No se pudieron obtener los usuarios"
+    )
+  }
+
+  const usersData =
+    await usersResponse.json()
+
+  const users =
+    Array.isArray(
+      usersData
+    )
+      ? usersData
+      : usersData.data ||
+        []
+
+  // COMBINE MEMBERS + USERS
+
+  return members
+    .map((member: any) => {
+      const fullUser =
+        users.find(
+          (u: any) =>
+            u.id ===
+            member.id_user
+        )
+
+      if (!fullUser)
+        return null
+
+      return {
+        id: fullUser.id,
+
+        name:
+          fullUser.name ||
+          "",
+
+        lastname:
+          fullUser.lastname ||
+          "",
+
+        email:
+          fullUser.email ||
+          "",
+
+        role:
+          normalizeRole(
+            fullUser.globalRole ||
+              fullUser.role
+          ),
+      }
+    })
+    .filter(Boolean) as UserOption[]
+}
