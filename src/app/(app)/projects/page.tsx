@@ -7,6 +7,7 @@ import { Project } from "@/types/project";
 import { getProjects } from "@/services/projectService";
 import { getNonAdminUsers, UserOption } from "@/services/userService";
 import { getProjectMembers, ProjectMember } from "@/services/memberService";
+import { slugify } from "@/lib/slug";
 
 const initialProjects: Project[] = [
   {
@@ -360,7 +361,7 @@ function ProjectCard({ project, usersById, onEdit }: ProjectCardProps) {
       </div>
 
       <Link
-        href={`/projects/${project.id}/tasks`}
+        href={`/projects/${slugify(project.name)}/tasks`}
         className="inline-flex w-full items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
       >
         View Tasks
