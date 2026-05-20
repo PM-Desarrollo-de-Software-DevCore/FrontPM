@@ -22,6 +22,7 @@ interface CreateProjectModalProps {
   project?: Project | null;
   open?: boolean;
   onClose?: () => void;
+  showTrigger?: boolean;
 }
 
 interface ProjectFormState {
@@ -43,6 +44,7 @@ export default function CreateProjectModal({
   project,
   open,
   onClose,
+  showTrigger = true,
 }: CreateProjectModalProps) {
   const isEditMode = Boolean(project);
   const [internalOpen, setInternalOpen] = useState(false);
@@ -360,7 +362,7 @@ export default function CreateProjectModal({
 
   return (
     <>
-      {!isEditMode && (
+      {!isEditMode && showTrigger && (
         <button
           onClick={() => setInternalOpen(true)}
           className="cursor-pointer rounded bg-black px-4 py-2 text-white transition hover:opacity-90"
