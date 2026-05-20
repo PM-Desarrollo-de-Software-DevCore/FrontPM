@@ -1,22 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { Card } from "@/components/ui/card/card";
 import { Button } from "@/components/ui/Button/button";
 import TaskChart from "@/components/ui/graphs/taskResume";
 import { getGlobalLeaderboard, LeaderboardEntry } from "@/services/leaderboardService";
+import { useAuth } from "@/hooks/useAuth";
+import { getUserCompletedTodayCount, getMultipleUsersCompletedTodayCount } from "@/services/taskService";
+import FramedAvatar from "@/components/ui/avatar/FramedAvatar";
+import LeaderboardAvatar from "@/components/ui/avatar/LeaderboardAvatar";
 
 export default function ProfileDashboard() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
+  const { user } = useAuth()
+
+  const [completedToday, setCompletedToday] = useState<number>(0)
+  const [completedLoading, setCompletedLoading] = useState<boolean>(true)
+  const [leaderboardCounts, setLeaderboardCounts] = useState<Map<string, number>>(new Map())
 
   useEffect(() => {
     let cancelled = false;
     getGlobalLeaderboard(5)
       .then((data) => {
-        if (!cancelled) setLeaderboard(data);
+        if (!cancelled) {
+          setLeaderboard(data);
+          
+          // Cargar conteos de tareas para todos los usuarios del leaderboard
+          const userIds = data.map(entry => entry.userId)
+          getMultipleUsersCompletedTodayCount(userIds).then(counts => {
+            if (!cancelled) setLeaderboardCounts(counts)
+          })
+        }
       })
       .catch((err: Error) => {
         if (!cancelled) setLeaderboardError(err.message);
@@ -29,6 +45,35 @@ export default function ProfileDashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchCount() {
+      if (!user) {
+        setCompletedToday(0)
+        setCompletedLoading(false)
+        return
+      }
+
+      setCompletedLoading(true)
+      try {
+        const count = await getUserCompletedTodayCount()
+        if (!cancelled) setCompletedToday(count)
+      } catch (err) {
+        console.error(err)
+        if (!cancelled) setCompletedToday(0)
+      } finally {
+        if (!cancelled) setCompletedLoading(false)
+      }
+    }
+
+    fetchCount()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
   return (
     <div className="w-full px-4 sm:px-6 lg:px-10 pt-0 pb-4 max-w-[1400px] mx-auto overflow-x-hidden">
 
@@ -39,15 +84,14 @@ export default function ProfileDashboard() {
           <Card className="rounded-2xl shadow-sm p-4 sm:p-6 text-center border border-gray-100">
             <div className="flex flex-col items-center gap-3">
 
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-[3px] border-pink-500 overflow-hidden">
-                <Image
-                  src="/images/persona.png"
-                  alt="profile"
-                  width={100}
-                  height={100}
-                  className="object-cover"
-                />
-              </div>
+              <FramedAvatar
+                src={user?.avatar ?? "/images/persona.png"}
+                alt="profile"
+                size={100}
+                completedTodayCount={completedLoading ? null : completedToday}
+                priority
+                frameSize="xl"
+              />
 
               <h2 className="font-semibold text-base sm:text-lg">
                 Yash Ghori
@@ -121,12 +165,11 @@ export default function ProfileDashboard() {
                   <div key={entry.userId} className="flex justify-between items-center">
 
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <Image
+                      <LeaderboardAvatar
                         src={entry.profileImageUrl ?? "/images/persona.png"}
                         alt={`${entry.name} ${entry.lastname}`}
-                        width={36}
-                        height={36}
-                        className="rounded-full w-8 h-8 sm:w-9 sm:h-9 object-cover"
+                        size={48}
+                        completedTodayCount={leaderboardCounts.get(entry.userId) ?? 0}
                       />
                       <span className="text-xs sm:text-sm">
                         {entry.name} {entry.lastname}
