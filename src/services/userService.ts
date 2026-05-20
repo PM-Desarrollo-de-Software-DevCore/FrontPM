@@ -19,6 +19,24 @@ export interface UserOption {
   role: "admin" | "user";
 }
 
+export interface UserProfileDetails {
+  id: string;
+  name: string;
+  lastname: string;
+  email: string;
+  skill: string | null;
+  area: string | null;
+  profileImageUrl: string | null;
+}
+
+export interface UserTechnologyEntry {
+  id_user_tech: string;
+  id_user: string;
+  technology: string;
+  yearsOfExperience: number;
+  createdAt: string;
+}
+
 function normalizeRole(rawRole?: string): UserOption["role"] {
   return rawRole?.toLowerCase() === "admin" ? "admin" : "user";
 }
@@ -58,6 +76,51 @@ export async function getNonAdminUsers(): Promise<UserOption[]> {
   return users
     .map(userFromBackendFormat)
     .filter((user: UserOption) => user.role === "user");
+}
+
+export async function getUserProfileDetails(userId: string): Promise<UserProfileDetails> {
+  const response = await fetch(`${API_URL}/users`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("No se pudo obtener el perfil del usuario");
+  }
+
+  const data = await response.json();
+  const users = Array.isArray(data) ? data : data.data || [];
+  const user = users.find((entry: any) => entry.id === userId);
+
+  if (!user) {
+    throw new Error("Usuario no encontrado");
+  }
+
+  return {
+    id: user.id,
+    name: user.name ?? "",
+    lastname: user.lastname ?? "",
+    email: user.email ?? "",
+    skill: user.skill ?? null,
+    area: user.area ?? null,
+    profileImageUrl: user.profileImageUrl ?? null,
+  };
+}
+
+export async function getUserTechnologies(userId: string): Promise<UserTechnologyEntry[]> {
+  const response = await fetch(`${API_URL}/users/${userId}/technologies`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : data.data || [];
 }
 
 export async function getProjectMembers(
