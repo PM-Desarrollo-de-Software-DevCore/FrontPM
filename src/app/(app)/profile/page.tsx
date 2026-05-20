@@ -15,6 +15,7 @@ import {
   UserProfileDetails,
   UserTechnologyEntry,
 } from "@/services/userService";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 function splitValues(value: string | null | undefined): string[] {
   if (!value) return [];
@@ -26,6 +27,7 @@ function splitValues(value: string | null | undefined): string[] {
 }
 
 export default function ProfileDashboard() {
+  const { language, toggleLanguage } = useLanguage();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
@@ -220,6 +222,15 @@ export default function ProfileDashboard() {
 
           <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 sm:py-4 text-sm w-full">
             Request Modification
+          </Button>
+
+          <Button
+            type="button"
+            data-no-i18n="true"
+            onClick={toggleLanguage}
+            className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-3 sm:py-4 text-sm w-full"
+          >
+            {language === "en" ? "Switch to Spanish" : "Cambiar a Ingles"}
           </Button>
         </div>
 
