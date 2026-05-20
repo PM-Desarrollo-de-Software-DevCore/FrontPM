@@ -7,6 +7,7 @@ import {
 import {
   Sprint,
 } from "@/types/sprint"
+import { useNotification } from "@/components/ui/notifications/NotificationProvider"
 
 interface Props {
 
@@ -28,6 +29,7 @@ export default function CreateSprintModal({
   onSubmitAction,
 
 }: Props) {
+  const { notifyError } = useNotification()
 
   const [
     name,
@@ -68,9 +70,7 @@ export default function CreateSprintModal({
         !endDate
       ) {
 
-        alert(
-          "Please complete all fields."
-        )
+        notifyError("Sprint not created", "Please complete all fields.")
 
         return
       }
@@ -79,9 +79,7 @@ export default function CreateSprintModal({
         startDate < today
       ) {
 
-        alert(
-          "Sprint start date cannot be in the past."
-        )
+        notifyError("Invalid sprint dates", "Sprint start date cannot be in the past.")
 
         return
       }
@@ -91,9 +89,7 @@ export default function CreateSprintModal({
         startDate
       ) {
 
-        alert(
-          "Sprint end date must be after the start date."
-        )
+        notifyError("Invalid sprint dates", "Sprint end date must be after the start date.")
 
         return
       }
