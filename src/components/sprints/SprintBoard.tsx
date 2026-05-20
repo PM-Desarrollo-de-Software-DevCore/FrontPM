@@ -2,6 +2,12 @@
 
 "use client"
 
+import { useCallback, useEffect, useState } from "react"
+
+import {
+  type DropResult,
+} from "@hello-pangea/dnd"
+
 import {
   Sprint,
 } from "@/types/sprint"
@@ -28,10 +34,13 @@ interface Props {
     task: Task
   ) => void
 
-  onCreateTaskAction: () => void
+  onCreateTaskAction: (
+    sprintId: string,
+    status: Task["status"]
+  ) => void
 
   onTaskMoveAction: (
-    result: any
+    result: DropResult
   ) => void
 
   onUpdateSprintAction: (
@@ -42,6 +51,8 @@ interface Props {
   onCompleteSprintAction: (
     sprintId: string
   ) => void
+
+  collapseStorageKey: string
 }
 
 export default function SprintBoard({
@@ -62,7 +73,41 @@ export default function SprintBoard({
 
   onCompleteSprintAction,
 
+  collapseStorageKey,
+
 }: Props) {
+
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(collapseStorageKey)
+      if (!raw) {
+        setCollapsedSections({})
+        return
+      }
+
+      const parsed = JSON.parse(raw) as Record<string, boolean>
+      setCollapsedSections(parsed)
+    } catch {
+      setCollapsedSections({})
+    }
+  }, [collapseStorageKey])
+
+  const toggleSectionCollapse = useCallback(
+    (sectionId: string) => {
+      setCollapsedSections((prev) => {
+        const next = {
+          ...prev,
+          [sectionId]: !prev[sectionId],
+        }
+
+        localStorage.setItem(collapseStorageKey, JSON.stringify(next))
+        return next
+      })
+    },
+    [collapseStorageKey]
+  )
 
   const backlogTasks =
     tasks.filter(
@@ -118,6 +163,10 @@ export default function SprintBoard({
           onTaskMoveAction
         }
 
+        isCollapsed={Boolean(collapsedSections.backlog)}
+
+        onToggleCollapseAction={toggleSectionCollapse}
+
         onUpdateSprintAction={() => {}}
 
         onCompleteSprintAction={() => {}}
@@ -164,6 +213,10 @@ export default function SprintBoard({
               onTaskMoveAction={
                 onTaskMoveAction
               }
+
+              isCollapsed={Boolean(collapsedSections[sprint.id])}
+
+              onToggleCollapseAction={toggleSectionCollapse}
 
               onUpdateSprintAction={
                 onUpdateSprintAction
@@ -232,6 +285,10 @@ export default function SprintBoard({
                     onTaskMoveAction={
                       onTaskMoveAction
                     }
+
+                    isCollapsed={Boolean(collapsedSections[sprint.id])}
+
+                    onToggleCollapseAction={toggleSectionCollapse}
 
                     onUpdateSprintAction={
                       onUpdateSprintAction
