@@ -19,6 +19,17 @@ export interface UserOption {
   role: "admin" | "user";
 }
 
+export interface UserDirectoryEntry {
+  id: string;
+  name: string;
+  lastname: string;
+  email: string;
+  role: "admin" | "user";
+  skill: string | null;
+  area: string | null;
+  profileImageUrl: string | null;
+}
+
 export interface UserProfileDetails {
   id: string;
   name: string;
@@ -51,6 +62,19 @@ function userFromBackendFormat(user: BackendUser): UserOption {
   };
 }
 
+function userDirectoryFromBackendFormat(user: any): UserDirectoryEntry {
+  return {
+    id: user.id,
+    name: user.name ?? "",
+    lastname: user.lastname ?? "",
+    email: user.email ?? "",
+    role: normalizeRole(user.globalRole ?? user.role),
+    skill: user.skill ?? null,
+    area: user.area ?? null,
+    profileImageUrl: user.profileImageUrl ?? null,
+  };
+}
+
 function getAuthHeaders(): Record<string, string> {
   const token = getToken();
   return {
@@ -78,7 +102,7 @@ export async function getNonAdminUsers(): Promise<UserOption[]> {
     .filter((user: UserOption) => user.role === "user");
 }
 
-export async function getUserProfileDetails(userId: string): Promise<UserProfileDetails> {
+export async function getUsersDirectory(): Promise<UserDirectoryEntry[]> {
   const response = await fetch(`${API_URL}/users`, {
     method: "GET",
     headers: getAuthHeaders(),
@@ -86,12 +110,18 @@ export async function getUserProfileDetails(userId: string): Promise<UserProfile
   });
 
   if (!response.ok) {
-    throw new Error("No se pudo obtener el perfil del usuario");
+    throw new Error("No se pudieron obtener los usuarios");
   }
 
   const data = await response.json();
   const users = Array.isArray(data) ? data : data.data || [];
-  const user = users.find((entry: any) => entry.id === userId);
+
+  return users.map(userDirectoryFromBackendFormat);
+}
+
+export async function getUserProfileDetails(userId: string): Promise<UserProfileDetails> {
+  const users = await getUsersDirectory();
+  const user = users.find((entry) => entry.id === userId);
 
   if (!user) {
     throw new Error("Usuario no encontrado");

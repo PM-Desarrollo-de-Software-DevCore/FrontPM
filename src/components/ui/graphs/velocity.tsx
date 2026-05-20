@@ -12,17 +12,28 @@ import { Line } from "react-chartjs-2"
 
 ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip)
 
-export default function VelocityChart() {
+type VelocityChartProps = {
+  title?: string
+  description?: string
+  labels?: string[]
+  values?: number[]
+}
 
+export default function VelocityChart({
+  title = "Velocity",
+  description = "Work completed per sprint",
+  labels = ["Sprint 1", "Sprint 2", "Sprint 3", "Sprint 4", "Sprint 5"],
+  values = [10, 12, 8, 6, 12],
+}: VelocityChartProps) {
   const data = {
-    labels: ["Sprint 1", "Sprint 2", "Sprint 3", "Sprint 4", "Sprint 5"],
+    labels,
     datasets: [
       {
-        label: "Velocity",
-        data: [10, 12, 8, 6, 12], 
-        borderColor: "#3b82f6",
-        backgroundColor: "#3b82f6",
-        tension: 0.4, 
+        label: title,
+        data: values,
+        borderColor: "#0f766e",
+        backgroundColor: "#0f766e",
+        tension: 0.4,
         pointRadius: 5,
         pointHoverRadius: 7,
         fill: false,
@@ -78,10 +89,10 @@ export default function VelocityChart() {
 
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-slate-900">
-          Velocity
+          {title}
         </h3>
         <p className="text-sm text-gray-500">
-          Work completed per sprint
+          {description}
         </p>
       </div>
 
