@@ -102,7 +102,6 @@ export default function TasksPage() {
       setSprints(sprintData)
       setUsers(memberData)
     } catch (error) {
-      console.error(error)
       notifyError("Data could not be loaded", "Please try again.")
     }
   }, [notifyError, resolvedProjectId, token])
@@ -159,7 +158,6 @@ export default function TasksPage() {
         token
       )
     } catch (error) {
-      console.error(error)
       await loadData()
       notifyError(
         "Task could not be moved",
@@ -200,7 +198,6 @@ export default function TasksPage() {
           : "Task was created successfully."
       )
     } catch (error) {
-      console.error(error)
       notifyError(
         "Task could not be created",
         error instanceof Error ? error.message : "Please try again."
@@ -223,7 +220,6 @@ export default function TasksPage() {
       await loadData()
       notifySuccess("Sprint created", "The sprint was created successfully.")
     } catch (error) {
-      console.error(error)
       notifyError(
         "Sprint could not be created",
         error instanceof Error ? error.message : "Please try again."
@@ -244,7 +240,6 @@ export default function TasksPage() {
       setSelectedTask(null)
       notifySuccess("Task deleted", "The task was removed successfully.")
     } catch (error) {
-      console.error(error)
       notifyError(
         "Task could not be deleted",
         error instanceof Error ? error.message : "An unexpected error occurred."
@@ -269,7 +264,6 @@ export default function TasksPage() {
       )
       notifySuccess("Task updated", "The assignee was updated successfully.")
     } catch (error) {
-      console.error(error)
       notifyError(
         "Task could not be updated",
         error instanceof Error ? error.message : "Please try again."
@@ -287,7 +281,6 @@ export default function TasksPage() {
       )
       notifySuccess("Sprint updated", "The sprint was updated successfully.")
     } catch (error) {
-      console.error(error)
       notifyError(
         "Sprint could not be updated",
         error instanceof Error ? error.message : "Please try again."
@@ -325,7 +318,6 @@ export default function TasksPage() {
       await loadData()
       notifySuccess("Sprint completed", "The sprint was completed successfully.")
     } catch (error) {
-      console.error(error)
       notifyError(
         "Sprint could not be completed",
         error instanceof Error ? error.message : "Please try again."
