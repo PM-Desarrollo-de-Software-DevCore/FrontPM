@@ -9,12 +9,34 @@ import { useAuth } from "@/hooks/useAuth";
 import { getUserCompletedTodayCount, getMultipleUsersCompletedTodayCount } from "@/services/taskService";
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar";
 import LeaderboardAvatar from "@/components/ui/avatar/LeaderboardAvatar";
+import {
+  getUserProfileDetails,
+  getUserTechnologies,
+  UserProfileDetails,
+  UserTechnologyEntry,
+} from "@/services/userService";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
+
+function splitValues(value: string | null | undefined): string[] {
+  if (!value) return [];
+
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 export default function ProfileDashboard() {
+  const { language, toggleLanguage } = useLanguage();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
   const { user } = useAuth()
+
+  const [profile, setProfile] = useState<UserProfileDetails | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [technologies, setTechnologies] = useState<UserTechnologyEntry[]>([]);
 
   const [completedToday, setCompletedToday] = useState<number>(0)
   const [completedLoading, setCompletedLoading] = useState<boolean>(true)
@@ -74,8 +96,59 @@ export default function ProfileDashboard() {
     }
   }, [user])
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProfile() {
+      if (!user?.id) {
+        setProfile(null);
+        setTechnologies([]);
+        setProfileLoading(false);
+        return;
+      }
+
+      setProfileLoading(true);
+      setProfileError(null);
+
+      try {
+        const [profileData, technologiesData] = await Promise.all([
+          getUserProfileDetails(user.id),
+          getUserTechnologies(user.id),
+        ]);
+
+        if (!cancelled) {
+          setProfile(profileData);
+          setTechnologies(technologiesData);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setProfileError(err instanceof Error ? err.message : "No se pudo cargar el perfil");
+          setProfile(null);
+          setTechnologies([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setProfileLoading(false);
+        }
+      }
+    }
+
+    loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  const displayName = profile ? `${profile.name} ${profile.lastname}`.trim() : `${user?.name ?? ""} ${user?.lastname ?? ""}`.trim();
+  const email = profile?.email ?? user?.email ?? "Sin correo disponible";
+  const avatarSrc = profile?.profileImageUrl ?? user?.avatar ?? "/images/persona.png";
+  const mainSkill = profile?.skill?.trim() || "No definida";
+  const areaList = splitValues(profile?.area);
+  const technologyNames = technologies.map((item) => item.technology.trim()).filter(Boolean);
+
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-10 pt-0 pb-4 max-w-[1400px] mx-auto overflow-x-hidden">
+    <div className="w-full px-4 sm:px-6 lg:px-10 pt-0 pb-4 max-w-350 mx-auto overflow-x-hidden">
 
       <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-6 items-start w-full">
 
@@ -85,7 +158,7 @@ export default function ProfileDashboard() {
             <div className="flex flex-col items-center gap-3">
 
               <FramedAvatar
-                src={user?.avatar ?? "/images/persona.png"}
+                src={avatarSrc}
                 alt="profile"
                 size={100}
                 completedTodayCount={completedLoading ? null : completedToday}
@@ -93,24 +166,77 @@ export default function ProfileDashboard() {
                 frameSize="xl"
               />
 
-              <h2 className="font-semibold text-base sm:text-lg">
-                Yash Ghori
-              </h2>
+              <div className="space-y-1">
+                <h2 className="font-semibold text-base sm:text-lg">
+                  {profileLoading ? "Cargando perfil..." : displayName || "Usuario"}
+                </h2>
 
-              <p className="text-xs sm:text-sm text-gray-500">
-                Ahmedabad, Gujarat
-              </p>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  {profileLoading ? "Obteniendo datos del usuario" : email}
+                </p>
+              </div>
+
+              <div className="grid w-full grid-cols-1 gap-3 pt-2 text-left sm:grid-cols-2">
+                <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-3">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-400">Skill principal</p>
+                  <p className="mt-1 text-sm font-medium text-gray-800">{profileLoading ? "..." : mainSkill}</p>
+                </div>
+
+                <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-3">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-400">Area</p>
+                  <p className="mt-1 text-sm font-medium text-gray-800">
+                    {profileLoading ? "..." : areaList.length > 0 ? areaList.join(", ") : "No definida"}
+                  </p>
+                </div>
+              </div>
+
+              {profileError && (
+                <p className="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-left text-xs text-red-600">
+                  {profileError}
+                </p>
+              )}
+            </div>
+          </Card>
+
+          <Card className="rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-semibold text-sm sm:text-base">Skills</h2>
+              <span className="text-xs text-gray-400">{technologyNames.length} registradas</span>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {technologyNames.length > 0 ? (
+                technologyNames.map((technology) => (
+                  <span
+                    key={technology}
+                    className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
+                  >
+                    {technology}
+                  </span>
+                ))
+              ) : (
+                <p className="text-xs text-gray-500">No hay skills registradas todavía.</p>
+              )}
             </div>
           </Card>
 
           <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 sm:py-4 text-sm w-full">
             Request Modification
           </Button>
+
+          <Button
+            type="button"
+            data-no-i18n="true"
+            onClick={toggleLanguage}
+            className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-3 sm:py-4 text-sm w-full"
+          >
+            {language === "en" ? "Switch to Spanish" : "Cambiar a Ingles"}
+          </Button>
         </div>
 
         <div className="md:col-span-4 lg:col-span-6 flex flex-col">
 
-          <Card className="rounded-2xl shadow-sm border border-gray-100 flex flex-col lg:h-[600px]">
+          <Card className="rounded-2xl shadow-sm border border-gray-100 flex flex-col lg:h-150">
 
             <div className="p-4 sm:p-6 border-b flex justify-between items-center flex-wrap gap-2">
               <h2 className="text-lg sm:text-xl font-semibold">
@@ -191,7 +317,7 @@ export default function ProfileDashboard() {
               Tasks
             </h2>
 
-            <div className="w-[160px] h-[160px] sm:w-[200px] sm:h-[200px] flex items-center justify-center">
+            <div className="w-40 h-40 sm:w-50 sm:h-50 flex items-center justify-center">
               <TaskChart />
             </div>
 
