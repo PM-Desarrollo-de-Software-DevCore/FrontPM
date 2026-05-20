@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button/button";
 import TaskChart from "@/components/ui/graphs/taskResume";
 import { getGlobalLeaderboard, LeaderboardEntry } from "@/services/leaderboardService";
 import { useAuth } from "@/hooks/useAuth";
-import { getUserCompletedTodayCount, getMultipleUsersCompletedTodayCount } from "@/services/taskService";
+import { getUserCompletedTodayCount, getMultipleUsersCompletedTodayCount, getMyTasks } from "@/services/taskService";
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar";
 import LeaderboardAvatar from "@/components/ui/avatar/LeaderboardAvatar";
 import {
@@ -16,6 +16,7 @@ import {
   UserTechnologyEntry,
 } from "@/services/userService";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
+import { Task } from "@/types/task";
 
 function splitValues(value: string | null | undefined): string[] {
   if (!value) return [];
@@ -24,6 +25,63 @@ function splitValues(value: string | null | undefined): string[] {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function formatTaskDate(value?: string | null): string {
+  if (!value) return "Sin fecha"
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "Sin fecha"
+
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date)
+}
+
+function getTaskStatusLabel(status: Task["status"]): string {
+  switch (status) {
+    case "completed":
+      return "Completada"
+    case "in_progress":
+      return "En progreso"
+    default:
+      return "Pendiente"
+  }
+}
+
+function getTaskStatusStyles(status: Task["status"]): string {
+  switch (status) {
+    case "completed":
+      return "bg-emerald-100 text-emerald-700"
+    case "in_progress":
+      return "bg-sky-100 text-sky-700"
+    default:
+      return "bg-amber-100 text-amber-700"
+  }
+}
+
+function getPriorityLabel(priority: Task["priority"]): string {
+  switch (priority) {
+    case "high":
+      return "Alta"
+    case "medium":
+      return "Media"
+    default:
+      return "Baja"
+  }
+}
+
+function getTaskProgressColor(status: Task["status"]): string {
+  switch (status) {
+    case "completed":
+      return "bg-emerald-500"
+    case "in_progress":
+      return "bg-sky-500"
+    default:
+      return "bg-amber-500"
+  }
 }
 
 export default function ProfileDashboard() {
@@ -37,6 +95,9 @@ export default function ProfileDashboard() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [technologies, setTechnologies] = useState<UserTechnologyEntry[]>([]);
+  const [myTasks, setMyTasks] = useState<Task[]>([])
+  const [tasksLoading, setTasksLoading] = useState(true)
+  const [tasksError, setTasksError] = useState<string | null>(null)
 
   const [completedToday, setCompletedToday] = useState<number>(0)
   const [completedLoading, setCompletedLoading] = useState<boolean>(true)
@@ -146,6 +207,56 @@ export default function ProfileDashboard() {
   const mainSkill = profile?.skill?.trim() || "No definida";
   const areaList = splitValues(profile?.area);
   const technologyNames = technologies.map((item) => item.technology.trim()).filter(Boolean);
+  const isAdmin = user?.role === "admin"
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadMyTasks() {
+      if (isAdmin) {
+        setMyTasks([])
+        setTasksError(null)
+        setTasksLoading(false)
+        return
+      }
+
+      setTasksLoading(true)
+      setTasksError(null)
+
+      try {
+        const tasks = await getMyTasks()
+        if (!cancelled) {
+          setMyTasks(tasks)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setTasksError(err instanceof Error ? err.message : "No se pudieron cargar las tareas")
+          setMyTasks([])
+        }
+      } finally {
+        if (!cancelled) {
+          setTasksLoading(false)
+        }
+      }
+    }
+
+    loadMyTasks()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAdmin])
+
+  const taskStats = myTasks.reduce(
+    (acc, task) => {
+      acc.total += 1
+      if (task.status === "completed") acc.completed += 1
+      else if (task.status === "in_progress") acc.inProgress += 1
+      else acc.pending += 1
+      return acc
+    },
+    { total: 0, completed: 0, inProgress: 0, pending: 0 }
+  )
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-10 pt-0 pb-4 max-w-350 mx-auto overflow-x-hidden">
@@ -234,44 +345,68 @@ export default function ProfileDashboard() {
           </Button>
         </div>
 
-        <div className="md:col-span-4 lg:col-span-6 flex flex-col">
+        {!isAdmin && (
+          <div className="md:col-span-4 lg:col-span-6 flex flex-col">
 
-          <Card className="rounded-2xl shadow-sm border border-gray-100 flex flex-col lg:h-150">
+            <Card className="rounded-2xl shadow-sm border border-gray-100 flex flex-col lg:h-150">
 
-            <div className="p-4 sm:p-6 border-b flex justify-between items-center flex-wrap gap-2">
-              <h2 className="text-lg sm:text-xl font-semibold">
-                Tasks
-              </h2>
-            </div>
+              <div className="p-4 sm:p-6 border-b flex justify-between items-center flex-wrap gap-2">
+                <h2 className="text-lg sm:text-xl font-semibold">
+                  Tasks
+                </h2>
+                <span className="text-xs text-gray-400">
+                  {tasksLoading ? "Cargando..." : `${taskStats.total} tareas`}
+                </span>
+              </div>
 
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-4 sm:gap-6">
-
-              {[...Array(8)].map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-xl border border-gray-100 px-4 sm:px-6 py-4 shadow-sm"
-                >
-                  <p className="font-semibold text-sm sm:text-base">
-                    Make an Automatic Payment System
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-4 sm:gap-6">
+                {tasksError ? (
+                  <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                    {tasksError}
                   </p>
+                ) : tasksLoading ? (
+                  <p className="text-sm text-gray-500">Cargando tareas...</p>
+                ) : myTasks.length === 0 ? (
+                  <p className="text-sm text-gray-500">No tienes tareas asignadas todavía.</p>
+                ) : (
+                  myTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="rounded-xl border border-gray-100 px-4 sm:px-6 py-4 shadow-sm bg-white"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-sm sm:text-base text-slate-900">
+                            {task.title}
+                          </p>
+                          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                            {task.description?.trim() || "Sin descripción"}
+                          </p>
+                        </div>
 
-                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                    Opened 10 days ago
-                  </p>
+                        <span className={`rounded-full px-3 py-1 text-xs font-medium ${getTaskStatusStyles(task.status)}`}>
+                          {getTaskStatusLabel(task.status)}
+                        </span>
+                      </div>
 
-                  <div className="flex gap-2 mt-3 flex-wrap">
-                    <span className="bg-green-100 text-green-600 text-xs px-3 py-1 rounded-full">
-                      Completed
-                    </span>
-                  </div>
-                </div>
-              ))}
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+                          Prioridad: {getPriorityLabel(task.priority)}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+                          Vence: {formatTaskDate(task.end_date)}
+                        </span>
+                      </div>
 
-            </div>
-          </Card>
-        </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
 
-        <div className="md:col-span-6 lg:col-span-3 flex flex-col gap-4">
+        <div className={isAdmin ? "md:col-span-4 lg:col-span-9 flex flex-col gap-4" : "md:col-span-6 lg:col-span-3 flex flex-col gap-4"}>
 
           <Card className="rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100">
 
@@ -311,17 +446,29 @@ export default function ProfileDashboard() {
             )}
           </Card>
 
-          <Card className="rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex flex-col items-center">
+          {!isAdmin && (
+            <Card className="rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 flex flex-col items-center">
 
-            <h2 className="font-semibold text-sm sm:text-base mb-4 text-center">
-              Tasks
-            </h2>
+              <h2 className="font-semibold text-sm sm:text-base mb-4 text-center">
+                Tasks
+              </h2>
 
-            <div className="w-40 h-40 sm:w-50 sm:h-50 flex items-center justify-center">
-              <TaskChart />
-            </div>
+              <div className="w-40 h-40 sm:w-50 sm:h-50 flex items-center justify-center">
+                <TaskChart
+                  completed={taskStats.completed}
+                  inProgress={taskStats.inProgress}
+                  pending={taskStats.pending}
+                />
+              </div>
 
-          </Card>
+              <div className="mt-4 flex w-full justify-between text-xs text-gray-500">
+                <span>Completadas: {taskStats.completed}</span>
+                <span>En progreso: {taskStats.inProgress}</span>
+                <span>Pendientes: {taskStats.pending}</span>
+              </div>
+
+            </Card>
+          )}
         </div>
 
       </div>
