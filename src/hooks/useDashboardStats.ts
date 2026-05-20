@@ -167,3 +167,59 @@ export function useUserTasks(filters?: FiltersOptions) {
 
   return { data, loading, error }
 }
+
+export type DailyCompletion = {
+  date: string
+  dayOfWeek: string
+  completed: number
+}
+
+export type WeeklyProgressData = {
+  weekRange: {
+    start: string
+    end: string
+    weekOffset: number
+  }
+  totalCompleted: number
+  dailyCompletions: DailyCompletion[]
+}
+
+export function useWeeklyProgress() {
+  const [data, setData] = useState<WeeklyProgressData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchWeekly = async () => {
+      setLoading(true)
+      setError(null)
+
+      const token = localStorage.getItem("authToken")
+      if (!token) { setError("No hay sesión activa"); setLoading(false); return }
+
+      try {
+        const res = await fetch(`${BASE_URL}/dashboard/weekly-progress`, {
+          method: "GET",
+          headers: getHeaders(token),
+          cache: "no-store",
+        })
+
+        if (res.status === 401) { setError("Sesión expirada, vuelve a iniciar sesión"); return }
+        if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`)
+
+        const json = await res.json()
+        if (!json.success) throw new Error("La respuesta del servidor indica fallo")
+
+        setData(json.data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error desconocido")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchWeekly()
+  }, [])
+
+  return { data, loading, error }
+}

@@ -4,14 +4,13 @@ import { useState } from "react"
 import { Button } from "../Button/button"
 import { useUserTasks, UserTask } from "@/hooks/useDashboardStats"
 
-type FilterStatus = "all" | "pending" | "in_progress" | "completed" | "on_hold"
+type FilterStatus = "all" | "pending" | "in_progress" | "completed" 
 
 const getStatusColor = (status: UserTask["status"], isOverdue: boolean) => {
-  if (isOverdue) return "bg-red-500"
   switch (status) {
     case "completed":   return "bg-green-500"
-    case "on_hold":     return "bg-red-500"
-    case "in_progress": return "bg-blue-500"
+    case "in_progress": return isOverdue ? "bg-red-500" : "bg-blue-500"
+    case "on_hold":     return "bg-yellow-500"
     case "pending":     return "bg-yellow-500"
     default:            return "bg-gray-500"
   }
@@ -28,7 +27,6 @@ const getPriorityStyles = (priority: UserTask["priority"]) => {
 const formatStatus = (status: UserTask["status"], isOverdue: boolean) => {
   if (isOverdue) return "Overdue"
   switch (status) {
-    case "on_hold":     return "On Hold"
     case "in_progress": return "In Progress"
     case "completed":   return "Completed"
     case "pending":     return "Pending"
@@ -90,7 +88,6 @@ export default function ProjectsList({ filters }: Props) {
           { key: "completed",   label: `Completed (${countByStatus("completed")})` },
           { key: "in_progress", label: `In Progress (${countByStatus("in_progress")})` },
           { key: "pending",     label: `Pending (${countByStatus("pending")})` },
-          { key: "on_hold",     label: `On Hold (${countByStatus("on_hold")})` },
         ].map((tab) => (
           <button
             key={tab.key}

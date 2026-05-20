@@ -17,8 +17,8 @@ type FiltersState = {
 
 export default function UserDashboard() {
   const [filters, setFilters] = useState<FiltersState>({
-    sprint: "",
-    project: ""
+    sprint: undefined,
+    project: undefined
   })
 
   const { data, loading, error } = useDashboardStats(filters) // 👈 nuevo
@@ -75,7 +75,7 @@ export default function UserDashboard() {
 
           <Card className="h-auto lg:h-[462px]">
             <CardContent className="h-full pt-4">
-              <WeeklyProg />
+              <WeeklyProg filters={filters} />
             </CardContent>
           </Card>
 
