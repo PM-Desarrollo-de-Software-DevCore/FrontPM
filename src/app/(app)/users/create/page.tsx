@@ -6,6 +6,7 @@ import DocumentScannerIcon from "@mui/icons-material/DocumentScanner"
 import { API_BASE_URL, getToken } from "@/lib/auth"
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
 import { deleteUserProfileImage, uploadUserProfileImage } from "@/services/userService"
+import { useNotification } from "@/components/ui/notifications/NotificationProvider"
 
 type UserPreview = {
   id: string
@@ -107,6 +108,7 @@ const emptyForm: UserForm = {
 }
 
 export default function CreateUserPage() {
+  const { notifySuccess, notifyError } = useNotification()
   const [users, setUsers] = useState<UserPreview[]>([])
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [formMode, setFormMode] = useState<"create" | "edit">("create")
@@ -116,7 +118,6 @@ export default function CreateUserPage() {
   const [designationInput, setDesignationInput] = useState("")
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingUsers, setIsLoadingUsers] = useState(true)
-  const [saveAlertMessage, setSaveAlertMessage] = useState<string | null>(null)
   const [isLoadingCV, setIsLoadingCV] = useState(false)
   const [cvError, setCVError] = useState<string | null>(null)
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null)
@@ -131,16 +132,6 @@ export default function CreateUserPage() {
   })
   const [formColumnHeight, setFormColumnHeight] = useState<number | null>(null)
   const formColumnRef = useRef<HTMLElement | null>(null)
-
-  useEffect(() => {
-    if (!saveAlertMessage) return
-
-    const timeoutId = window.setTimeout(() => {
-      setSaveAlertMessage(null)
-    }, 5000)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [saveAlertMessage])
 
   useEffect(() => {
     return () => {
@@ -169,7 +160,7 @@ export default function CreateUserPage() {
     return () => {
       resizeObserver.disconnect()
     }
-  }, [formMode, selectedUserId, users, form, isLoadingCV, cvError, saveAlertMessage])
+  }, [formMode, selectedUserId, users, form, isLoadingCV, cvError])
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -388,7 +379,7 @@ export default function CreateUserPage() {
         designation: Array.isArray(cvData.experience_areas) ? cvData.experience_areas : prev.designation,
       }))
 
-      setSaveAlertMessage("CV processed successfully! Form has been populated.")
+      notifySuccess("CV processed", "Form has been populated successfully.")
     } catch (error) {
       setCVError(
         error instanceof Error ? error.message : "Failed to process CV"
@@ -462,11 +453,12 @@ export default function CreateUserPage() {
       )
 
       setProfileImagePreview(updated.profileImageUrl)
-      setSaveAlertMessage("Profile image removed successfully.")
+      notifySuccess("Profile image removed", "The profile image was removed successfully.")
     } catch (error) {
       setProfileImageError(
         error instanceof Error ? error.message : "Profile image could not be removed"
       )
+      notifyError("Profile image could not be removed", error instanceof Error ? error.message : "Please try again.")
     }
   }
 
@@ -581,7 +573,7 @@ export default function CreateUserPage() {
         }
 
         resetToCreateMode()
-        setSaveAlertMessage('User created successfully.')
+        notifySuccess("User created", "The user was created successfully.")
       } else if (formMode === 'edit' && selectedUserId) {
         // update
         const res = await fetch(`${API_BASE_URL}/users/${selectedUserId}`, {
@@ -638,12 +630,12 @@ export default function CreateUserPage() {
           }) : user))
         }
 
-        setSaveAlertMessage('User updated successfully.')
+        notifySuccess("User updated", "The user was updated successfully.")
       }
     } catch {
       // fallback behaviors
-      if (formMode === 'create') setSaveAlertMessage('User created locally (server error).')
-      else setSaveAlertMessage('User updated locally (server error).')
+      if (formMode === 'create') notifySuccess("User created", "User created locally because the server was unavailable.")
+      else notifySuccess("User updated", "User updated locally because the server was unavailable.")
     } finally {
       setIsSaving(false)
     }
@@ -745,11 +737,6 @@ export default function CreateUserPage() {
   return (
     <div className="min-h-screen bg-white px-6 py-6">
       <div className="mx-auto w-full max-w-350">
-        {saveAlertMessage && (
-          <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-green-700 shadow-sm">
-            {saveAlertMessage}
-          </div>
-        )}
 
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <h1 className="text-4xl font-bold text-slate-800">Users</h1>

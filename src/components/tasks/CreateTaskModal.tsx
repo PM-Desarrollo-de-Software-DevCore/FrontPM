@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 
 import { Task } from "@/types/task"
 import { getAssignmentSuggestions, AssignmentSuggestionItem } from "@/services/assignmentSuggestionService"
+import { useNotification } from "@/components/ui/notifications/NotificationProvider"
 
 interface UserChoice {
   id: string
@@ -15,6 +16,8 @@ interface Props {
   open: boolean
   projectId: string
   users: UserChoice[]
+  initialSprintId?: string | null
+  initialStatus?: Task["status"]
   onCloseAction: () => void
   onSubmitAction: (task: Partial<Task>) => void
 }
@@ -23,16 +26,28 @@ export default function CreateTaskModal({
   open,
   projectId,
   users,
+  initialSprintId = null,
+  initialStatus = "pending",
   onCloseAction,
   onSubmitAction,
 }: Props) {
+  const { notifyError } = useNotification()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium")
   const [endDate, setEndDate] = useState("")
   const [assignedTo, setAssignedTo] = useState("")
+  const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null)
+  const [selectedStatus, setSelectedStatus] = useState<Task["status"]>("pending")
   const [suggestions, setSuggestions] = useState<AssignmentSuggestionItem[]>([])
   const [suggestionsLoading, setSuggestionsLoading] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+
+    setSelectedSprintId(initialSprintId)
+    setSelectedStatus(initialStatus)
+  }, [open, initialSprintId, initialStatus])
 
   useEffect(() => {
     if (!open) return
@@ -97,14 +112,20 @@ export default function CreateTaskModal({
   }
 
   const handleSubmit = async () => {
+    const trimmedTitle = title.trim()
+    if (!trimmedTitle) {
+      notifyError("Task not created", "Task title is required.")
+      return
+    }
+
     await onSubmitAction({
-      title,
+      title: trimmedTitle,
       description,
       priority,
-      end_date: endDate,
+      ...(endDate ? { end_date: endDate } : {}),
       progress: 0,
-      status: "pending",
-      id_sprint: null,
+      status: selectedStatus,
+      id_sprint: selectedSprintId,
       ...(assignedTo ? { assignedTo } : {}),
     })
 
@@ -113,6 +134,8 @@ export default function CreateTaskModal({
     setPriority("medium")
     setEndDate("")
     setAssignedTo("")
+    setSelectedSprintId(null)
+    setSelectedStatus("pending")
     setSuggestions([])
   }
 
@@ -212,7 +235,7 @@ export default function CreateTaskModal({
               <label className="mb-2 block text-sm font-medium text-gray-600">Priority</label>
               <select
                 value={priority}
-                onChange={(e) => setPriority(e.target.value as any)}
+                onChange={(e) => setPriority(e.target.value as Task["priority"])}
                 className="h-12 w-full rounded-2xl border border-gray-200 px-4 text-sm outline-none"
               >
                 <option value="low">Low</option>
