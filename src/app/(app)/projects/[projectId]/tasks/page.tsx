@@ -676,6 +676,8 @@ return (
       open={
         isCreateModalOpen
       }
+      projectId={projectId}
+      users={users}
       onCloseAction={() =>
         setIsCreateModalOpen(
           false
@@ -707,6 +709,7 @@ return (
         task={
           selectedTask
         }
+        projectId={projectId}
         users={users}
         onCloseAction={() => {
 
