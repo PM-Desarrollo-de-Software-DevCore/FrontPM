@@ -4,6 +4,7 @@ import HoursChart from "@/components/ui/graphs/hours_perTM"
 import VelocityChart from "@/components/ui/graphs/velocity"
 import FlowChart from "@/components/ui/graphs/flow"
 import { CheckCircle2, CheckSquare, MessageSquare } from "lucide-react"
+import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
 
 const completedTasks = [
   { id: "#402235", title: "Make an Automatic Payment System that enable the design", completedBy: "Yash Ghori", avatar: "/images/persona.png" },
@@ -80,12 +81,11 @@ export default function WorklogsPage() {
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Completed</span>
                   </div>
-                  <Image
+                  <FramedAvatar
                     src={task.avatar}
                     alt={task.completedBy}
-                    width={34}
-                    height={34}
-                    className="rounded-full w-8 h-8 sm:w-9 sm:h-9 object-cover border-2 border-white shadow-sm"
+                    size={42}
+                    frameSize="large"
                   />
                   <MessageSquare className="w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" />
                 </div>

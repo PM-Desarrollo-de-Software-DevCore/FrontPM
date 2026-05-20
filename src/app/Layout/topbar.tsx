@@ -1,10 +1,12 @@
 "use client"
 
 import Image from "next/image"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined"
+import { getUserCompletedTodayCount } from "@/services/taskService"
+import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
 
 export default function Topbar() {
   const [open, setOpen] = useState(false)
@@ -12,6 +14,27 @@ export default function Topbar() {
   const { user, logout } = useAuth()
 
   const fullName = [user?.name, user?.lastname].filter(Boolean).join(" ") || "Usuario"
+  const [completedToday, setCompletedToday] = useState<number>(0)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchCount() {
+      if (!user) return
+      try {
+        const count = await getUserCompletedTodayCount()
+        if (!cancelled) setCompletedToday(count)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+
+    fetchCount()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-sidebar-border bg-sidebar shadow-sm">
@@ -74,14 +97,15 @@ export default function Topbar() {
             </div>
 
             <div className="relative">
-              <Image
-                src="/images/persona.png"
-                alt="User"
-                width={36}
-                height={36}
-                onClick={() => setOpen(!open)}
-                className="rounded-full cursor-pointer"
-              />
+                <button type="button" onClick={() => setOpen(!open)} className="block">
+                  <FramedAvatar
+                    src={user?.avatar ?? "/images/persona.png"}
+                    alt="User"
+                    size={36}
+                    completedTodayCount={completedToday}
+                    priority
+                  />
+                </button>
 
               {open && (
                 <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
