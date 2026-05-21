@@ -23,7 +23,7 @@ export default function DashboardPage() {
       <div className="w-full px-4 sm:px-6 lg:px-8 pt-4 pb-4 space-y-4">
       
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-strong">
             Dashboard
           </h1>
 
@@ -52,11 +52,11 @@ export default function DashboardPage() {
               </div>
               <div className="flex-1 overflow-y-auto p-4 sm:p-5 flex flex-col gap-4">
                 {[...Array(8)].map((_, i) => (
-                  <div key={i} className="rounded-xl border border-zinc-100 px-4 py-3 shadow-sm bg-white">
-                    <p className="text-sm font-semibold">
+                  <div key={i} className="rounded-xl border border-border px-4 py-3 shadow-sm bg-card">
+                    <p className="text-sm font-semibold text-strong">
                       User updated project settings
                     </p>
-                    <p className="text-xs text-zinc-500 mt-1">
+                    <p className="text-xs text-muted mt-1">
                       Logs · 2 mins ago
                     </p>
                   </div>

@@ -4,6 +4,7 @@ import "../styles/globals.css";
 import { cn } from "@/lib/utils";
 import { LanguageProvider } from "@/components/i18n/LanguageProvider";
 import { NotificationProvider } from "@/components/ui/notifications/NotificationProvider";
+import ThemeProvider from "@/components/ui/ThemeProvider";
 
 const figtree = Figtree({subsets:['latin'],variable:'--font-sans'});
 
@@ -29,10 +30,30 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn("font-sans", figtree.variable)}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const stored = localStorage.getItem('theme');
+                if (stored === 'dark') {
+                  document.documentElement.classList.add('dark');
+                } else if (stored === 'light') {
+                  document.documentElement.classList.remove('dark');
+                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                  document.documentElement.classList.add('dark');
+                }
+              } catch (err) {}
+            `,
+          }}
+        />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <LanguageProvider>
-          <NotificationProvider>{children}</NotificationProvider>
-        </LanguageProvider>
+        <ThemeProvider>
+          <LanguageProvider>
+            <NotificationProvider>{children}</NotificationProvider>
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

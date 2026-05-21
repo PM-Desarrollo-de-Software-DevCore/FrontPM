@@ -1,6 +1,7 @@
 import AuthGuard from "@/components/auth/AuthGuard";
 import SideBarLayout from "../Layout/sidebar";
 import Topbar from "../Layout/topbar";
+import ThemeProvider from "@/components/ui/ThemeProvider";
 
 export default function AppLayout({
   children,
@@ -10,7 +11,9 @@ export default function AppLayout({
   return (
     <AuthGuard>
       <Topbar />
-      <SideBarLayout>{children}</SideBarLayout>
+      <ThemeProvider>
+        <SideBarLayout>{children}</SideBarLayout>
+      </ThemeProvider>
     </AuthGuard>
   );
 }

@@ -82,10 +82,10 @@ export default function WorkloadChart() {
 
       {/* Header */}
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">
+        <h3 className="text-lg font-semibold text-strong">
           Workload
         </h3>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted">
           Workload per team member 
         </p>
       </div>
