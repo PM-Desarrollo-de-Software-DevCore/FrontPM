@@ -48,13 +48,13 @@ export default function ProjectsOverview() {
       <CardHeader className="flex items-center justify-between gap-4 pb-4">
         <div>
           <CardTitle>Proyectos recientes</CardTitle>
-          <p className="text-sm text-muted\">
+          <p className="text-sm text-muted">
             Cambios hechos en Projects se muestran aquí.
           </p>
         </div>
         <Link
-          href=\"/projects\"
-          className=\"text-sm font-medium text-muted transition hover:text-foreground\"
+          href="/projects"
+          className="text-sm font-medium text-muted transition hover:text-foreground"
         >
           Ver todos
         </Link>
