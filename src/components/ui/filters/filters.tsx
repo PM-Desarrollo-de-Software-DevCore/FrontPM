@@ -33,7 +33,7 @@ export default function Filters({
 
 
       <div className="flex flex-col flex-1">
-        <label className="text-sm font-medium text-zinc-600 mb-1">
+        <label className="text-sm font-medium text-muted mb-1">
           Sprint
         </label>
 
@@ -41,7 +41,7 @@ export default function Filters({
           <select
             value={filters.sprint || ""}
             onChange={(e) => handleChange("sprint", e.target.value)}
-            className="w-full appearance-none border border-zinc-300 rounded-lg px-4 pr-10 py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full appearance-none border border-border rounded-lg px-4 pr-10 py-3 text-base bg-card text-card-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="">Todos</option>
             {sprints.map((s) => (
@@ -49,13 +49,13 @@ export default function Filters({
             ))}
           </select>
 
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={18} />
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" size={18} />
         </div>
       </div>
 
 
       <div className="flex flex-col flex-1">
-        <label className="text-sm font-medium text-zinc-600 mb-1">
+        <label className="text-sm font-medium text-muted mb-1">
           Proyecto
         </label>
 
@@ -63,7 +63,7 @@ export default function Filters({
           <select
             value={filters.project || ""}
             onChange={(e) => handleChange("project", e.target.value)}
-            className="w-full appearance-none border border-zinc-300 rounded-lg px-4 pr-10 py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full appearance-none border border-border rounded-lg px-4 pr-10 py-3 text-base bg-card text-card-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="">Todos</option>
             {projects.map((p) => (
@@ -71,7 +71,7 @@ export default function Filters({
             ))}
           </select>
 
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" size={18} />
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" size={18} />
         </div>
       </div>
 

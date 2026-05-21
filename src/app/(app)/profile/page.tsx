@@ -9,12 +9,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { getUserCompletedTodayCount, getMultipleUsersCompletedTodayCount, getMyTasks } from "@/services/taskService";
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar";
 import LeaderboardAvatar from "@/components/ui/avatar/LeaderboardAvatar";
+<<<<<<< HEAD
 import {
   getUserProfileDetails,
   getUserTechnologies,
   UserProfileDetails,
   UserTechnologyEntry,
 } from "@/services/userService";
+  import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { Task } from "@/types/task";
 
@@ -83,6 +85,9 @@ function getTaskProgressColor(status: Task["status"]): string {
       return "bg-amber-500"
   }
 }
+=======
+import ThemeToggle from "@/components/ui/ThemeToggle";
+>>>>>>> PM-57_Modo-oscuro
 
 export default function ProfileDashboard() {
   const { language, toggleLanguage } = useLanguage();
@@ -282,6 +287,7 @@ export default function ProfileDashboard() {
                   {profileLoading ? "Cargando perfil..." : displayName || "Usuario"}
                 </h2>
 
+<<<<<<< HEAD
                 <p className="text-xs sm:text-sm text-gray-500">
                   {profileLoading ? "Obteniendo datos del usuario" : email}
                 </p>
@@ -328,6 +334,14 @@ export default function ProfileDashboard() {
               ) : (
                 <p className="text-xs text-gray-500">No hay skills registradas todavía.</p>
               )}
+=======
+              <p className="text-xs sm:text-sm text-gray-500">
+                Ahmedabad, Gujarat
+              </p>
+              <div className="mt-3">
+                <ThemeToggle />
+              </div>
+>>>>>>> PM-57_Modo-oscuro
             </div>
           </Card>
 
