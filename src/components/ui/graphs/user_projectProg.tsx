@@ -15,10 +15,10 @@ export default function TotalProgress({ dashboardData, loading, error }: Props) 
     <div className="w-full h-full flex flex-col">
 
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">
+        <h3 className="text-lg font-semibold text-strong">
           Project Progress
         </h3>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted">
           Total progress of based on completed tasks
         </p>
       </div>
@@ -29,7 +29,7 @@ export default function TotalProgress({ dashboardData, loading, error }: Props) 
           {loading ? (
             <div className="h-12 w-24 animate-pulse bg-slate-200 rounded-md" />
           ) : (
-            <span className="text-5xl font-bold text-slate-900">
+            <span className="text-5xl font-bold text-strong">
               {progress}%
             </span>
           )}
