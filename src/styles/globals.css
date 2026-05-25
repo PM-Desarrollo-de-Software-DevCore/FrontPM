@@ -130,6 +130,53 @@
 }
 
 /* Dark-mode legibility helpers and overrides for Tailwind classes that reduce contrast */
+.dark .text-black { color: var(--foreground) !important; }
+.dark .text-gray-900,
+.dark .text-slate-900,
+.dark .text-zinc-900 { color: var(--foreground) !important; }
+
+.dark .text-gray-800,
+.dark .text-slate-800,
+.dark .text-zinc-800 { color: var(--foreground) !important; }
+
+.dark .text-gray-700,
+.dark .text-slate-700,
+.dark .text-zinc-700 { color: var(--muted-foreground) !important; }
+
+.dark .text-gray-600,
+.dark .text-slate-600,
+.dark .text-zinc-600 { color: var(--muted-foreground) !important; }
+
+.dark .text-gray-500,
+.dark .text-slate-500,
+.dark .text-zinc-500 { color: var(--muted-foreground) !important; }
+
+.dark .text-gray-400,
+.dark .text-slate-400,
+.dark .text-zinc-400 { color: color-mix(in srgb, var(--muted-foreground) 72%, white) !important; }
+
+.dark .bg-white,
+.dark .bg-gray-50,
+.dark .bg-slate-50,
+.dark .bg-zinc-50 { background-color: var(--card) !important; color: var(--card-foreground) !important; }
+
+.dark .bg-gray-100,
+.dark .bg-slate-100,
+.dark .bg-zinc-100 { background-color: rgba(255,255,255,0.04) !important; color: var(--foreground) !important; }
+
+.dark .bg-\[\#fcfcfc\] { background-color: var(--card) !important; }
+
+.dark .border-gray-100,
+.dark .border-slate-100,
+.dark .border-zinc-100 { border-color: rgba(255,255,255,0.04) !important; }
+
+.dark .border-gray-200,
+.dark .border-slate-200,
+.dark .border-zinc-200,
+.dark .border-gray-300,
+.dark .border-slate-300,
+.dark .border-zinc-300 { border-color: rgba(255,255,255,0.08) !important; }
+
 .dark h1,
 .dark h2,
 .dark h3,
@@ -149,43 +196,8 @@
   color: var(--muted-foreground) !important;
 }
 
-/* Tailwind gray text overrides in dark mode to ensure readability */
-.dark .text-gray-500 { color: var(--muted-foreground) !important; }
-.dark .text-gray-600 { color: var(--muted-foreground) !important; }
-.dark .text-gray-700 { color: var(--foreground) !important; font-weight:600 !important; }
-/* Zinc / gray mappings used across components */
-.dark .text-zinc-900 { color: var(--foreground) !important; }
-.dark .text-zinc-700 { color: var(--foreground) !important; font-weight:600 !important; }
-.dark .text-zinc-600 { color: var(--muted-foreground) !important; }
-.dark .text-zinc-500 { color: var(--muted-foreground) !important; }
-.dark .text-zinc-400 { color: var(--muted-foreground) !important; }
 
-.dark .bg-zinc-50 { background-color: rgba(255,255,255,0.02) !important; }
-.dark .bg-blue-50 { background-color: rgba(100,181,246,0.06) !important; color: var(--primary-foreground) !important; }
-
-/* Slate mappings used in user pages */
-.dark .text-slate-800 { color: var(--foreground) !important; }
-.dark .text-slate-700 { color: var(--muted-foreground) !important; }
-.dark .text-slate-600 { color: var(--muted-foreground) !important; }
-.dark .text-slate-500 { color: var(--muted-foreground) !important; }
-.dark .bg-slate-50 { background-color: rgba(255,255,255,0.02) !important; }
-.dark .bg-slate-100 { background-color: rgba(255,255,255,0.03) !important; }
-.dark .border-slate-200 { border-color: rgba(255,255,255,0.06) !important; }
-
-
-/* Make light backgrounds inside cards use card variable in dark mode */
-.dark .bg-white { background-color: var(--card) !important; color: var(--card-foreground) !important; }
-.dark .border-gray-100 { border-color: rgba(255,255,255,0.06) !important; }
-/* Additional border mappings commonly used in components */
-.dark .border-gray-200,
-.dark .border-zinc-200,
-.dark .border-zinc-300,
-.dark .border-gray-300 {
-  border-color: rgba(255,255,255,0.06) !important;
-}
-
-.dark .border-zinc-100,
-.dark .border-zinc-50 { border-color: rgba(255,255,255,0.04) !important; }
+.dark .bg-blue-50 { background-color: rgba(100,181,246,0.08) !important; color: var(--primary-foreground) !important; }
 
 /* Inputs, selects and dropdowns */
 .dark .bg-white.input,
