@@ -4,10 +4,10 @@ import Image from "next/image"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
-import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined"
 import { getUserCompletedTodayCount } from "@/services/taskService"
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
 import { getUserProfileDetails } from "@/services/userService"
+import NotificationCenter from "@/components/ui/notifications/NotificationCenter"
 
 export default function Topbar() {
   const [open, setOpen] = useState(false)
@@ -104,11 +104,7 @@ export default function Topbar() {
             />
           </div>
 
-          <button className="relative">
-            <NotificationsNoneOutlinedIcon className="h-5 w-5 text-sidebar-foreground" />
-
-            <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full" />
-          </button>
+          <NotificationCenter />
 
 
           <div className="flex items-center gap-2 sm:gap-3">

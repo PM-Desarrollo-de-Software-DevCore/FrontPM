@@ -8,10 +8,10 @@ export default function TotalProgress() {
       
   
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">
+        <h3 className="text-lg font-semibold text-strong">
           Project Progress
         </h3>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted">
           Total progress of the project based on completed tasks
         </p>
       </div>
