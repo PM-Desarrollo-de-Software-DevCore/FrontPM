@@ -153,6 +153,7 @@ export default function TasksPage() {
     () => queryTask?.id_sprint || requestedSprintId || null,
     [queryTask?.id_sprint, requestedSprintId]
   )
+  const activeModalTask = selectedTask ?? queryTask
 
   useEffect(() => {
     if (!resolvedProjectId || !focusSprintId) {
@@ -465,9 +466,9 @@ export default function TasksPage() {
         onCloseAction={() => setIsReportModalOpen(false)}
       />
 
-      {(selectedTask || queryTask) && (
+      {activeModalTask && (
         <TaskDetailsModal
-          task={selectedTask || queryTask}
+          task={activeModalTask}
           projectId={resolvedProjectId}
           users={users}
           onCloseAction={() => {
