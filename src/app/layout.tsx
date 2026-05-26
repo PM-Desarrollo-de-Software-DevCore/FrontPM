@@ -6,16 +6,18 @@ import { LanguageProvider } from "@/components/i18n/LanguageProvider";
 import { NotificationProvider } from "@/components/ui/notifications/NotificationProvider";
 import ThemeProvider from "@/components/ui/ThemeProvider";
 
-const figtree = Figtree({subsets:['latin'],variable:'--font-sans'});
+const figtree = Figtree({subsets:['latin'],variable:'--font-sans', preload: false});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  preload: false,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false,
 });
 
 export const metadata: Metadata = {
