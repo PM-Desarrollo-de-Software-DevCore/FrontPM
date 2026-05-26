@@ -81,14 +81,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     <NotificationContext.Provider value={value}>
       {children}
 
-      <div className="pointer-events-none fixed bottom-5 left-5 z-9999 flex w-[min(92vw,22rem)] flex-col gap-3">
+      <div className="pointer-events-none fixed top-3 right-3 z-9999 flex w-[min(92vw,22rem)] flex-col gap-2 sm:top-5 sm:right-5 sm:gap-3">
         {notifications.map((notification) => (
           <div
             key={notification.id}
             className={`pointer-events-auto rounded-2xl border px-4 py-3 shadow-xl transition-all duration-200 ease-out ${
               notification.visible
                 ? "translate-x-0 opacity-100"
-                : "-translate-x-3 opacity-0"
+                : "translate-x-3 opacity-0"
             } ${
               notification.type === "success"
                 ? "border-green-200 bg-green-50 text-green-900"
