@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import EditIcon from "@mui/icons-material/Edit"
 import DocumentScannerIcon from "@mui/icons-material/DocumentScanner"
 import { API_BASE_URL, getToken } from "@/lib/auth"
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
 import { deleteUserProfileImage, uploadUserProfileImage } from "@/services/userService"
 import { useNotification } from "@/components/ui/notifications/NotificationProvider"
+import { useSearchParams } from "next/navigation"
 
 type UserPreview = {
   id: string
@@ -109,6 +110,7 @@ const emptyForm: UserForm = {
 
 export default function CreateUserPage() {
   const { notifySuccess, notifyError } = useNotification()
+  const searchParams = useSearchParams()
   const [users, setUsers] = useState<UserPreview[]>([])
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [formMode, setFormMode] = useState<"create" | "edit">("create")
@@ -132,6 +134,7 @@ export default function CreateUserPage() {
   })
   const [formColumnHeight, setFormColumnHeight] = useState<number | null>(null)
   const formColumnRef = useRef<HTMLElement | null>(null)
+  const handledUserIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     return () => {
@@ -203,7 +206,7 @@ export default function CreateUserPage() {
     setProfileImageError(null)
   }
 
-  const loadUserIntoForm = (user: UserPreview) => {
+  const loadUserIntoForm = useCallback((user: UserPreview) => {
     setFormMode("edit")
     setSelectedUserId(user.id)
     setForm({
@@ -234,7 +237,23 @@ export default function CreateUserPage() {
     setProfileImageFile(null)
     setProfileImagePreview(user.profileImageUrl ?? null)
     setProfileImageError(null)
-  }
+  }, [profileImageObjectUrl])
+
+  useEffect(() => {
+    const requestedUserId = searchParams.get("userId")
+
+    if (!requestedUserId || requestedUserId === handledUserIdRef.current) {
+      return
+    }
+
+    const matchedUser = users.find((user) => user.id === requestedUserId)
+    if (!matchedUser) {
+      return
+    }
+
+    loadUserIntoForm(matchedUser)
+    handledUserIdRef.current = requestedUserId
+  }, [loadUserIntoForm, searchParams, users])
 
   const handleDeleteUser = (userId: string) => {
     const userToDelete = users.find((user) => user.id === userId)
