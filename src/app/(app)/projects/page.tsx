@@ -175,11 +175,11 @@ export default function ProjectsPage() {
   };
 
   return (
-    <main className="min-h-screen w-full flex-1 bg-white px-8 py-8">
+    <main className="min-h-screen w-full flex-1 px-8 py-8">
         <div className="w-full">
         <div className="mb-5 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-700">Projects</h1>
+            <h1 className="text-4xl font-bold text-strong">Projects</h1>
           </div>
 
           <CreateProjectModal onCreate={handleCreateProject} />

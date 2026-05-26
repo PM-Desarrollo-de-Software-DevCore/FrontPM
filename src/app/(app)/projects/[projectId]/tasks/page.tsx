@@ -330,7 +330,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="bg-[#fafafa] p-8">
+    <div className="p-8">
       <div className="mb-6">
         <h1 className="text-4xl font-bold text-black">Scrum Board</h1>
         <p className="mt-2 text-gray-400">Manage project sprints and tasks</p>

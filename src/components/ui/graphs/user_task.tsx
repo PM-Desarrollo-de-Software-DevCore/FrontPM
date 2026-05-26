@@ -94,8 +94,8 @@ export default function ProjectsList({ filters }: Props) {
             onClick={() => setFilter(tab.key as FilterStatus)}
             className={`px-3 py-1.5 text-sm rounded-full border transition
               ${filter === tab.key
-                ? "bg-gray-200 text-gray-800 border-gray-300"
-                : "bg-white text-gray-600 hover:bg-gray-100"
+                ? "bg-muted text-strong border-border"
+                : "bg-card text-muted-foreground hover:bg-muted border-border"
               }`}
           >
             {tab.label}
@@ -107,12 +107,12 @@ export default function ProjectsList({ filters }: Props) {
         {filteredTasks.map((task) => (
           <div
             key={task.id_task}
-            className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-4 shadow-sm hover:shadow-md transition w-full min-w-0 cursor-pointer"
+            className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-4 shadow-sm hover:shadow-md transition w-full min-w-0 cursor-pointer"
           >
 
             <div className="flex flex-col items-start gap-1 min-w-0 flex-1 pr-3">
               <span className="font-medium text-sm text-left truncate w-full">{task.title}</span>
-              <span className="text-xs text-gray-400 text-left truncate w-full">{task.project.name}</span>
+              <span className="text-xs text-muted text-left truncate w-full">{task.project.name}</span>
             </div>
 
 
@@ -134,7 +134,7 @@ export default function ProjectsList({ filters }: Props) {
       </div>
 
       {filteredTasks.length === 0 && (
-        <div className="text-sm text-gray-400 text-center py-6">
+        <div className="text-sm text-muted text-center py-6">
           No tasks found
         </div>
       )}

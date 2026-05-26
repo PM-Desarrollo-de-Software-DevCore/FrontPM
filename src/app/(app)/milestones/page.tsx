@@ -153,39 +153,39 @@ function getInitials(label: string) {
 function getProjectStatusClasses(status: FrontProjectStatus) {
   switch (status) {
     case "Completed":
-      return "bg-emerald-100 text-emerald-700"
+      return "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
     case "In Progress":
-      return "bg-blue-100 text-blue-700"
+      return "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
     case "Planning":
-      return "bg-zinc-100 text-zinc-700"
+      return "bg-zinc-50 text-zinc-700 dark:bg-zinc-800/30 dark:text-zinc-300"
     default:
-      return "bg-zinc-100 text-zinc-700"
+      return "bg-zinc-50 text-zinc-700 dark:bg-zinc-800/30 dark:text-zinc-300"
   }
 }
 
 function getProjectPriorityClasses(priority: FrontProjectPriority) {
   switch (priority) {
     case "High":
-      return "bg-rose-100 text-rose-700"
+      return "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400"
     case "Medium":
-      return "bg-amber-100 text-amber-800"
+      return "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
     case "Low":
-      return "bg-emerald-100 text-emerald-700"
+      return "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
     default:
-      return "bg-zinc-100 text-zinc-700"
+      return "bg-zinc-50 text-zinc-700 dark:bg-zinc-800/30 dark:text-zinc-300"
   }
 }
 
 function getSprintStatusClasses(status: FrontSprintStatus) {
   switch (status) {
     case "finished":
-      return "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+      return "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
     case "active":
-      return "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+      return "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/50"
     case "planned":
-      return "bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100"
+      return "bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-800/30 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800/50"
     default:
-      return "bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100"
+      return "bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-800/30 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800/50"
   }
 }
 
@@ -363,13 +363,13 @@ function ProjectButton({
       className={`w-full rounded-2xl border p-4 text-left shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
         isSelected
           ? "border-blue-500 bg-blue-50 shadow-md"
-          : "border-zinc-200 bg-white hover:border-blue-200 hover:shadow-md"
+          : "border-border bg-card hover:border-blue-200 hover:shadow-md"
       }`}
     >
-      <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-lg font-semibold text-zinc-900">{project.name}</h3>
-          <p className="mt-1 text-xs text-zinc-500">Owner: {project.owner}</p>
+          <h3 className="truncate text-lg font-bold text-strong">{project.name}</h3>
+          <p className="mt-1 text-xs text-muted">Owner: {project.owner}</p>
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1">
@@ -382,9 +382,9 @@ function ProjectButton({
         </div>
       </div>
 
-      <p className="line-clamp-2 text-xs leading-5 text-zinc-500">{project.description}</p>
+      <p className="line-clamp-2 text-xs leading-5 text-muted">{project.description}</p>
 
-      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-zinc-500">
+      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-muted">
         <span>{project.tasks} tasks</span>
         <span>{project.progress}% complete</span>
       </div>
@@ -394,22 +394,22 @@ function ProjectButton({
           <span
             key={member.id}
             title={member.label}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white bg-zinc-900 text-[10px] font-semibold text-white"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-card-foreground text-[10px] font-semibold"
           >
             {member.initials || "?"}
           </span>
         ))}
 
         {project.teamMembers.length > 4 && (
-          <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-white bg-zinc-100 px-2 text-[10px] font-semibold text-zinc-600">
+          <span className="inline-flex h-7 min-w-[28px] items-center justify-center rounded-full border border-border bg-muted px-2 text-[10px] font-semibold text-muted-foreground">
             +{project.teamMembers.length - 4}
           </span>
         )}
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-zinc-400">
+      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-muted">
         <span>Deadline: {formatDate(project.endDate, "en-GB").toUpperCase()}</span>
-        {isSelected && <span className="font-semibold text-blue-700">Active</span>}
+        {isSelected && <span className="font-semibold text-primary">Active</span>}
       </div>
     </button>
   )
@@ -524,34 +524,34 @@ export default function MilestonesPage() {
   const selectedTimeline = selectedProject ? buildTimelineItems(selectedProject.sprints) : []
 
   return (
-    <main className="min-h-screen w-full bg-linear-to-br from-slate-50 via-white to-blue-50 px-5 py-6 text-slate-900">
+    <main className="min-h-screen w-full bg-background px-5 py-6 text-foreground">
       <div className="mb-8 flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Milestones</h1>
-        <p className="max-w-2xl text-sm text-slate-500">
+        <h1 className="text-3xl font-bold tracking-tight text-strong">Milestones</h1>
+        <p className="max-w-2xl text-sm text-muted">
           Selecciona un proyecto para cambiar la vista superior, la progresión del sprint y la línea de tiempo sin salir de la página.
         </p>
       </div>
 
       {isLoading && (
-        <div className="rounded-2xl border border-slate-200 bg-white/80 p-6 text-sm text-slate-500 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted shadow-sm">
           Loading milestone data from backend...
         </div>
       )}
 
       {!isLoading && error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700 shadow-sm">
+        <div className="rounded-2xl border border-red-500/50 bg-red-50/10 p-6 text-sm text-red-600 dark:bg-red-950/20 dark:border-red-900 dark:text-red-400 shadow-sm">
           {error}
         </div>
       )}
 
       {!isLoading && !error && selectedProject && (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <Card className="col-span-1 border-slate-200 bg-white/90 shadow-sm">
+          <Card className="col-span-1 border-border bg-card shadow-sm">
             <CardContent className="pt-4">
               <div className="mb-6 flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-sm font-semibold text-slate-900">{selectedProject.name}</h3>
-                  <p className="mt-1 text-xs text-slate-500">Sprint Progress</p>
+                  <h3 className="truncate text-sm font-semibold text-strong">{selectedProject.name}</h3>
+                  <p className="mt-1 text-xs text-muted">Sprint Progress</p>
                 </div>
 
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${getProjectStatusClasses(selectedProject.status)}`}>
@@ -564,34 +564,34 @@ export default function MilestonesPage() {
                   <SprintProgressChart sprint={selectedSprint} />
                 </div>
               ) : (
-                <div className="flex h-60 w-full items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
+                <div className="flex h-60 w-full items-center justify-center rounded-2xl border border-dashed border-border bg-card text-sm text-muted">
                   No sprint data available for this project yet.
                 </div>
               )}
 
               <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
-                <div className="rounded-xl bg-slate-50 p-3">
-                  <p className="text-slate-500">Project progress</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{selectedProject.progress}%</p>
+                <div className="rounded-xl bg-muted p-3">
+                  <p className="text-muted-foreground">Project progress</p>
+                  <p className="mt-1 text-sm font-semibold text-strong">{selectedProject.progress}%</p>
                 </div>
-                <div className="rounded-xl bg-slate-50 p-3">
-                  <p className="text-slate-500">Tasks</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{selectedProject.tasks}</p>
+                <div className="rounded-xl bg-muted p-3">
+                  <p className="text-muted-foreground">Tasks</p>
+                  <p className="mt-1 text-sm font-semibold text-strong">{selectedProject.tasks}</p>
                 </div>
-                <div className="rounded-xl bg-slate-50 p-3">
-                  <p className="text-slate-500">Owner</p>
-                  <p className="mt-1 line-clamp-1 text-sm font-semibold text-slate-900">{selectedProject.owner}</p>
+                <div className="rounded-xl bg-muted p-3">
+                  <p className="text-muted-foreground">Owner</p>
+                  <p className="mt-1 line-clamp-1 text-sm font-semibold text-strong">{selectedProject.owner}</p>
                 </div>
-                <div className="rounded-xl bg-slate-50 p-3">
-                  <p className="text-slate-500">Deadline</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{formatDate(selectedProject.endDate).toUpperCase()}</p>
+                <div className="rounded-xl bg-muted p-3">
+                  <p className="text-muted-foreground">Deadline</p>
+                  <p className="mt-1 text-sm font-semibold text-strong">{formatDate(selectedProject.endDate).toUpperCase()}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <div className="col-span-1 flex flex-col gap-3">
-            <div className="pt-1 text-sm font-semibold text-slate-900">Select Project Sprint</div>
+            <div className="pt-1 text-sm font-semibold text-strong">Select Project Sprint</div>
             {selectedProject.sprints.length ? (
               selectedProject.sprints.map((sprint) => (
                 <button
@@ -600,44 +600,44 @@ export default function MilestonesPage() {
                   onClick={() => setSelectedSprintId(sprint.id)}
                   className={`w-full rounded-2xl border px-4 py-3 text-left transition-all ${
                     selectedSprint?.id === sprint.id
-                      ? "border-blue-500 bg-blue-50 shadow-sm"
+                      ? "border-primary bg-muted shadow-sm"
                       : getSprintStatusClasses(sprint.status)
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-slate-900">{sprint.name}</p>
-                      <p className="mt-0.5 text-xs text-slate-600">{sprint.progress}% complete</p>
+                      <p className="truncate text-sm font-medium text-strong">{sprint.name}</p>
+                      <p className="mt-0.5 text-xs text-muted">{sprint.progress}% complete</p>
                     </div>
 
                     <div className="flex shrink-0 flex-col items-end gap-2">
-                      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                      <span className="rounded-full bg-card px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
                         {sprint.status}
                       </span>
                       {sprint.status === "finished" && <Check className="h-4 w-4 shrink-0" />}
                     </div>
                   </div>
 
-                  <div className="mt-3 text-xs text-slate-500">
+                  <div className="mt-3 text-xs text-muted">
                     {formatShortDate(sprint.startDate)} - {formatShortDate(sprint.endDate)}
                   </div>
                 </button>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
+              <div className="rounded-2xl border border-dashed border-border bg-card p-4 text-sm text-muted">
                 Este proyecto todavía no tiene sprints cargados.
               </div>
             )}
           </div>
 
-          <Card className="col-span-1 border-slate-200 bg-white/90 shadow-sm">
+          <Card className="col-span-1 border-border bg-card shadow-sm">
             <CardContent className="pt-4">
               <div className="mb-4">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-strong">
                   <Flag className="h-4 w-4" />
                   Milestone Timeline
                 </h3>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted">
                   Milestones generados desde los sprints del proyecto seleccionado
                 </p>
               </div>
@@ -647,7 +647,7 @@ export default function MilestonesPage() {
                   selectedTimeline.map((item, index) => (
                     <div key={item.id} className="relative">
                       {index < selectedTimeline.length - 1 && (
-                        <div className="absolute left-3 top-8 h-10 w-0.5 bg-slate-200" />
+                        <div className="absolute left-3 top-8 h-10 w-0.5 bg-border" />
                       )}
 
                       <div className="flex gap-3">
@@ -661,18 +661,18 @@ export default function MilestonesPage() {
 
                         <div className="min-w-0 flex-1 pb-1">
                           <div className="flex flex-wrap items-baseline justify-between gap-2">
-                            <p className="flex-1 text-xs font-semibold text-slate-900">{item.title}</p>
-                            <span className="shrink-0 text-xs text-slate-500">{formatShortDate(item.date)}</span>
+                            <p className="flex-1 text-xs font-semibold text-strong">{item.title}</p>
+                            <span className="shrink-0 text-xs text-muted">{formatShortDate(item.date)}</span>
                           </div>
 
-                          <p className="mt-0.5 text-xs text-slate-500">{item.description}</p>
-                          <p className="mt-1 text-xs text-slate-400">{item.sprint}</p>
+                          <p className="mt-0.5 text-xs text-muted">{item.description}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{item.sprint}</p>
                         </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                  <div className="rounded-2xl border border-dashed border-border bg-card p-4 text-sm text-muted">
                     Sin milestones para mostrar en este proyecto.
                   </div>
                 )}
@@ -683,10 +683,10 @@ export default function MilestonesPage() {
           <div className="col-span-1 md:col-span-3">
             <div className="mb-4 flex items-end justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">Related Projects</h3>
-                <p className="mt-1 text-xs text-slate-500">Los botones funcionan como tabs y actualizan toda la vista superior.</p>
+                <h3 className="text-sm font-semibold text-strong">Related Projects</h3>
+                <p className="mt-1 text-xs text-muted">Los botones funcionan como tabs y actualizan toda la vista superior.</p>
               </div>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-muted">
                 {projects.length} projects loaded from backend
               </div>
             </div>
@@ -706,7 +706,7 @@ export default function MilestonesPage() {
       )}
 
       {!isLoading && !error && !selectedProject && (
-        <div className="rounded-2xl border border-slate-200 bg-white/80 p-6 text-sm text-slate-500 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted shadow-sm">
           No hay proyectos disponibles para mostrar.
         </div>
       )}

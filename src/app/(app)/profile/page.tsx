@@ -17,6 +17,7 @@ import {
 } from "@/services/userService";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { Task } from "@/types/task";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 function splitValues(value: string | null | undefined): string[] {
   if (!value) return [];
@@ -281,10 +282,12 @@ export default function ProfileDashboard() {
                 <h2 className="font-semibold text-base sm:text-lg">
                   {profileLoading ? "Cargando perfil..." : displayName || "Usuario"}
                 </h2>
-
                 <p className="text-xs sm:text-sm text-gray-500">
                   {profileLoading ? "Obteniendo datos del usuario" : email}
                 </p>
+                <div className="mt-3">
+                  <ThemeToggle />
+                </div>
               </div>
 
               <div className="grid w-full grid-cols-1 gap-3 pt-2 text-left sm:grid-cols-2">
