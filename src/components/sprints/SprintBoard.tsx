@@ -53,6 +53,8 @@ interface Props {
   ) => void
 
   collapseStorageKey: string
+
+  focusSprintId?: string | null
 }
 
 export default function SprintBoard({
@@ -75,24 +77,38 @@ export default function SprintBoard({
 
   collapseStorageKey,
 
+  focusSprintId,
+
 }: Props) {
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined") {
+      return {}
+    }
 
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
-
-  useEffect(() => {
     try {
       const raw = localStorage.getItem(collapseStorageKey)
       if (!raw) {
-        setCollapsedSections({})
-        return
+        return {}
       }
 
-      const parsed = JSON.parse(raw) as Record<string, boolean>
-      setCollapsedSections(parsed)
+      return JSON.parse(raw) as Record<string, boolean>
     } catch {
-      setCollapsedSections({})
+      return {}
     }
-  }, [collapseStorageKey])
+  })
+
+  useEffect(() => {
+    if (!focusSprintId) {
+      return
+    }
+
+    const element = document.getElementById(`sprint-${focusSprintId}`)
+    if (!element) {
+      return
+    }
+
+    element.scrollIntoView({ behavior: "smooth", block: "start" })
+  }, [focusSprintId, sprints, tasks])
 
   const toggleSectionCollapse = useCallback(
     (sectionId: string) => {
