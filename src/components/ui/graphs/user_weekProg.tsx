@@ -24,25 +24,52 @@ ChartJS.register(
   Filler
 )
 
-const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+function getDaysInRange(from: string, to: string) {
+  const days: { iso: string; label: string }[] = []
+  const cur = new Date(from + "T00:00:00")
+  const end = new Date(to + "T00:00:00")
+
+  while (cur <= end) {
+    days.push({
+      iso: cur.toISOString().slice(0, 10),
+      label: cur.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit" }),
+    })
+    cur.setDate(cur.getDate() + 1)
+  }
+  return days
+}
+
+const getToday = () => new Date().toISOString().slice(0, 10)
+const getDateNDaysAgo = (n: number) =>
+  new Date(Date.now() - n * 864e5).toISOString().slice(0, 10)
 
 type Props = {
-  filters?: { sprint?: string; project?: string }
+  filters?: { sprint?: string; project?: string; dateFrom?: string; dateTo?: string }
 }
 
 export default function ThroughputChart({ filters }: Props) {
   const chartRef = useRef<any>(null)
-  const { data, loading, error } = useWeeklyProgress()
+
+  const dateFrom = filters?.dateFrom || getDateNDaysAgo(7)
+  const dateTo = filters?.dateTo || getToday()
+
+  const { data, loading, error } = useWeeklyProgress({
+    ...filters,
+    dateFrom,
+    dateTo,
+  })
 
 
-  const completedTasks = DAY_ORDER.map((day) => {
-    const found = data?.dailyCompletions.find((d) => d.dayOfWeek.toLowerCase() === day)
+  const days = getDaysInRange(dateFrom, dateTo)
+
+  const completedTasks = days.map((day) => {
+    const found = data?.dailyCompletions.find((d) => d.date === day.iso)
     return found?.completed ?? 0
   })
 
   const chartData = {
-    labels: DAY_LABELS,
+    labels: days.map((d) => d.label),
     datasets: [
       {
         label: "Tasks Completed",
@@ -67,6 +94,13 @@ export default function ThroughputChart({ filters }: Props) {
     ],
   }
 
+
+  const rangeLabel = `${new Date(dateFrom + "T00:00:00").toLocaleDateString("es-MX", {
+    day: "numeric", month: "short",
+  })} – ${new Date(dateTo + "T00:00:00").toLocaleDateString("es-MX", {
+    day: "numeric", month: "short", year: "numeric",
+  })}`
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -82,12 +116,20 @@ export default function ThroughputChart({ filters }: Props) {
         padding: 12,
         displayColors: false,
         callbacks: {
-          label: (context: any) => `Tasks: ${context.raw}`,
+          label: (context: any) => `Tareas: ${context.raw}`,
         },
       },
     },
     scales: {
-      x: { grid: { display: false } },
+      x: {
+        grid: { display: false },
+        ticks: {
+
+          maxRotation: days.length > 10 ? 45 : 0,
+          autoSkip: true,
+          maxTicksLimit: 14,
+        },
+      },
       y: {
         beginAtZero: true,
         grid: { color: "rgba(0,0,0,0.05)" },
@@ -100,8 +142,8 @@ export default function ThroughputChart({ filters }: Props) {
     return (
       <div className="w-full h-full flex flex-col">
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">Weekly Progress</h3>
-          <p className="text-sm text-gray-500">Tasks completed per day</p>
+          <h3 className="text-lg font-semibold text-slate-900">Detail Progress</h3>
+          <p className="text-sm text-gray-500">{rangeLabel}</p>
         </div>
         <div className="flex flex-1 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-500" />
@@ -114,8 +156,8 @@ export default function ThroughputChart({ filters }: Props) {
     return (
       <div className="w-full h-full flex flex-col">
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">Weekly Progress</h3>
-          <p className="text-sm text-gray-500">Tasks completed per day</p>
+          <h3 className="text-lg font-semibold text-slate-900"></h3>
+          <p className="text-sm text-gray-500">{rangeLabel}</p>
         </div>
         <div className="flex flex-1 items-center justify-center text-sm text-red-500">{error}</div>
       </div>
@@ -125,8 +167,8 @@ export default function ThroughputChart({ filters }: Props) {
   return (
     <div className="w-full h-full flex flex-col">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">Weekly Progress</h3>
-        <p className="text-sm text-gray-500">Tasks completed per day</p>
+        <h3 className="text-lg font-semibold text-slate-900">Detail Progress</h3>
+        <p className="text-sm text-gray-500">{rangeLabel}</p>
       </div>
       <div className="flex-1">
         <Line ref={chartRef} data={chartData} options={options} />
@@ -134,3 +176,4 @@ export default function ThroughputChart({ filters }: Props) {
     </div>
   )
 }
+
