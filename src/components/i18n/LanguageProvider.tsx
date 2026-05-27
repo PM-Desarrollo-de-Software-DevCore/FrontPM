@@ -192,11 +192,6 @@ const esToEnEntries: Array<[string, string]> = [
   ["Habilidad", "Loading milestone data from backend..."],
   ["Cargando proyectos...", "Loading projects..."],
 
-
-
-
-
-
 ];
 
 const enToEsEntries: Array<[string, string]> = esToEnEntries.map(([es, en]) => [en, es]);
