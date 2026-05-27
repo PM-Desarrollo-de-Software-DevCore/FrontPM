@@ -11,6 +11,8 @@ type LanguageContextValue = {
 };
 
 const STORAGE_KEY = "app-language";
+const textNodeOriginalValues = new WeakMap<Text, string>();
+const attributeOriginalValues = new WeakMap<HTMLElement, Map<string, string>>();
 
 const esToEnEntries: Array<[string, string]> = [
   ["Cargando sesión", "Loading session"],
@@ -23,12 +25,13 @@ const esToEnEntries: Array<[string, string]> = [
   ["Sesión expirada, vuelve a iniciar sesión", "Session expired, please sign in again"],
   ["Error desconocido", "Unknown error"],
   ["Completadas", "Completed"],
+  ["completadas", "completed"],
   ["En progreso", "In progress"],
   ["Pendientes", "Pending"],
   ["Sin fecha", "No date"],
   ["No se pudieron cargar los proyectos", "Projects could not be loaded"],
   ["No se pudieron cargar los datos del proyecto", "Project data could not be loaded"],
-  ["Worklogs por proyecto", "Worklogs by project"],
+  ["Registros de trabajo por proyecto", "Worklogs by project"],
   ["Revisa tareas completadas, flujo del proyecto y miembros activos.", "Review completed tasks, project flow, and active members."],
   ["Proyecto activo:", "Active project:"],
   ["Proyecto", "Project"],
@@ -69,23 +72,126 @@ const esToEnEntries: Array<[string, string]> = [
   ["Obteniendo datos del usuario", "Fetching user data"],
   ["Sin correo disponible", "No email available"],
   ["No definida", "Not defined"],
-  ["Skill principal", "Main skill"],
+  ["Habilidad principal", "Main skill"],
   ["Area", "Area"],
   ["No se pudo cargar el perfil", "Could not load profile"],
   ["registradas", "registered"],
-  ["No hay skills registradas todavía.", "No skills registered yet."],
+  ["No hay habilidades registradas todavía.", "No skills registered yet."],
   ["Cargando...", "Loading..."],
   ["Sin datos todavía", "No data yet"],
   ["seleccionado", "selected"],
-  ["Dashboard", "Dashboard"],
-  ["Projects", "Projects"],
-  ["Milestones", "Milestones"],
-  ["Work Logs", "Work Logs"],
-  ["Profile", "Profile"],
-  ["Users", "Users"],
-  ["Search...", "Search..."],
-  ["View Profile", "View Profile"],
-  ["Logout", "Logout"],
+  ["Tablero", "Dashboard"],
+  ["Proyectos", "Projects"],
+  ["Hitos", "Milestones"],
+  ["Registros de trabajo", "Work Logs"],
+  ["Perfil", "Profile"],
+  ["Usuarios", "Users"],
+  ["Buscar...", "Search..."],
+  ["Cargando datos de hitos desde el backend...","Loading milestone data from backend..."],
+  ["Activo", "Active"],
+  ["Completado", "Complete"],
+  ["completado", "complete"],
+  ["Bajo", "Low"],
+  ["Medio", "Medium"],
+  ["Alto", "High"],
+  ["En progreso", "In Progress"],
+  ["Planificación", "Planning"],
+  ["Crear sprint", "Create Sprint"],
+  ["Gestiona los sprints y las tareas del proyecto", "Manage project sprints and tasks"],
+  ["Tablero Scrum", "Scrum Board"],
+  ["Reporte del proyecto", "Project Report"],
+  ["Regenerando vista previa del reporte...", "Regenerating report preview..."],
+  ["Nombre del sprint", "Sprint Name"],
+  ["Fecha de inicio", "Start Date"],
+  ["Fecha de fin", "End Date"],
+  ["Cancelar", "Cancel"],
+  ["Autenticación", "Authentication"],
+  ["Agregar tarea", "Add Task"],
+  ["Contraer", "Collapse"],
+  ["Número de teléfono", "Phone number"],
+  ["Ver tareas", "View Tasks"],
+  ["Nuevo proyecto", "New project"],
+  ["Registros de trabajo", "Work Registros"],
+  ["Reporte del proyecto", "Project Report"],
+  ["Tareas completadas", "Tasks Completed"],
+  ["Crear usuario", "Create User"],
+  ["Buscar proyectos, sprints, tareas, usuarios", "Search projects, sprints, tasks, users"],
+  ["Buscar proyectos, sprints, tareas", "Search projects, sprints, tasks"],
+  ["Registros", "Logs"],
+  ["Rendimiento", "Performance"],
+  ["Tiempo de carga de la página a lo largo del tiempo", "Page load time over time"],
+  ["Ver tareas", "View tasks"],
+  ["Progreso del sprint", "Sprint Progress"],
+  ["Sin datos de sprint disponibles para este proyecto todavía.", "No sprint data available for this project yet."],
+  ["Progreso del proyecto", "Project progress"],
+  ["Tareas", "Tasks"],
+  ["Propietario", "Owner"],
+  ["Fecha límite", "Deadline"],
+  ["Seleccionar sprint del proyecto", "Select Project Sprint"],
+  ["Línea de tiempo de hitos", "Milestone Timeline"],
+  ["Proyectos relacionados", "Related Projects"],
+  ["proyectos cargados desde el backend", "projects loaded from backend"],
+  ["Registros de trabajo", "Worklogs"],
+  ["Tareas completadas", "Tasks Completed"],
+  ["Velocidad del proyecto", "Project Velocity"],
+  ["Flujo de tareas", "Task Flow"],
+  ["Solicitar modificación", "Request Modification"],
+  ["Clasificación", "Leaderboard"],
+  ["Nombre", "First Name"],
+  ["Apellido", "Last Name"],
+  ["Subir CV (PDF)", "Upload CV (PDF)"],
+  ["Subir imagen de perfil", "Upload Profile Image"],
+  ["Correo electrónico", "Email"],
+  ["Código", "Code"],
+  ["Número de teléfono", "Phone Number"],
+  ["Contraseña", "Password"],
+  ["Áreas de designación", "Designation Areas"],
+  ["Habilidades", "Skills"],
+  ["Crear usuario", "Create User"],
+  ["Agregar", "Add"],
+  ["Solo PDF. Extraerá tu información y completará automáticamente el formulario.", "PDF only. It will extract your information and auto-fill the form."],
+  ["JPG, PNG o WEBP. Tamaño cuadrado recomendado.", "JPG, PNG or WEBP. Recommended square image."],
+  ["Eliminar imagen de perfil", "Remove Profile Image"],
+  ["Creado:", "Created:"],
+  ["Editar perfil", "Edit Profile"],
+  ["Crear contraseña", "Create password"],
+  ["Cambiar contraseña", "Change password"],
+  ["Procesando CV...", "Processing CV..."],
+  ["CV procesado", "CV processed"],
+  ["El formulario se completó correctamente.", "Form has been populated successfully."],
+  ["Imagen de perfil eliminada", "Profile image removed"],
+  ["La imagen de perfil se eliminó correctamente.", "The profile image was removed successfully."],
+  ["Usuario creado", "User created"],
+  ["El usuario se creó correctamente.", "The user was created successfully."],
+  ["Usuario actualizado", "User updated"],
+  ["El usuario se actualizó correctamente.", "The user was updated successfully."],
+  ["El usuario se creó localmente porque el servidor no estaba disponible.", "User created locally because the server was unavailable."],
+  ["El usuario se actualizó localmente porque el servidor no estaba disponible.", "User updated locally because the server was unavailable."],
+  ["Por favor sube un archivo PDF", "Please upload a PDF file"],
+  ["Por favor sube una imagen JPG, PNG o WEBP", "Please upload a JPG, PNG, or WEBP image"],
+  ["Mínimo una skill", "You must add at least one skill"],
+  ["Mínimo un área de designación", "You must add at least one designation area"],
+  ["Ver perfil", "View Profile"],
+  ["Cerrar sesión", "Logout"],
+  ["Buscar por nombre o correo", "Search by name or email"],
+  ["Notificaciones", "Notifications"],
+  ["Mostrar mas", "Show more"],
+  ["Mostrar más", "Show more"],
+  ["Historial completo con fecha y hora.", "Full history with date and time."],
+  ["Este proyecto todavía no tiene sprints cargados.", "This project does not have any sprints loaded yet."],
+  ["Milestones generados desde los sprints del proyecto seleccionado", "Milestones generated from the selected project's sprints"],
+  ["Sin milestones para mostrar en este proyecto.", "No milestones to show for this project."],
+  ["Los botones funcionan como tabs y actualizan toda la vista superior.", "The buttons work like tabs and update the entire top view."],
+  ["4/5 completadas", "4/5 completed"],
+  ["Nuevo", "New"],
+  ["problemas", "issues"],
+  ["Primer ", "First"],
+  ["nombre ", "name"],
+  ["Apellido", "Last name"],
+  ["Habilidad", "Skill"],
+  ["Habilidad", "Loading milestone data from backend..."],
+  ["Cargando proyectos...", "Loading projects..."],
+
 ];
 
 const enToEsEntries: Array<[string, string]> = esToEnEntries.map(([es, en]) => [en, es]);
@@ -137,7 +243,12 @@ function translateDom(language: Language) {
   }
 
   textNodes.forEach((node) => {
-    const translated = translateText(node.nodeValue || "", language);
+    if (!textNodeOriginalValues.has(node)) {
+      textNodeOriginalValues.set(node, node.nodeValue || "");
+    }
+
+    const source = textNodeOriginalValues.get(node) || node.nodeValue || "";
+    const translated = translateText(source, language);
     if (translated !== node.nodeValue) {
       node.nodeValue = translated;
     }
@@ -154,11 +265,21 @@ function translateDom(language: Language) {
   elements.forEach((element) => {
     if (element.closest("[data-no-i18n='true']")) return;
 
+    if (!attributeOriginalValues.has(element)) {
+      attributeOriginalValues.set(element, new Map());
+    }
+
+    const elementOriginals = attributeOriginalValues.get(element)!;
+
     attributesToTranslate.forEach((attribute) => {
       const current = element.getAttribute(attribute);
       if (!current) return;
 
-      const translated = translateText(current, language);
+      if (!elementOriginals.has(attribute)) {
+        elementOriginals.set(attribute, current);
+      }
+
+      const translated = translateText(elementOriginals.get(attribute) || current, language);
       if (translated !== current) {
         element.setAttribute(attribute, translated);
       }
