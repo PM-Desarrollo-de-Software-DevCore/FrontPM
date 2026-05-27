@@ -1,10 +1,10 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
 import SummarizeIcon from "@mui/icons-material/Summarize"
 import Tooltip from "@mui/material/Tooltip"
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 
 import SprintBoard from "@/components/sprints/SprintBoard"
 import CreateSprintModal from "@/components/sprints/CreateSprintModal"
@@ -45,6 +45,7 @@ interface CreateTaskContext {
 export default function TasksPage() {
   const { notifyError, notifySuccess } = useNotification()
   const params = useParams()
+  const searchParams = useSearchParams()
   const projectId = params.projectId as string
 
   const [resolvedProjectId, setResolvedProjectId] = useState("")
@@ -60,6 +61,7 @@ export default function TasksPage() {
     return localStorage.getItem("authToken") || ""
   })
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [dismissedTaskQueryId, setDismissedTaskQueryId] = useState<string | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isCreateSprintModalOpen, setIsCreateSprintModalOpen] = useState(false)
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
@@ -135,6 +137,39 @@ export default function TasksPage() {
 
     void initializeData()
   }, [notifyError, resolvedProjectId, token])
+
+  const requestedTaskId = searchParams.get("taskId")
+  const requestedSprintId = searchParams.get("sprintId")
+
+  const queryTask = useMemo(() => {
+    if (!requestedTaskId || requestedTaskId === dismissedTaskQueryId) {
+      return null
+    }
+
+    return tasks.find((task) => task.id === requestedTaskId) ?? null
+  }, [dismissedTaskQueryId, requestedTaskId, tasks])
+
+  const focusSprintId = useMemo(
+    () => queryTask?.id_sprint || requestedSprintId || null,
+    [queryTask?.id_sprint, requestedSprintId]
+  )
+  const activeModalTask = selectedTask ?? queryTask
+
+  useEffect(() => {
+    if (!resolvedProjectId || !focusSprintId) {
+      return
+    }
+
+    const collapseKey = `tasks-collapsed:${resolvedProjectId || projectId}`
+
+    try {
+      const raw = localStorage.getItem(collapseKey)
+      const parsed = raw ? (JSON.parse(raw) as Record<string, boolean>) : {}
+      localStorage.setItem(collapseKey, JSON.stringify({ ...parsed, [focusSprintId]: true }))
+    } catch {
+      localStorage.setItem(collapseKey, JSON.stringify({ [focusSprintId]: true }))
+    }
+  }, [focusSprintId, projectId, resolvedProjectId])
 
   const handleDragEnd = async (result: DropResult) => {
     if (!result.destination) return
@@ -402,7 +437,9 @@ export default function TasksPage() {
           onTaskMoveAction={handleDragEnd}
           onUpdateSprintAction={handleUpdateSprint}
           onCompleteSprintAction={handleCompleteSprint}
+          key={`tasks-board-${resolvedProjectId || projectId}`}
           collapseStorageKey={`tasks-collapsed:${resolvedProjectId || projectId}`}
+          focusSprintId={focusSprintId}
         />
       </DragDropContext>
 
@@ -429,12 +466,16 @@ export default function TasksPage() {
         onCloseAction={() => setIsReportModalOpen(false)}
       />
 
-      {selectedTask && (
+      {activeModalTask && (
         <TaskDetailsModal
-          task={selectedTask}
+          task={activeModalTask}
           projectId={resolvedProjectId}
           users={users}
           onCloseAction={() => {
+            if (queryTask && requestedTaskId) {
+              setDismissedTaskQueryId(requestedTaskId)
+            }
+
             setSelectedTask(null)
           }}
           onDeleteAction={handleDeleteTask}
