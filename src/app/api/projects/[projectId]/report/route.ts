@@ -1,0 +1,65 @@
+import { NextRequest, NextResponse } from "next/server"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ projectId: string }> }
+) {
+  try {
+    const { projectId } = await context.params
+    const token = request.nextUrl.searchParams.get("token")
+    const download = request.nextUrl.searchParams.get("download")
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: "Token no proporcionado" },
+        { status: 401 }
+      )
+    }
+
+    const backendUrl = new URL(`${API_URL}/projects/${projectId}/report`)
+    if (download === "1" || download === "true") {
+      backendUrl.searchParams.set("download", "1")
+    }
+
+    const response = await fetch(backendUrl.toString(), {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.text()
+      return new NextResponse(errorBody || "No se pudo obtener el reporte", {
+        status: response.status,
+        headers: {
+          "Content-Type": response.headers.get("Content-Type") || "application/json",
+        },
+      })
+    }
+
+    const fileBuffer = await response.arrayBuffer()
+    const contentType = response.headers.get("Content-Type") || "application/pdf"
+    const contentDisposition = response.headers.get("Content-Disposition") || "inline; filename=\"project-report.pdf\""
+
+    return new NextResponse(fileBuffer, {
+      status: 200,
+      headers: {
+        "Content-Type": contentType,
+        "Content-Disposition": contentDisposition,
+        "Cache-Control": "no-store",
+      },
+    })
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : "Error inesperado",
+      },
+      { status: 500 }
+    )
+  }
+}
