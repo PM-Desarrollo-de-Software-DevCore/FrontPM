@@ -1,12 +1,15 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
-import { useParams } from "next/navigation"
+import SummarizeIcon from "@mui/icons-material/Summarize"
+import Tooltip from "@mui/material/Tooltip"
+import { useParams, useSearchParams } from "next/navigation"
 
 import SprintBoard from "@/components/sprints/SprintBoard"
 import CreateSprintModal from "@/components/sprints/CreateSprintModal"
 import CreateTaskModal from "@/components/tasks/CreateTaskModal"
+import ProjectReportModal from "@/components/tasks/ProjectReportModal"
 import TaskDetailsModal from "@/components/tasks/TaskDetailsModal"
 import { useNotification } from "@/components/ui/notifications/NotificationProvider"
 
@@ -42,9 +45,11 @@ interface CreateTaskContext {
 export default function TasksPage() {
   const { notifyError, notifySuccess } = useNotification()
   const params = useParams()
+  const searchParams = useSearchParams()
   const projectId = params.projectId as string
 
   const [resolvedProjectId, setResolvedProjectId] = useState("")
+  const [projectName, setProjectName] = useState("")
   const [tasks, setTasks] = useState<Task[]>([])
   const [sprints, setSprints] = useState<Sprint[]>([])
   const [users, setUsers] = useState<ProjectMember[]>([])
@@ -56,8 +61,10 @@ export default function TasksPage() {
     return localStorage.getItem("authToken") || ""
   })
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [dismissedTaskQueryId, setDismissedTaskQueryId] = useState<string | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isCreateSprintModalOpen, setIsCreateSprintModalOpen] = useState(false)
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false)
   const [createTaskContext, setCreateTaskContext] = useState<CreateTaskContext>({
     sprintId: null,
     status: "pending",
@@ -76,9 +83,10 @@ export default function TasksPage() {
           (item) => item.id === projectId || slugify(item.name) === projectId
         )
 
+        setProjectName(project?.name || "")
         setResolvedProjectId(project?.id || projectId)
-      } catch (error) {
-        console.error(error)
+      } catch {
+        setProjectName("")
         setResolvedProjectId(projectId)
       }
     }
@@ -101,14 +109,67 @@ export default function TasksPage() {
       setTasks(taskData)
       setSprints(sprintData)
       setUsers(memberData)
-    } catch (error) {
+    } catch {
       notifyError("Data could not be loaded", "Please try again.")
     }
   }, [notifyError, resolvedProjectId, token])
 
   useEffect(() => {
-    void loadData()
-  }, [loadData])
+    if (!token || !resolvedProjectId) {
+      return
+    }
+
+    const initializeData = async () => {
+      try {
+        const [taskData, sprintData, memberData] = await Promise.all([
+          getProjectTasks(resolvedProjectId, token),
+          getProjectSprints(resolvedProjectId, token),
+          getProjectMembers(resolvedProjectId),
+        ])
+
+        setTasks(taskData)
+        setSprints(sprintData)
+        setUsers(memberData)
+      } catch {
+        notifyError("Data could not be loaded", "Please try again.")
+      }
+    }
+
+    void initializeData()
+  }, [notifyError, resolvedProjectId, token])
+
+  const requestedTaskId = searchParams.get("taskId")
+  const requestedSprintId = searchParams.get("sprintId")
+
+  const queryTask = useMemo(() => {
+    if (!requestedTaskId || requestedTaskId === dismissedTaskQueryId) {
+      return null
+    }
+
+    return tasks.find((task) => task.id === requestedTaskId) ?? null
+  }, [dismissedTaskQueryId, requestedTaskId, tasks])
+
+  const focusSprintId = useMemo(
+    () => queryTask?.id_sprint || requestedSprintId || null,
+    [queryTask?.id_sprint, requestedSprintId]
+  )
+  const activeModalTask = selectedTask ?? queryTask
+
+  useEffect(() => {
+    if (!resolvedProjectId || !focusSprintId) {
+      return
+    }
+
+    const collapseKey = `tasks-collapsed:${resolvedProjectId || projectId}`
+
+    try {
+      const raw = localStorage.getItem(collapseKey)
+      const parsed = raw ? (JSON.parse(raw) as Record<string, boolean>) : {}
+      localStorage.setItem(collapseKey, JSON.stringify({ ...parsed, [focusSprintId]: true }))
+    } catch {
+      localStorage.setItem(collapseKey, JSON.stringify({ [focusSprintId]: true }))
+    }
+  }, [focusSprintId, projectId, resolvedProjectId])
 
   const handleDragEnd = async (result: DropResult) => {
     if (!result.destination) return
@@ -211,6 +272,10 @@ export default function TasksPage() {
       status,
     })
     setIsCreateModalOpen(true)
+  }
+
+  const handleOpenReport = () => {
+    setIsReportModalOpen(true)
   }
 
   const handleCreateSprint = async (sprintData: Partial<Sprint>) => {
@@ -331,11 +396,29 @@ export default function TasksPage() {
 
   return (
     <div className="p-8">
-      <div className="mb-6">
-        <h1 className="text-4xl font-bold text-black">Scrum Board</h1>
-        <p className="mt-2 text-gray-400">Manage project sprints and tasks</p>
-        <div className="mt-5 flex gap-3">
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-4xl font-bold text-black">Scrum Board</h1>
+          <p className="mt-2 text-gray-400">Manage project sprints and tasks</p>
+        </div>
+
+        <div className="flex items-center gap-3 self-start lg:self-auto">
+          <Tooltip title="Generate Report" arrow placement="top">
+            <span>
+              <button
+                type="button"
+                onClick={handleOpenReport}
+                disabled={!resolvedProjectId}
+                aria-label="Generate Report"
+                className="grid h-11 w-11 place-items-center rounded-full bg-slate-900 text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <SummarizeIcon className="h-5 w-5" />
+              </button>
+            </span>
+          </Tooltip>
+
           <button
+            type="button"
             onClick={() => setIsCreateSprintModalOpen(true)}
             className="rounded-2xl bg-blue-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-600"
           >
@@ -354,7 +437,9 @@ export default function TasksPage() {
           onTaskMoveAction={handleDragEnd}
           onUpdateSprintAction={handleUpdateSprint}
           onCompleteSprintAction={handleCompleteSprint}
+          key={`tasks-board-${resolvedProjectId || projectId}`}
           collapseStorageKey={`tasks-collapsed:${resolvedProjectId || projectId}`}
+          focusSprintId={focusSprintId}
         />
       </DragDropContext>
 
@@ -374,12 +459,23 @@ export default function TasksPage() {
         onSubmitAction={handleCreateSprint}
       />
 
-      {selectedTask && (
+      <ProjectReportModal
+        open={isReportModalOpen}
+        projectId={resolvedProjectId}
+        projectName={projectName || projectId}
+        onCloseAction={() => setIsReportModalOpen(false)}
+      />
+
+      {activeModalTask && (
         <TaskDetailsModal
-          task={selectedTask}
+          task={activeModalTask}
           projectId={resolvedProjectId}
           users={users}
           onCloseAction={() => {
+            if (queryTask && requestedTaskId) {
+              setDismissedTaskQueryId(requestedTaskId)
+            }
+
             setSelectedTask(null)
           }}
           onDeleteAction={handleDeleteTask}

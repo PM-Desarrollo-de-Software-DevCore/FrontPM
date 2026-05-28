@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card/card"
 import PerformanceChart from "@/components/ui/graphs/performaceChart"
 import Filters from "@/components/ui/filters/filters"
 import { getProjects } from "@/services/projectService"
+import AdminProfileChangeRequests from "@/components/profile/AdminProfileChangeRequests"
 
 type FiltersState = {
   project?: string
@@ -113,6 +114,12 @@ export default function DashboardPage() {
           </div>
 
         </div>
+
+        <Card className="w-full">
+          <CardContent className="p-4 sm:p-6">
+            <AdminProfileChangeRequests />
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

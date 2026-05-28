@@ -247,7 +247,7 @@ export default function SprintSection({
     }
 
   return (
-    <div className="rounded-[36px] border border-gray-200 bg-white p-6 shadow-sm">
+    <div id={`sprint-${sprint.id}`} className="scroll-mt-24 rounded-[36px] border border-gray-200 bg-white p-6 shadow-sm">
 
       {/* HEADER */}
 
