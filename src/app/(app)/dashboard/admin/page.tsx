@@ -1,23 +1,63 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Carrousel from "@/components/ui/card/projectCarrousel"
 import { Card, CardContent } from "@/components/ui/card/card"
 import PerformanceChart from "@/components/ui/graphs/performaceChart"
 import Filters from "@/components/ui/filters/filters"
+import { getProjects } from "@/services/projectService"
 import AdminProfileChangeRequests from "@/components/profile/AdminProfileChangeRequests"
 
 type FiltersState = {
-  sprint?: string
   project?: string
+  dateFrom?: string
+  dateTo?: string
+}
+
+type ProjectOption = {
+  id: string
+  name: string
 }
 
 export default function DashboardPage() {
 
   const [filters, setFilters] = useState<FiltersState>({
-    sprint: "",
-    project: ""
+    project: undefined,
+    dateFrom: undefined,
+    dateTo: undefined,
   })
+
+  const [projectOptions, setProjectOptions] = useState<ProjectOption[]>([])
+
+  useEffect(() => {
+    const loadProjects = async () => {
+      try {
+        const data = await getProjects()
+        setProjectOptions(
+          data.map((project) => ({ id: project.id, name: project.name }))
+        )
+      } catch (error) {
+        console.error("Error loading projects for dashboard filter:", error)
+      }
+    }
+
+    void loadProjects()
+  }, [])
+
+  useEffect(() => {
+    if (!projectOptions.length) return
+
+    const projectExists = projectOptions.some(
+      (project) => project.name === filters.project
+    )
+
+    if (!filters.project || !projectExists) {
+      setFilters((prev) => ({
+        ...prev,
+        project: projectOptions[0]?.name,
+      }))
+    }
+  }, [filters.project, projectOptions])
 
   return (
     <div className="w-full min-h-screen">
@@ -32,8 +72,7 @@ export default function DashboardPage() {
             <Filters
               filters={filters}
               onChange={setFilters}
-              sprints={["Sprint 1", "Sprint 2"]}
-              projects={["API", "Mobile App", "Dashboard"]}
+              projects={projectOptions.map((project) => project.name)}
             />
           </div>
         </div>
