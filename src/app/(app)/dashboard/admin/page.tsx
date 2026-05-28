@@ -5,6 +5,7 @@ import Carrousel from "@/components/ui/card/projectCarrousel"
 import { Card, CardContent } from "@/components/ui/card/card"
 import PerformanceChart from "@/components/ui/graphs/performaceChart"
 import Filters from "@/components/ui/filters/filters"
+import AdminProfileChangeRequests from "@/components/profile/AdminProfileChangeRequests"
 
 type FiltersState = {
   sprint?: string
@@ -74,6 +75,12 @@ export default function DashboardPage() {
           </div>
 
         </div>
+
+        <Card className="w-full">
+          <CardContent className="p-4 sm:p-6">
+            <AdminProfileChangeRequests />
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

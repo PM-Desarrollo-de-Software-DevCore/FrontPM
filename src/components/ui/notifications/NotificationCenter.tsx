@@ -17,6 +17,10 @@ const CATEGORY_LABELS: Record<string, string> = {
   admin_user_created: "Admin",
   admin_user_updated: "Admin",
   admin_user_deleted: "Admin",
+  profile_change_requested: "Perfil · solicitud",
+  profile_change_approved: "Perfil · aprobada",
+  profile_change_rejected: "Perfil · rechazada",
+  profile_change_cancelled: "Perfil · cancelada",
 }
 
 const dateFormatter = new Intl.DateTimeFormat("es-ES", {
