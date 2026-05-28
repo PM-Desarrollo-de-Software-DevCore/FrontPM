@@ -12,6 +12,10 @@ export type NotificationCategory =
   | "admin_user_created"
   | "admin_user_updated"
   | "admin_user_deleted"
+  | "profile_change_requested"
+  | "profile_change_approved"
+  | "profile_change_rejected"
+  | "profile_change_cancelled"
 
 export interface NotificationRecord {
   id_notification: string
