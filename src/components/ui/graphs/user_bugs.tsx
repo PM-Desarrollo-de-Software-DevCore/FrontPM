@@ -1,59 +1,69 @@
 "use client"
 
-type Bug = {
-  id: number
-  status: "resolved" | "open"
-}
-
-const bugs: Bug[] = [
-  { id: 1, status: "resolved" },
-  { id: 2, status: "resolved" },
-  { id: 3, status: "open" },
-  { id: 4, status: "resolved" },
-  { id: 5, status: "open" },
-  { id: 6, status: "resolved" },
-]
+import { useEffect, useState } from "react"
+import { getGlobalLeaderboard, LeaderboardEntry } from "@/services/leaderboardService"
+import { getMultipleUsersCompletedTodayCount } from "@/services/taskService"
+import LeaderboardAvatar from "@/components/ui/avatar/LeaderboardAvatar"
 
 export default function BugsResolved() {
-  const total = bugs.length
-  const resolved = bugs.filter((b) => b.status === "resolved").length
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true)
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null)
+  const [leaderboardCounts, setLeaderboardCounts] = useState<Map<string, number>>(new Map())
 
-  const progress = total === 0 ? 0 : Math.round((resolved / total) * 100)
+  useEffect(() => {
+    let cancelled = false
+    getGlobalLeaderboard(5)
+      .then((data) => {
+        if (!cancelled) {
+          setLeaderboard(data)
+          const userIds = data.map(entry => entry.userId)
+          getMultipleUsersCompletedTodayCount(userIds).then(counts => {
+            if (!cancelled) setLeaderboardCounts(counts)
+          })
+        }
+      })
+      .catch((err: Error) => {
+        if (!cancelled) setLeaderboardError(err.message)
+      })
+      .finally(() => {
+        if (!cancelled) setLeaderboardLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [])
 
   return (
     <div className="w-full h-full flex flex-col">
-      
-
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">
-          Bugs Resolved 
-        </h3>
-        <p className="text-sm text-gray-500">
-          Percentage of bugs resolved in the current sprint
-        </p>
+        <h3 className="text-lg font-semibold text-slate-900">Leaderboard</h3>
+        <p className="text-sm text-gray-500">Top performers this sprint</p>
       </div>
 
-
-      <div className="flex-1 flex flex-col justify-center">
-        
-   
-        <div className="flex items-end gap-2">
-          <span className="text-5xl font-bold text-slate-900">
-            {progress}%
-          </span>
-          <span className="text-sm text-gray-500 mb-1">
-            ({resolved}/{total})
-          </span>
-        </div>
-
-
-        <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mt-4">
-          <div
-            className="h-full bg-red-500 rounded-full transition-all"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-
+      <div className="flex-1 overflow-y-auto">
+        {leaderboardLoading ? (
+          <p className="text-sm text-gray-500">Cargando...</p>
+        ) : leaderboardError ? (
+          <p className="text-sm text-red-500">{leaderboardError}</p>
+        ) : leaderboard.length === 0 ? (
+          <p className="text-sm text-gray-500">Sin datos todavía</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {leaderboard.map((entry) => (
+              <div key={entry.userId} className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <LeaderboardAvatar
+                    src={entry.profileImageUrl ?? "/images/persona.png"}
+                    alt={`${entry.name} ${entry.lastname}`}
+                    size={48}
+                    completedTodayCount={leaderboardCounts.get(entry.userId) ?? 0}
+                  />
+                  <span className="text-sm">{entry.name} {entry.lastname}</span>
+                </div>
+                <span className="text-sm font-medium">{entry.points}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

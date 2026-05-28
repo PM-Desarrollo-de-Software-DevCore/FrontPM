@@ -4,12 +4,18 @@ import { DashboardData } from "@/hooks/useDashboardStats"
 
 type Props = {
   dashboardData: DashboardData | null
+  projectId?: string
   loading?: boolean
   error?: string | null
 }
 
-export default function TotalProgress({ dashboardData, loading, error }: Props) {
-  const progress = dashboardData?.summary.completionPercentage ?? 0
+export default function TotalProgress({ dashboardData, projectId, loading, error }: Props) {
+  const projectProgress = projectId
+    ? dashboardData?.tasksByProject?.find((project) => project.id_project === projectId)
+        ?.completionPercentage
+    : undefined
+
+  const progress = projectProgress ?? dashboardData?.summary.completionPercentage ?? 0
 
   return (
     <div className="w-full h-full flex flex-col">
