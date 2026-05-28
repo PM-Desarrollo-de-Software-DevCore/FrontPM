@@ -6,7 +6,7 @@ import {
   ProjectPriority,
   ProjectStatus,
 } from "@/types/project";
-import { createProject, updateProject } from "@/services/projectService";
+import { createProject, ProjectPayload, updateProject } from "@/services/projectService";
 import {
   AssignmentSuggestionItem,
   getAssignmentSuggestions,
@@ -32,10 +32,18 @@ interface CreateProjectModalProps {
 interface ProjectFormState {
   name: string;
   description: string;
+  client: string;
+  projectType: string;
+  projectObjective: string;
+  methodology: string;
   startDate: string;
   endDate: string;
   priority: ProjectPriority;
   status: ProjectStatus;
+  estimatedSprints: string;
+  budget: string;
+  monthlyCost: string;
+  billingModel: string;
 }
 
 interface SelectedProjectUser extends UserOption {
@@ -69,6 +77,24 @@ export default function CreateProjectModal({
   const [initialMembers, setInitialMembers] = useState<
     Array<{ userId: string; role: ProjectMemberRole }>
   >([]);
+  const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
+
+  const emptyFormState: ProjectFormState = {
+    name: "",
+    description: "",
+    client: "",
+    projectType: "Web app",
+    projectObjective: "",
+    methodology: "scrum",
+    startDate: "",
+    endDate: "",
+    priority: "Medium",
+    status: "Planning",
+    estimatedSprints: "",
+    budget: "",
+    monthlyCost: "",
+    billingModel: "fixed_price",
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -81,20 +107,20 @@ export default function CreateProjectModal({
     };
   }, [isOpen]);
 
-  const [form, setForm] = useState<ProjectFormState>({
-    name: "",
-    description: "",
-    startDate: "",
-    endDate: "",
-    priority: "Medium",
-    status: "Planning",
-  });
+  const [form, setForm] = useState<ProjectFormState>(emptyFormState);
+
+  const parseOptionalNumber = (value: string): number | undefined => {
+    if (!value.trim()) return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
 
   const closeModal = () => {
     setError(null);
     setUsersError(null);
     setMemberSyncWarning(null);
     setUserQuery("");
+    setAdvancedSettingsOpen(false);
 
     if (isEditMode) {
       onClose?.();
@@ -104,14 +130,7 @@ export default function CreateProjectModal({
     setInternalOpen(false);
     setSelectedUsers([]);
     setInitialMembers([]);
-    setForm({
-      name: "",
-      description: "",
-      startDate: "",
-      endDate: "",
-      priority: "Medium",
-      status: "Planning",
-    });
+    setForm(emptyFormState);
   };
 
   useEffect(() => {
@@ -130,25 +149,34 @@ export default function CreateProjectModal({
         return dateString;
       };
 
+      const hasAdvancedData =
+        project.estimatedSprints !== undefined ||
+        project.budget !== undefined ||
+        project.monthlyCost !== undefined ||
+        Boolean(project.billingModel);
+
       setForm({
         name: project.name,
         description: project.description,
+        client: project.client || "",
+        projectType: project.projectType || "Web app",
+        projectObjective: project.projectObjective || "",
+        methodology: project.methodology || "scrum",
         startDate: formatDate(project.startDate),
         endDate: formatDate(project.endDate),
         priority: project.priority,
         status: project.status,
+        estimatedSprints: project.estimatedSprints?.toString() || "",
+        budget: project.budget?.toString() || "",
+        monthlyCost: project.monthlyCost?.toString() || "",
+        billingModel: project.billingModel || "fixed_price",
       });
+      setAdvancedSettingsOpen(hasAdvancedData);
     } else {
-      setForm({
-        name: "",
-        description: "",
-        startDate: "",
-        endDate: "",
-        priority: "Medium",
-        status: "Planning",
-      });
+      setForm(emptyFormState);
       setSelectedUsers([]);
       setInitialMembers([]);
+      setAdvancedSettingsOpen(false);
     }
 
     setUserQuery("");
@@ -286,6 +314,18 @@ export default function CreateProjectModal({
     setMemberSyncWarning(null);
 
     try {
+      const trimmedName = form.name.trim();
+      const trimmedDescription = form.description.trim();
+      const trimmedClient = form.client.trim();
+      const trimmedProjectType = form.projectType.trim();
+      const trimmedObjective = form.projectObjective.trim();
+
+      if (!trimmedName || !trimmedDescription || !trimmedClient || !trimmedProjectType || !trimmedObjective) {
+        setError("Completa los campos esenciales del proyecto antes de guardar.");
+        setLoading(false);
+        return;
+      }
+
       // Validar que la fecha de inicio sea anterior a la de fin
       const startDate = new Date(form.startDate);
       const endDate = new Date(form.endDate);
@@ -296,15 +336,25 @@ export default function CreateProjectModal({
         return;
       }
 
+      const projectPayload: ProjectPayload = {
+        name: trimmedName,
+        description: trimmedDescription,
+        client: trimmedClient,
+        projectType: trimmedProjectType,
+        projectObjective: trimmedObjective,
+        methodology: form.methodology.trim(),
+        estimatedSprints: parseOptionalNumber(form.estimatedSprints),
+        budget: parseOptionalNumber(form.budget),
+        monthlyCost: parseOptionalNumber(form.monthlyCost),
+        billingModel: form.billingModel.trim(),
+        startDate: form.startDate,
+        endDate: form.endDate,
+        priority: form.priority,
+        status: form.status,
+      };
+
       if (isEditMode && project) {
-        const updatedProject = await updateProject(project.id, {
-          name: form.name,
-          description: form.description,
-          startDate: form.startDate,
-          endDate: form.endDate,
-          priority: form.priority,
-          status: form.status,
-        });
+        const updatedProject = await updateProject(project.id, projectPayload);
 
         const manageableCurrentMembers = initialMembers.filter((member) =>
           availableUsers.some((user) => user.id === member.userId)
@@ -380,14 +430,7 @@ export default function CreateProjectModal({
       }
 
       // Crear el proyecto usando el endpoint
-      const newProject = await createProject({
-        name: form.name,
-        description: form.description,
-        startDate: form.startDate,
-        endDate: form.endDate,
-        priority: form.priority,
-        status: form.status,
-      });
+      const newProject = await createProject(projectPayload);
 
       let failedMemberOps = 0;
 
@@ -427,7 +470,7 @@ export default function CreateProjectModal({
       {!isEditMode && showTrigger && (
         <button
           onClick={() => setInternalOpen(true)}
-          className="cursor-pointer rounded bg-black px-4 py-2 text-white transition hover:opacity-90"
+          className="cursor-pointer rounded-full bg-black px-4 py-2 text-white transition hover:bg-zinc-800"
         >
           + New Project
         </button>
@@ -441,11 +484,19 @@ export default function CreateProjectModal({
           <form
             onSubmit={handleSubmit}
             onClick={(e) => e.stopPropagation()}
-            className="flex w-full max-w-2xl max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-2xl border bg-white p-8 shadow-xl"
+            className="flex w-full max-w-4xl max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-3xl border border-zinc-200 bg-white p-6 shadow-2xl md:p-8"
           >
-            <h2 className="text-xl font-semibold text-zinc-900">
-              {isEditMode ? "Edit Project" : "Create Project"}
-            </h2>
+            <div className="mb-5 border-b border-zinc-100 pb-5">
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-zinc-500">
+                {isEditMode ? "Edit Project" : "New Project"}
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+                {isEditMode ? "Edit Project" : "Create Project"}
+              </h2>
+              <p className="mt-2 text-sm text-zinc-500">
+                Fill out the essentials first, then open advanced settings if you need budget or billing details.
+              </p>
+            </div>
 
             <div className="flex-1 space-y-5 overflow-y-auto pr-1">
               {error && (
@@ -460,32 +511,150 @@ export default function CreateProjectModal({
                 </div>
               )}
 
-              <input
-                value={form.name}
-                placeholder="Project Name"
-                onChange={(e) =>
-                  setForm({ ...form, name: e.target.value })
-                }
-                className="w-full rounded border p-3"
-                required
-                disabled={loading}
-              />
-
-              <textarea
-                value={form.description}
-                placeholder="Project Description"
-                onChange={(e) =>
-                  setForm({ ...form, description: e.target.value })
-                }
-                className="w-full rounded border p-3"
-                required
-                disabled={loading}
-              />
-
-              <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
+              <section className="rounded-3xl border border-zinc-200 bg-zinc-50/70 p-5">
+                <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-zinc-900">Smart member suggestions</p>
+                    <p className="text-sm font-semibold text-zinc-950">Project basics</p>
+                    <p className="text-xs text-zinc-500">What defines the project and its timeline.</p>
+                  </div>
+                  <span className="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-zinc-500 shadow-sm">Required</span>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Project Name</label>
+                    <input
+                      value={form.name}
+                      placeholder="Project Name"
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Client</label>
+                    <input
+                      value={form.client}
+                      placeholder="Acme Corp"
+                      onChange={(e) => setForm({ ...form, client: e.target.value })}
+                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Project Type</label>
+                    <input
+                      value={form.projectType}
+                      placeholder="Web app"
+                      onChange={(e) => setForm({ ...form, projectType: e.target.value })}
+                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Methodology</label>
+                    <select
+                      value={form.methodology}
+                      onChange={(e) => setForm({ ...form, methodology: e.target.value })}
+                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      required
+                      disabled={loading}
+                    >
+                      <option value="scrum">Scrum</option>
+                      <option value="kanban">Kanban</option>
+                      <option value="waterfall">Waterfall</option>
+                      <option value="hybrid">Hybrid</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Start Date</label>
+                    <input
+                      type="date"
+                      value={form.startDate}
+                      onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">End Date</label>
+                    <input
+                      type="date"
+                      value={form.endDate}
+                      onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Project Description</label>
+                    <textarea
+                      value={form.description}
+                      placeholder="Project Description"
+                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                      className="min-h-28 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Project Objective</label>
+                    <textarea
+                      value={form.projectObjective}
+                      placeholder="Launch a central portal for customer onboarding"
+                      onChange={(e) => setForm({ ...form, projectObjective: e.target.value })}
+                      className="min-h-28 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Priority</label>
+                    <select
+                      value={form.priority}
+                      onChange={(e) => setForm({ ...form, priority: e.target.value as ProjectPriority })}
+                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      disabled={loading}
+                    >
+                      <option value="High">High Priority</option>
+                      <option value="Medium">Medium Priority</option>
+                      <option value="Low">Low Priority</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-700">Status</label>
+                    <select
+                      value={form.status}
+                      onChange={(e) => setForm({ ...form, status: e.target.value as ProjectStatus })}
+                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      disabled={loading}
+                    >
+                      <option value="Planning">Planning</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Completed">Completed</option>
+                    </select>
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-3xl border border-zinc-200 bg-white p-5">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-zinc-950">Smart member suggestions</p>
                     <p className="text-xs text-zinc-500">Ranked by skill fit and completed tasks</p>
                   </div>
                   {suggestionsLoading && <span className="text-xs text-zinc-400">Analyzing...</span>}
@@ -505,7 +674,7 @@ export default function CreateProjectModal({
                               handleSelectUser(matchingUser);
                             }
                           }}
-                          className="flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-left transition hover:border-zinc-300"
+                          className="flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-left transition hover:border-zinc-300 hover:bg-white"
                         >
                           <div>
                             <p className="text-sm font-medium text-zinc-900">
@@ -529,152 +698,161 @@ export default function CreateProjectModal({
                       : "Write a stronger title or description to get recommendations."}
                   </p>
                 )}
-              </div>
 
-              <div>
-                <label className="mb-1 block text-sm text-zinc-600">
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  value={form.startDate}
-                  onChange={(e) =>
-                    setForm({ ...form, startDate: e.target.value })
-                  }
-                  className="w-full rounded border p-3"
-                  required
-                  disabled={loading}
-                />
-              </div>
+                <div className="relative mt-5">
+                  <label className="mb-1 block text-sm font-medium text-zinc-700">Project Users</label>
 
-              <div>
-                <label className="mb-1 block text-sm text-zinc-600">
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  value={form.endDate}
-                  onChange={(e) =>
-                    setForm({ ...form, endDate: e.target.value })
-                  }
-                  className="w-full rounded border p-3"
-                  required
-                  disabled={loading}
-                />
-              </div>
+                  <input
+                    value={userQuery}
+                    onChange={(e) => setUserQuery(e.target.value)}
+                    placeholder="Search by name or email"
+                    className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                    disabled={loading || usersLoading}
+                  />
 
-              <div className="relative">
-                <label className="mb-1 block text-sm text-zinc-600">
-                  Project Users
-                </label>
+                  {usersError && (
+                    <p className="mt-2 text-sm text-red-600">{usersError}</p>
+                  )}
 
-                <input
-                  value={userQuery}
-                  onChange={(e) => setUserQuery(e.target.value)}
-                  placeholder="Buscar por nombre o correo"
-                  className="w-full rounded border p-3"
-                  disabled={loading || usersLoading}
-                />
+                  {!usersError && userQuery.trim().length > 0 && (
+                    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-44 overflow-auto rounded-2xl border border-zinc-200 bg-white shadow-lg">
+                      {filteredUsers.length > 0 ? (
+                        filteredUsers.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => handleSelectUser(user)}
+                            className="flex w-full items-center justify-between border-b border-zinc-100 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-zinc-50"
+                          >
+                            <span>{`${user.name} ${user.lastname}`.trim()}</span>
+                            <span className="text-zinc-500">{user.email}</span>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="px-3 py-2 text-sm text-zinc-500">No se encontraron usuarios.</p>
+                      )}
+                    </div>
+                  )}
 
-                {usersError && (
-                  <p className="mt-2 text-sm text-red-600">{usersError}</p>
-                )}
-
-                {!usersError && userQuery.trim().length > 0 && (
-                  <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-44 overflow-auto rounded border border-zinc-200 bg-white shadow-lg">
-                    {filteredUsers.length > 0 ? (
-                      filteredUsers.map((user) => (
-                        <button
+                  {selectedUsers.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {selectedUsers.map((user) => (
+                        <span
                           key={user.id}
-                          type="button"
-                          onClick={() => handleSelectUser(user)}
-                          className="flex w-full items-center justify-between border-b border-zinc-100 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-zinc-50"
+                          className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-700"
                         >
-                          <span>{`${user.name} ${user.lastname}`.trim()}</span>
-                          <span className="text-zinc-500">{user.email}</span>
-                        </button>
-                      ))
-                    ) : (
-                      <p className="px-3 py-2 text-sm text-zinc-500">
-                        No se encontraron usuarios.
-                      </p>
-                    )}
-                  </div>
-                )}
+                          {`${user.name} ${user.lastname}`.trim() || user.email}
+                          <select
+                            value={user.projectRole}
+                            onChange={(e) => handleRoleChange(user.id, e.target.value as ProjectMemberRole)}
+                            className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] text-zinc-700"
+                            disabled={loading}
+                          >
+                            <option value="developer">Developer</option>
+                            <option value="scrum_master">Scrum Master</option>
+                            <option value="project_manager">Project Manager</option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveUser(user.id)}
+                            className="text-zinc-500 hover:text-zinc-800"
+                            aria-label={`Quitar ${user.name}`}
+                            disabled={loading}
+                          >
+                            x
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
 
-                {selectedUsers.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {selectedUsers.map((user) => (
-                      <span
-                        key={user.id}
-                        className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-700"
-                      >
-                        {`${user.name} ${user.lastname}`.trim() || user.email}
+              <section className="overflow-hidden rounded-3xl border border-zinc-200 bg-zinc-50/70">
+                <button
+                  type="button"
+                  onClick={() => setAdvancedSettingsOpen((current) => !current)}
+                  className="flex w-full items-center justify-between px-5 py-4 text-left"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-zinc-950">Advanced settings</p>
+                    <p className="text-xs text-zinc-500">Optional fields for planning, finance, and billing.</p>
+                  </div>
+                  <span className={`text-zinc-500 transition-transform ${advancedSettingsOpen ? "rotate-180" : ""}`}>
+                    ▾
+                  </span>
+                </button>
+
+                {advancedSettingsOpen && (
+                  <div className="border-t border-zinc-200 bg-white px-5 py-5">
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-zinc-700">Estimated sprints</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={form.estimatedSprints}
+                          onChange={(e) => setForm({ ...form, estimatedSprints: e.target.value })}
+                          placeholder="6"
+                          className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                          disabled={loading}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-zinc-700">Budget</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={form.budget}
+                          onChange={(e) => setForm({ ...form, budget: e.target.value })}
+                          placeholder="25000"
+                          className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                          disabled={loading}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-zinc-700">Monthly cost</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={form.monthlyCost}
+                          onChange={(e) => setForm({ ...form, monthlyCost: e.target.value })}
+                          placeholder="3200"
+                          className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                          disabled={loading}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-zinc-700">Billing model</label>
                         <select
-                          value={user.projectRole}
-                          onChange={(e) =>
-                            handleRoleChange(user.id, e.target.value as ProjectMemberRole)
-                          }
-                          className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] text-zinc-700"
+                          value={form.billingModel}
+                          onChange={(e) => setForm({ ...form, billingModel: e.target.value })}
+                          className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
                           disabled={loading}
                         >
-                          <option value="developer">Developer</option>
-                          <option value="scrum_master">Scrum Master</option>
-                          <option value="project_manager">Project Manager</option>
+                          <option value="fixed_price">Fixed price</option>
+                          <option value="monthly_retainer">Monthly retainer</option>
+                          <option value="time_and_materials">Time and materials</option>
+                          <option value="other">Other</option>
                         </select>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveUser(user.id)}
-                          className="text-zinc-500 hover:text-zinc-800"
-                          aria-label={`Quitar ${user.name}`}
-                          disabled={loading}
-                        >
-                          x
-                        </button>
-                      </span>
-                    ))}
+                      </div>
+                    </div>
                   </div>
                 )}
-              </div>
-
-              <select
-                value={form.priority}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    priority: e.target.value as ProjectPriority,
-                  })
-                }
-                className="w-full rounded border p-3"
-                disabled={loading}
-              >
-                <option value="High">High Priority</option>
-                <option value="Medium">Medium Priority</option>
-                <option value="Low">Low Priority</option>
-              </select>
-
-              <select
-                value={form.status}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    status: e.target.value as ProjectStatus,
-                  })
-                }
-                className="w-full rounded border p-3"
-                disabled={loading}
-              >
-                <option value="Planning">Planning</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </select>
+              </section>
             </div>
 
-            <div className="mt-5 flex gap-3">
+            <div className="mt-6 flex flex-col gap-3 border-t border-zinc-100 pt-5 sm:flex-row">
               <button
                 type="button"
                 onClick={closeModal}
-                className="w-full rounded border px-4 py-3 disabled:opacity-50"
+                className="w-full rounded-2xl border border-zinc-200 px-4 py-3 font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
                 disabled={loading}
               >
                 Cancel
@@ -682,7 +860,7 @@ export default function CreateProjectModal({
 
               <button
                 type="submit"
-                className="w-full rounded bg-black px-4 py-3 text-white disabled:opacity-50"
+                className="w-full rounded-2xl bg-black px-4 py-3 font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50"
                 disabled={loading}
               >
                 {loading
