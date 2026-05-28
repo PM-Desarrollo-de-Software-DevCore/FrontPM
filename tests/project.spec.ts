@@ -20,12 +20,18 @@ test.describe('Proyectos', () => {
     const projectName = `Proyecto Test ${Date.now()}`;
     await page.fill('input[placeholder="Project Name"]', projectName);
     await page.fill('textarea[placeholder="Project Description"]', 'Descripción del proyecto');
-    await page.fill('input[placeholder="Project Manager"]', 'Test Manager');
+    await page.fill('input[placeholder="Acme Corp"]', 'Acme Corp');
+    await page.fill('input[placeholder="Web app"]', 'Web app');
+    await page.fill('textarea[placeholder="Launch a central portal for customer onboarding"]', 'Lanzar un portal central para el onboarding de clientes');
+
+    await page.locator('button:has-text("Advanced settings")').click();
+    await page.fill('input[placeholder="6"]', '6');
+    await page.fill('input[placeholder="25000"]', '25000');
+    await page.fill('input[placeholder="3200"]', '3200');
 
     const dateFields = page.locator('input[type="date"]');
     await dateFields.nth(0).fill('2026-05-13');
     await dateFields.nth(1).fill('2026-08-13');
-    await page.fill('input[placeholder="Team Members (comma separated)"]', 'Team 1, Team 2');
 
     await page.click('button:has-text("Create Project")');
     await expect(page.getByRole('heading', { name: projectName })).toBeVisible();
