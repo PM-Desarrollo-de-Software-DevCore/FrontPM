@@ -16,36 +16,59 @@ ChartJS.register(ArcElement, Tooltip, Legend)
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   completed:   { label: "Completed",   color: "#22c55e" },
-  on_hold:     { label: "On Hold",     color: "#ef4444" },
-  in_progress: { label: "On Progress", color: "#3b82f6" },
+  overdue:     { label: "Overdue",     color: "#ef4444" },
+  in_progress: { label: "In Progress", color: "#3b82f6" },
   pending:     { label: "Pending",     color: "#eab308" },
 }
 
 type Props = {
   dashboardData: DashboardData | null
+  tasks?: Array<{ status: string; isOverdue?: boolean; project?: { id_project: string } }>
+  projectId?: string
   loading?: boolean
   error?: string | null
 }
 
-export default function TasksChart({ dashboardData, loading, error }: Props) {
+const getTaskStatusCounts = (tasks: Array<{ status: string; isOverdue?: boolean }>) => {
+  return tasks.reduce<Record<string, number>>((acc, task) => {
+    const status = task.isOverdue || task.status === "on_hold" ? "overdue" : task.status
+    acc[status] = (acc[status] ?? 0) + 1
+    return acc
+  }, {})
+}
 
+export default function TasksChart({ dashboardData, tasks, projectId, loading, error }: Props) {
+  const filteredTasks = projectId
+    ? tasks?.filter((task) => task.project?.id_project === projectId) ?? []
+    : tasks
 
-  const rawItems = dashboardData?.tasksByStatus?.filter((s) => s.count > 0).length
-    ? dashboardData.tasksByStatus
-        .filter((s) => s.count > 0)
-        .map((s) => ({
-          label: STATUS_CONFIG[s.status]?.label ?? s.status,
-          color: STATUS_CONFIG[s.status]?.color ?? "#94a3b8",
-          count: s.count,
+  const statusCounts = filteredTasks !== undefined ? getTaskStatusCounts(filteredTasks) : undefined
+
+  const rawItems = statusCounts
+    ? Object.entries(statusCounts)
+        .map(([status, count]) => ({
+          label: STATUS_CONFIG[status]?.label ?? status,
+          color: STATUS_CONFIG[status]?.color ?? "#94a3b8",
+          count,
         }))
-    : dashboardData
-    ? [
-        { label: "Completed",   color: "#22c55e", count: dashboardData.summary.completedTasks  },
-        { label: "On Hold",     color: "#ef4444", count: dashboardData.summary.overdueTasks    },
-        { label: "On Progress", color: "#3b82f6", count: dashboardData.summary.inProgressTasks },
-        { label: "Pending",     color: "#eab308", count: dashboardData.summary.pendingTasks    },
-      ].filter((i) => i.count > 0)
-    : []
+        .filter((item) => item.count > 0)
+    : dashboardData?.tasksByStatus?.filter((s) => s.count > 0)
+        .map((s) => {
+          const status = s.status === "on_hold" ? "overdue" : s.status
+          return {
+            label: STATUS_CONFIG[status]?.label ?? status,
+            color: STATUS_CONFIG[status]?.color ?? "#94a3b8",
+            count: s.count,
+          }
+        }) ??
+      dashboardData
+        ? [
+            { label: "Completed",   color: "#22c55e", count: dashboardData.summary.completedTasks  },
+            { label: "Overdue",     color: "#ef4444", count: dashboardData.summary.overdueTasks    },
+            { label: "In Progress", color: "#3b82f6", count: dashboardData.summary.inProgressTasks },
+            { label: "Pending",     color: "#eab308", count: dashboardData.summary.pendingTasks    },
+          ].filter((i) => i.count > 0)
+        : []
 
   const total = rawItems.reduce((sum, i) => sum + i.count, 0)
 

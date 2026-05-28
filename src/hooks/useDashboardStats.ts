@@ -56,6 +56,7 @@ export type UserTask = {
   start_date: string
   end_date: string
   project: { id_project: string; name: string }
+  id_sprint?: string | null
   isOverdue: boolean
 }
 
@@ -67,8 +68,9 @@ export type UserTasksData = {
 
 
 type FiltersOptions = {
-  sprint?: string
   project?: string
+  dateFrom?: string
+  dateTo?: string
 }
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
@@ -78,6 +80,13 @@ const getHeaders = (token: string) => ({
   Authorization: `Bearer ${token}`,
 })
 
+const buildQueryString = (filters?: FiltersOptions) => {
+  const params = new URLSearchParams()
+  if (filters?.project) params.append("project", filters.project)
+  if (filters?.dateFrom) params.append("dateFrom", filters.dateFrom)
+  if (filters?.dateTo) params.append("dateTo", filters.dateTo)
+  return params.toString() ? `?${params.toString()}` : ""
+}
 
 export function useDashboardStats(filters?: FiltersOptions) {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -93,10 +102,7 @@ export function useDashboardStats(filters?: FiltersOptions) {
       if (!token) { setError("No hay sesión activa"); setLoading(false); return }
 
       try {
-        const params = new URLSearchParams()
-        if (filters?.sprint) params.append("sprint", filters.sprint)
-        if (filters?.project) params.append("project", filters.project)
-        const query = params.toString() ? `?${params.toString()}` : ""
+        const query = buildQueryString(filters)
 
         const res = await fetch(`${BASE_URL}/dashboard/tasks-stats${query}`, {
           method: "GET",
@@ -118,7 +124,7 @@ export function useDashboardStats(filters?: FiltersOptions) {
     }
 
     fetchStats()
-  }, [filters?.sprint, filters?.project])
+  }, [filters?.project, filters?.dateFrom, filters?.dateTo])
 
   return { data, loading, error }
 }
@@ -138,10 +144,7 @@ export function useUserTasks(filters?: FiltersOptions) {
       if (!token) { setError("No hay sesión activa"); setLoading(false); return }
 
       try {
-        const params = new URLSearchParams()
-        if (filters?.sprint) params.append("sprint", filters.sprint)
-        if (filters?.project) params.append("project", filters.project)
-        const query = params.toString() ? `?${params.toString()}` : ""
+        const query = buildQueryString(filters)
 
         const res = await fetch(`${BASE_URL}/dashboard/user-tasks${query}`, {
           method: "GET",
@@ -163,7 +166,7 @@ export function useUserTasks(filters?: FiltersOptions) {
     }
 
     fetchTasks()
-  }, [filters?.sprint, filters?.project])
+  }, [filters?.project, filters?.dateFrom, filters?.dateTo])
 
   return { data, loading, error }
 }
@@ -184,7 +187,7 @@ export type WeeklyProgressData = {
   dailyCompletions: DailyCompletion[]
 }
 
-export function useWeeklyProgress() {
+export function useWeeklyProgress(filters?: FiltersOptions) {
   const [data, setData] = useState<WeeklyProgressData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -198,7 +201,9 @@ export function useWeeklyProgress() {
       if (!token) { setError("No hay sesión activa"); setLoading(false); return }
 
       try {
-        const res = await fetch(`${BASE_URL}/dashboard/weekly-progress`, {
+        const query = buildQueryString(filters)
+
+        const res = await fetch(`${BASE_URL}/dashboard/weekly-progress${query}`, {
           method: "GET",
           headers: getHeaders(token),
           cache: "no-store",
@@ -219,7 +224,7 @@ export function useWeeklyProgress() {
     }
 
     fetchWeekly()
-  }, [])
+  }, [filters?.project, filters?.dateFrom, filters?.dateTo])
 
   return { data, loading, error }
 }

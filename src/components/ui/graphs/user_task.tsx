@@ -4,13 +4,16 @@ import { useState } from "react"
 import { Button } from "../Button/button"
 import { useUserTasks, UserTask } from "@/hooks/useDashboardStats"
 
-type FilterStatus = "all" | "pending" | "in_progress" | "completed" 
+type FilterStatus = "all" | "pending" | "in_progress" | "completed" | "overdue"
 
 const getStatusColor = (status: UserTask["status"], isOverdue: boolean) => {
+  if (isOverdue || status === "on_hold") {
+    return "bg-red-500"
+  }
+
   switch (status) {
     case "completed":   return "bg-green-500"
-    case "in_progress": return isOverdue ? "bg-red-500" : "bg-blue-500"
-    case "on_hold":     return "bg-yellow-500"
+    case "in_progress": return "bg-blue-500"
     case "pending":     return "bg-yellow-500"
     default:            return "bg-gray-500"
   }
@@ -25,7 +28,7 @@ const getPriorityStyles = (priority: UserTask["priority"]) => {
 }
 
 const formatStatus = (status: UserTask["status"], isOverdue: boolean) => {
-  if (isOverdue) return "Overdue"
+  if (isOverdue || status === "on_hold") return "Overdue"
   switch (status) {
     case "in_progress": return "In Progress"
     case "completed":   return "Completed"
@@ -46,12 +49,33 @@ export default function ProjectsList({ filters }: Props) {
 
   const tasks = data?.tasks ?? []
 
-  const filteredTasks = filter === "all"
-    ? tasks
-    : tasks.filter((t) => t.status === filter)
 
-  const countByStatus = (status: UserTask["status"]) =>
-    tasks.filter((t) => t.status === status).length
+  const sprintFilteredTasks = tasks.filter((task) => {
+    if (!filters?.sprint) return true
+
+    if (filters.sprint === "backlog") {
+      return !task.id_sprint
+    }
+
+    return task.id_sprint === filters.sprint
+  })
+
+  const projectFilteredTasks = sprintFilteredTasks.filter(
+    (t) => !filters?.project || t.project.id_project === filters.project
+  )
+
+  const filteredTasks = projectFilteredTasks.filter((t) => {
+    if (filter === "all") return true
+    if (filter === "overdue") return t.isOverdue || t.status === "on_hold"
+    return t.status === filter
+  })
+
+  const countByStatus = (status: FilterStatus) =>
+    projectFilteredTasks.filter((t) => {
+      if (status === "overdue") return t.isOverdue || t.status === "on_hold"
+      if (status === "all") return true
+      return t.status === status
+    }).length
 
   if (loading) {
     return (
@@ -88,6 +112,7 @@ export default function ProjectsList({ filters }: Props) {
           { key: "completed",   label: `Completed (${countByStatus("completed")})` },
           { key: "in_progress", label: `In Progress (${countByStatus("in_progress")})` },
           { key: "pending",     label: `Pending (${countByStatus("pending")})` },
+          { key: "overdue",     label: `Overdue (${countByStatus("overdue")})` },
         ].map((tab) => (
           <button
             key={tab.key}
