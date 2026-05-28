@@ -3,7 +3,24 @@ import { getToken } from '@/lib/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-function convertDateToISO(dateString: string): string {
+export interface ProjectPayload {
+  name: string;
+  description: string;
+  client: string;
+  projectType: string;
+  projectObjective: string;
+  methodology: string;
+  estimatedSprints?: number;
+  budget?: number;
+  monthlyCost?: number;
+  billingModel?: string;
+  startDate: string;
+  endDate: string;
+  priority: Project['priority'];
+  status: Project['status'];
+}
+
+function convertDateToISO(dateString?: string): string {
   if (!dateString) return "";
   if (dateString.includes("T")) return dateString;
   const date = new Date(`${dateString}T00:00:00Z`);
@@ -18,10 +35,18 @@ function getAuthHeaders(): Record<string, string> {
   };
 }
 
-function projectToBackendFormat(project: any) {
+function projectToBackendFormat(project: Partial<ProjectPayload>) {
   return {
     name: project.name,
     description: project.description,
+    client: project.client,
+    project_type: project.projectType,
+    project_objective: project.projectObjective,
+    methodology: project.methodology?.toLowerCase(),
+    estimated_sprints: project.estimatedSprints,
+    budget: project.budget,
+    monthly_cost: project.monthlyCost,
+    billing_model: project.billingModel?.toLowerCase(),
     start_date: convertDateToISO(project.startDate),
     end_date: convertDateToISO(project.endDate),
     priority: project.priority?.toLowerCase(),
@@ -35,6 +60,14 @@ function projectFromBackendFormat(data: any): Project {
     id: data.id || data.id_project,
     name: data.name,
     description: data.description,
+    client: data.client,
+    projectType: data.project_type || data.projectType,
+    projectObjective: data.project_objective || data.projectObjective,
+    methodology: data.methodology,
+    estimatedSprints: data.estimated_sprints ?? data.estimatedSprints,
+    budget: data.budget,
+    monthlyCost: data.monthly_cost ?? data.monthlyCost,
+    billingModel: data.billing_model || data.billingModel,
     startDate: data.start_date,
     endDate: data.end_date,
     priority: data.priority?.charAt(0).toUpperCase() + data.priority?.slice(1) || 'Medium',
@@ -78,7 +111,7 @@ export async function getProjectById(projectId: string): Promise<Project> {
   return projectFromBackendFormat(project);
 }
 
-export async function createProject(project: Omit<Project, 'id' | 'progress' | 'tasks' | 'owner' | 'team'>): Promise<Project> {
+export async function createProject(project: ProjectPayload): Promise<Project> {
   const backendData = projectToBackendFormat(project);
 
   const response = await fetch(`${API_URL}/projects`, {
@@ -97,7 +130,7 @@ export async function createProject(project: Omit<Project, 'id' | 'progress' | '
   return projectFromBackendFormat(createdProject);
 }
 
-export async function updateProject(projectId: string, project: Partial<Project>): Promise<Project> {
+export async function updateProject(projectId: string, project: Partial<ProjectPayload>): Promise<Project> {
   const backendData = projectToBackendFormat(project);
   
   const response = await fetch(`${API_URL}/projects/${projectId}`, {
