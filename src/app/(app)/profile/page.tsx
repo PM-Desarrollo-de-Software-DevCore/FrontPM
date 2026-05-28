@@ -18,6 +18,13 @@ import {
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { Task } from "@/types/task";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import RequestModificationModal from "@/components/profile/RequestModificationModal";
+import {
+  ProfileChangeRequest,
+  ProfileChangeStatus,
+  cancelProfileChangeRequest,
+  getMyProfileChangeRequests,
+} from "@/services/profileChangeRequestService";
 
 function splitValues(value: string | null | undefined): string[] {
   if (!value) return [];
@@ -85,6 +92,58 @@ function getTaskProgressColor(status: Task["status"]): string {
   }
 }
 
+const PROFILE_REQUEST_FIELD_LABELS: Record<string, string> = {
+  name: "Nombre",
+  lastname: "Apellido",
+  email: "Email",
+  skill: "Skill",
+  area: "Área",
+}
+
+function getRequestStatusStyles(status: ProfileChangeStatus): string {
+  switch (status) {
+    case "approved":
+      return "bg-emerald-100 text-emerald-700"
+    case "rejected":
+      return "bg-red-100 text-red-700"
+    case "cancelled":
+      return "bg-slate-100 text-slate-600"
+    default:
+      return "bg-amber-100 text-amber-700"
+  }
+}
+
+function getRequestStatusLabel(status: ProfileChangeStatus): string {
+  switch (status) {
+    case "approved":
+      return "Aprobada"
+    case "rejected":
+      return "Rechazada"
+    case "cancelled":
+      return "Cancelada"
+    default:
+      return "Pendiente"
+  }
+}
+
+function formatRequestDate(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date)
+}
+
+function formatChangeValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—"
+  return String(value)
+}
+
 export default function ProfileDashboard() {
   const { language, toggleLanguage } = useLanguage();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -103,6 +162,12 @@ export default function ProfileDashboard() {
   const [completedToday, setCompletedToday] = useState<number>(0)
   const [completedLoading, setCompletedLoading] = useState<boolean>(true)
   const [leaderboardCounts, setLeaderboardCounts] = useState<Map<string, number>>(new Map())
+
+  const [requestModalOpen, setRequestModalOpen] = useState(false)
+  const [myRequests, setMyRequests] = useState<ProfileChangeRequest[]>([])
+  const [requestsLoading, setRequestsLoading] = useState(false)
+  const [requestsError, setRequestsError] = useState<string | null>(null)
+  const [cancellingRequestId, setCancellingRequestId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false;
@@ -259,6 +324,62 @@ export default function ProfileDashboard() {
     { total: 0, completed: 0, inProgress: 0, pending: 0 }
   )
 
+  const reloadMyRequests = async () => {
+    if (!user?.id) {
+      setMyRequests([])
+      return
+    }
+
+    setRequestsLoading(true)
+    setRequestsError(null)
+
+    try {
+      const data = await getMyProfileChangeRequests()
+      setMyRequests(data)
+    } catch (err) {
+      setRequestsError(err instanceof Error ? err.message : "No se pudieron cargar tus solicitudes.")
+      setMyRequests([])
+    } finally {
+      setRequestsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    reloadMyRequests()
+  }, [user?.id])
+
+  const handleRequestCreated = (request: ProfileChangeRequest) => {
+    setMyRequests((prev) => [request, ...prev])
+  }
+
+  const handleCancelRequest = async (requestId: string) => {
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm("¿Cancelar esta solicitud?")
+      if (!confirmed) return
+    }
+
+    setCancellingRequestId(requestId)
+
+    try {
+      const updated = await cancelProfileChangeRequest(requestId)
+      setMyRequests((prev) =>
+        prev.map((request) => (request.id_request === requestId ? updated : request))
+      )
+    } catch (err) {
+      setRequestsError(err instanceof Error ? err.message : "No se pudo cancelar la solicitud.")
+    } finally {
+      setCancellingRequestId(null)
+    }
+  }
+
+  const profileSnapshot = {
+    name: profile?.name ?? user?.name ?? "",
+    lastname: profile?.lastname ?? user?.lastname ?? "",
+    email: profile?.email ?? user?.email ?? "",
+    skill: profile?.skill ?? null,
+    area: profile?.area ?? null,
+  }
+
   return (
     <div className="w-full px-4 sm:px-6 lg:px-10 pt-0 pb-4 max-w-350 mx-auto overflow-x-hidden">
 
@@ -334,9 +455,92 @@ export default function ProfileDashboard() {
             </div>
           </Card>
 
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 sm:py-4 text-sm w-full">
+          <Button
+            type="button"
+            onClick={() => setRequestModalOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 sm:py-4 text-sm w-full"
+          >
             Request Modification
           </Button>
+
+          <Card className="rounded-2xl shadow-sm p-4 sm:p-5 border border-gray-100">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-semibold text-sm sm:text-base">Mis solicitudes</h2>
+              <span className="text-xs text-gray-400">
+                {requestsLoading ? "Cargando..." : `${myRequests.length} registradas`}
+              </span>
+            </div>
+
+            {requestsError && (
+              <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+                {requestsError}
+              </p>
+            )}
+
+            <div className="mt-3 flex flex-col gap-2">
+              {requestsLoading ? (
+                <p className="text-xs text-gray-500">Cargando solicitudes...</p>
+              ) : myRequests.length === 0 ? (
+                <p className="text-xs text-gray-500">No has enviado solicitudes todavía.</p>
+              ) : (
+                myRequests.slice(0, 5).map((request) => {
+                  const proposed = request.proposedChanges ?? {}
+                  const fieldsChanged = Object.keys(proposed)
+                  const isCancelling = cancellingRequestId === request.id_request
+
+                  return (
+                    <div
+                      key={request.id_request}
+                      className="rounded-xl border border-gray-100 bg-white px-3 py-2 text-xs shadow-sm"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getRequestStatusStyles(
+                            request.status
+                          )}`}
+                        >
+                          {getRequestStatusLabel(request.status)}
+                        </span>
+                        <span className="text-[10px] text-gray-400">
+                          {formatRequestDate(request.createdAt)}
+                        </span>
+                      </div>
+
+                      <ul className="mt-2 space-y-0.5 text-[11px] text-slate-700">
+                        {fieldsChanged.map((field) => (
+                          <li key={field} className="truncate">
+                            <span className="font-medium text-slate-900">
+                              {PROFILE_REQUEST_FIELD_LABELS[field] ?? field}:
+                            </span>{" "}
+                            {formatChangeValue((proposed as Record<string, unknown>)[field])}
+                          </li>
+                        ))}
+                      </ul>
+
+                      {request.status === "rejected" && request.reviewNote && (
+                        <p className="mt-2 rounded-md bg-red-50 px-2 py-1 text-[11px] text-red-700">
+                          Motivo: {request.reviewNote}
+                        </p>
+                      )}
+
+                      {request.status === "pending" && (
+                        <div className="mt-2 flex justify-end">
+                          <button
+                            type="button"
+                            disabled={isCancelling}
+                            onClick={() => handleCancelRequest(request.id_request)}
+                            className="text-[11px] font-medium text-red-600 transition hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isCancelling ? "Cancelando..." : "Cancelar"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </Card>
 
           <Button
             type="button"
@@ -347,6 +551,13 @@ export default function ProfileDashboard() {
             {language === "en" ? "Switch to Spanish" : "Cambiar a Ingles"}
           </Button>
         </div>
+
+        <RequestModificationModal
+          open={requestModalOpen}
+          onClose={() => setRequestModalOpen(false)}
+          current={profileSnapshot}
+          onCreated={handleRequestCreated}
+        />
 
         {!isAdmin && (
           <div className="md:col-span-4 lg:col-span-6 flex flex-col">
