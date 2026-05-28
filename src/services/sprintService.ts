@@ -36,7 +36,7 @@ function mapSprint(
 export async function getProjectSprints(
   projectId: string,
   token: string
-) {
+): Promise<Sprint[]> {
 
   const response =
     await fetch(
