@@ -209,12 +209,7 @@
 }
 
 /* Improve button/text contrast inside dark cards */
-.dark .btn,
-.dark button { color: var(--card-foreground) !important; }
-
-/* Ensure small text still readable */
-.dark .text-xs,
-.dark .text-sm { color: var(--muted-foreground) !important; }
+.dark .btn { color: var(--card-foreground) !important; }
 
 /* Badge / pill background adjustments to keep contrast */
 .dark .bg-green-100 { background-color: rgba(34,197,94,0.12) !important; color: #34d399 !important; }

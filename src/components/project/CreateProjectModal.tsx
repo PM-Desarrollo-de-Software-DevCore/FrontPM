@@ -96,6 +96,12 @@ export default function CreateProjectModal({
     billingModel: "fixed_price",
   };
 
+  const labelClass = "mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200";
+  const fieldClass =
+    "w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 dark:border-white/10 dark:bg-slate-950/60 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-sky-400";
+  const textareaClass =
+    "min-h-28 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 dark:border-white/10 dark:bg-slate-950/60 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-sky-400";
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -484,85 +490,85 @@ export default function CreateProjectModal({
           <form
             onSubmit={handleSubmit}
             onClick={(e) => e.stopPropagation()}
-            className="flex w-full max-w-4xl max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-3xl border border-zinc-200 bg-white p-6 shadow-2xl md:p-8"
+            className="flex w-full max-w-4xl max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-3xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900 md:p-8"
           >
-            <div className="mb-5 border-b border-zinc-100 pb-5">
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-zinc-500">
+            <div className="mb-5 border-b border-zinc-100 pb-5 dark:border-white/10">
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-300">
                 {isEditMode ? "Edit Project" : "New Project"}
               </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-100">
                 {isEditMode ? "Edit Project" : "Create Project"}
               </h2>
-              <p className="mt-2 text-sm text-zinc-500">
+              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-300">
                 Fill out the essentials first, then open advanced settings if you need budget or billing details.
               </p>
             </div>
 
             <div className="flex-1 space-y-5 overflow-y-auto pr-1">
               {error && (
-                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
                   {error}
                 </div>
               )}
 
               {memberSyncWarning && (
-                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
                   {memberSyncWarning}
                 </div>
               )}
 
-              <section className="rounded-3xl border border-zinc-200 bg-zinc-50/70 p-5">
+              <section className="rounded-3xl border border-zinc-200 bg-zinc-50/70 p-5 dark:border-white/10 dark:bg-slate-800/60">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-zinc-950">Project basics</p>
-                    <p className="text-xs text-zinc-500">What defines the project and its timeline.</p>
+                    <p className="text-sm font-semibold text-zinc-950 dark:text-zinc-100">Project basics</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-300">What defines the project and its timeline.</p>
                   </div>
-                  <span className="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-zinc-500 shadow-sm">Required</span>
+                  <span className="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-zinc-500 shadow-sm dark:bg-slate-900 dark:text-zinc-200">Required</span>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="md:col-span-2">
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Project Name</label>
+                    <label className={labelClass}>Project Name</label>
                     <input
                       value={form.name}
                       placeholder="Project Name"
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      className={fieldClass}
                       required
                       disabled={loading}
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Client</label>
+                    <label className={labelClass}>Client</label>
                     <input
                       value={form.client}
                       placeholder="Acme Corp"
                       onChange={(e) => setForm({ ...form, client: e.target.value })}
-                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      className={fieldClass}
                       required
                       disabled={loading}
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Project Type</label>
+                    <label className={labelClass}>Project Type</label>
                     <input
                       value={form.projectType}
                       placeholder="Web app"
                       onChange={(e) => setForm({ ...form, projectType: e.target.value })}
-                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      className={fieldClass}
                       required
                       disabled={loading}
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Methodology</label>
+                    <label className={labelClass}>Methodology</label>
                     <select
                       value={form.methodology}
                       onChange={(e) => setForm({ ...form, methodology: e.target.value })}
-                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      className={fieldClass}
                       required
                       disabled={loading}
                     >
@@ -574,59 +580,59 @@ export default function CreateProjectModal({
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Start Date</label>
+                    <label className={labelClass}>Start Date</label>
                     <input
                       type="date"
                       value={form.startDate}
                       onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      className={`${fieldClass} dark:[color-scheme:dark]`}
                       required
                       disabled={loading}
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">End Date</label>
+                    <label className={labelClass}>End Date</label>
                     <input
                       type="date"
                       value={form.endDate}
                       onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      className={`${fieldClass} dark:[color-scheme:dark]`}
                       required
                       disabled={loading}
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Project Description</label>
+                    <label className={labelClass}>Project Description</label>
                     <textarea
                       value={form.description}
                       placeholder="Project Description"
                       onChange={(e) => setForm({ ...form, description: e.target.value })}
-                      className="min-h-28 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      className={textareaClass}
                       required
                       disabled={loading}
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Project Objective</label>
+                    <label className={labelClass}>Project Objective</label>
                     <textarea
                       value={form.projectObjective}
                       placeholder="Launch a central portal for customer onboarding"
                       onChange={(e) => setForm({ ...form, projectObjective: e.target.value })}
-                      className="min-h-28 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      className={textareaClass}
                       required
                       disabled={loading}
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Priority</label>
+                    <label className={labelClass}>Priority</label>
                     <select
                       value={form.priority}
                       onChange={(e) => setForm({ ...form, priority: e.target.value as ProjectPriority })}
-                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      className={fieldClass}
                       disabled={loading}
                     >
                       <option value="High">High Priority</option>
@@ -636,11 +642,11 @@ export default function CreateProjectModal({
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Status</label>
+                    <label className={labelClass}>Status</label>
                     <select
                       value={form.status}
                       onChange={(e) => setForm({ ...form, status: e.target.value as ProjectStatus })}
-                      className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                      className={fieldClass}
                       disabled={loading}
                     >
                       <option value="Planning">Planning</option>
@@ -651,13 +657,13 @@ export default function CreateProjectModal({
                 </div>
               </section>
 
-              <section className="rounded-3xl border border-zinc-200 bg-white p-5">
+              <section className="rounded-3xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-slate-900/70">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-zinc-950">Smart member suggestions</p>
-                    <p className="text-xs text-zinc-500">Ranked by skill fit and completed tasks</p>
+                    <p className="text-sm font-semibold text-zinc-950 dark:text-zinc-100">Smart member suggestions</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-300">Ranked by skill fit and completed tasks</p>
                   </div>
-                  {suggestionsLoading && <span className="text-xs text-zinc-400">Analyzing...</span>}
+                  {suggestionsLoading && <span className="text-xs text-zinc-400 dark:text-zinc-300">Analyzing...</span>}
                 </div>
 
                 {suggestions.length > 0 ? (
@@ -674,25 +680,25 @@ export default function CreateProjectModal({
                               handleSelectUser(matchingUser);
                             }
                           }}
-                          className="flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-left transition hover:border-zinc-300 hover:bg-white"
+                          className="flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-left transition hover:border-zinc-300 hover:bg-white dark:border-white/10 dark:bg-slate-800 dark:hover:bg-slate-700"
                         >
                           <div>
-                            <p className="text-sm font-medium text-zinc-900">
+                            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                               {suggestion.name} {suggestion.lastname}
                             </p>
-                            <p className="text-xs text-zinc-500">
+                            <p className="text-xs text-zinc-500 dark:text-zinc-300">
                               {suggestion.skill || "No skill"}{suggestion.area ? ` · ${suggestion.area}` : ""}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-semibold text-zinc-900">{suggestion.score}</p>
-                            <p className="text-[11px] text-zinc-500">{suggestion.completedTasks} done</p>
+                            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{suggestion.score}</p>
+                            <p className="text-[11px] text-zinc-500 dark:text-zinc-300">{suggestion.completedTasks} done</p>
                           </div>
                         </button>
                       ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-300">
                     {suggestionsLoading
                       ? "Generating recommendations..."
                       : "Write a stronger title or description to get recommendations."}
@@ -700,13 +706,13 @@ export default function CreateProjectModal({
                 )}
 
                 <div className="relative mt-5">
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Project Users</label>
+                  <label className={labelClass}>Project Users</label>
 
                   <input
                     value={userQuery}
                     onChange={(e) => setUserQuery(e.target.value)}
                     placeholder="Search by name or email"
-                    className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                    className={fieldClass}
                     disabled={loading || usersLoading}
                   />
 
@@ -715,21 +721,21 @@ export default function CreateProjectModal({
                   )}
 
                   {!usersError && userQuery.trim().length > 0 && (
-                    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-44 overflow-auto rounded-2xl border border-zinc-200 bg-white shadow-lg">
+                    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-44 overflow-auto rounded-2xl border border-zinc-200 bg-white shadow-lg dark:border-white/10 dark:bg-slate-900">
                       {filteredUsers.length > 0 ? (
                         filteredUsers.map((user) => (
                           <button
                             key={user.id}
                             type="button"
                             onClick={() => handleSelectUser(user)}
-                            className="flex w-full items-center justify-between border-b border-zinc-100 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-zinc-50"
+                            className="flex w-full items-center justify-between border-b border-zinc-100 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-zinc-50 dark:border-white/10 dark:text-zinc-100 dark:hover:bg-slate-800"
                           >
                             <span>{`${user.name} ${user.lastname}`.trim()}</span>
-                            <span className="text-zinc-500">{user.email}</span>
+                            <span className="text-zinc-500 dark:text-zinc-300">{user.email}</span>
                           </button>
                         ))
                       ) : (
-                        <p className="px-3 py-2 text-sm text-zinc-500">No se encontraron usuarios.</p>
+                        <p className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-300">No se encontraron usuarios.</p>
                       )}
                     </div>
                   )}
@@ -739,13 +745,13 @@ export default function CreateProjectModal({
                       {selectedUsers.map((user) => (
                         <span
                           key={user.id}
-                          className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-700"
+                          className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-700 dark:bg-slate-800 dark:text-zinc-100"
                         >
                           {`${user.name} ${user.lastname}`.trim() || user.email}
                           <select
                             value={user.projectRole}
                             onChange={(e) => handleRoleChange(user.id, e.target.value as ProjectMemberRole)}
-                            className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] text-zinc-700"
+                            className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-[11px] text-zinc-700 dark:border-white/10 dark:bg-slate-900 dark:text-zinc-100"
                             disabled={loading}
                           >
                             <option value="developer">Developer</option>
@@ -755,7 +761,7 @@ export default function CreateProjectModal({
                           <button
                             type="button"
                             onClick={() => handleRemoveUser(user.id)}
-                            className="text-zinc-500 hover:text-zinc-800"
+                            className="text-zinc-500 hover:text-zinc-800 dark:text-zinc-300 dark:hover:text-zinc-100"
                             aria-label={`Quitar ${user.name}`}
                             disabled={loading}
                           >
@@ -768,26 +774,26 @@ export default function CreateProjectModal({
                 </div>
               </section>
 
-              <section className="overflow-hidden rounded-3xl border border-zinc-200 bg-zinc-50/70">
+              <section className="overflow-hidden rounded-3xl border border-zinc-200 bg-zinc-50/70 dark:border-white/10 dark:bg-slate-800/60">
                 <button
                   type="button"
                   onClick={() => setAdvancedSettingsOpen((current) => !current)}
                   className="flex w-full items-center justify-between px-5 py-4 text-left"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-zinc-950">Advanced settings</p>
-                    <p className="text-xs text-zinc-500">Optional fields for planning, finance, and billing.</p>
+                    <p className="text-sm font-semibold text-zinc-950 dark:text-zinc-100">Advanced settings</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-300">Optional fields for planning, finance, and billing.</p>
                   </div>
-                  <span className={`text-zinc-500 transition-transform ${advancedSettingsOpen ? "rotate-180" : ""}`}>
+                  <span className={`text-zinc-500 transition-transform dark:text-zinc-300 ${advancedSettingsOpen ? "rotate-180" : ""}`}>
                     ▾
                   </span>
                 </button>
 
                 {advancedSettingsOpen && (
-                  <div className="border-t border-zinc-200 bg-white px-5 py-5">
+                  <div className="border-t border-zinc-200 bg-white px-5 py-5 dark:border-white/10 dark:bg-slate-900/70">
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-zinc-700">Estimated sprints</label>
+                        <label className={labelClass}>Estimated sprints</label>
                         <input
                           type="number"
                           min="0"
@@ -795,13 +801,13 @@ export default function CreateProjectModal({
                           value={form.estimatedSprints}
                           onChange={(e) => setForm({ ...form, estimatedSprints: e.target.value })}
                           placeholder="6"
-                          className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                          className={fieldClass}
                           disabled={loading}
                         />
                       </div>
 
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-zinc-700">Budget</label>
+                        <label className={labelClass}>Budget</label>
                         <input
                           type="number"
                           min="0"
@@ -809,13 +815,13 @@ export default function CreateProjectModal({
                           value={form.budget}
                           onChange={(e) => setForm({ ...form, budget: e.target.value })}
                           placeholder="25000"
-                          className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                          className={fieldClass}
                           disabled={loading}
                         />
                       </div>
 
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-zinc-700">Monthly cost</label>
+                        <label className={labelClass}>Monthly cost</label>
                         <input
                           type="number"
                           min="0"
@@ -823,17 +829,17 @@ export default function CreateProjectModal({
                           value={form.monthlyCost}
                           onChange={(e) => setForm({ ...form, monthlyCost: e.target.value })}
                           placeholder="3200"
-                          className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                          className={fieldClass}
                           disabled={loading}
                         />
                       </div>
 
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-zinc-700">Billing model</label>
+                        <label className={labelClass}>Billing model</label>
                         <select
                           value={form.billingModel}
                           onChange={(e) => setForm({ ...form, billingModel: e.target.value })}
-                          className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 outline-none transition focus:border-zinc-400"
+                          className={fieldClass}
                           disabled={loading}
                         >
                           <option value="fixed_price">Fixed price</option>
@@ -848,11 +854,11 @@ export default function CreateProjectModal({
               </section>
             </div>
 
-            <div className="mt-6 flex flex-col gap-3 border-t border-zinc-100 pt-5 sm:flex-row">
+            <div className="mt-6 flex flex-col gap-3 border-t border-zinc-100 pt-5 dark:border-white/10 sm:flex-row">
               <button
                 type="button"
                 onClick={closeModal}
-                className="w-full rounded-2xl border border-zinc-200 px-4 py-3 font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
+                className="w-full rounded-2xl border border-zinc-200 px-4 py-3 font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-white/15 dark:text-zinc-200 dark:hover:bg-slate-800"
                 disabled={loading}
               >
                 Cancel
@@ -860,7 +866,7 @@ export default function CreateProjectModal({
 
               <button
                 type="submit"
-                className="w-full rounded-2xl bg-black px-4 py-3 font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50"
+                className="w-full rounded-2xl bg-black px-4 py-3 font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400"
                 disabled={loading}
               >
                 {loading
