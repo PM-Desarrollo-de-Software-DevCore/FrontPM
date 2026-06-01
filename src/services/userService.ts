@@ -120,6 +120,7 @@ export async function getUsersDirectory(): Promise<UserDirectoryEntry[]> {
     cache: "no-store",
   });
 
+
   if (!response.ok) {
     throw new Error("No se pudieron obtener los usuarios");
   }
