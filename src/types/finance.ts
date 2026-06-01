@@ -107,3 +107,44 @@ export interface FinancialPortfolio {
   summary: PortfolioSummary
   projects: PortfolioProject[]
 }
+
+/** Rol dentro de un proyecto (incluye team_lead). */
+export type ProjectMemberRole = "project_manager" | "scrum_master" | "developer" | "team_lead"
+
+/** Miembro de proyecto con datos financieros. `monthly_rate` llega null si no autorizado a verlo. */
+export interface ProjectMemberFinance {
+  id_mp: string
+  id_user: string
+  id_project: string
+  role: ProjectMemberRole
+  fte: number | null
+  monthly_rate: number | null
+  createdAt: string
+}
+
+/** Registro de horas en una tarea. */
+export interface TimeEntry {
+  id_time_entry: string
+  id_task: string
+  id_user: string
+  id_project: string
+  hours: number
+  work_date: string
+  description: string | null
+  createdAt: string
+}
+
+/** Bucket de horas agregadas (por usuario o por tarea); `id` es el id de usuario/tarea. */
+export interface TimeSummaryBucket {
+  id: string
+  hours: number
+  entries: number
+}
+
+/** GET /projects/:id/time-summary */
+export interface ProjectTimeSummary {
+  totalHours: number
+  entryCount: number
+  byUser: TimeSummaryBucket[]
+  byTask: TimeSummaryBucket[]
+}
