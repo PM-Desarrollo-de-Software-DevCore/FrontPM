@@ -41,3 +41,19 @@ export function formatNumber(
 
   return value.toLocaleString("es-MX", { maximumFractionDigits })
 }
+
+/**
+ * Formatea una fecha sin corrimiento por zona horaria: toma solo la parte YYYY-MM-DD
+ * y la interpreta como fecha LOCAL. Evita que una fecha guardada como UTC-midnight se
+ * muestre un día antes en zonas con offset negativo (p. ej. UTC-6).
+ */
+export function formatDate(value: string | null | undefined, fallback = "—"): string {
+  if (!value) return fallback
+
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number)
+  const date = year && month && day ? new Date(year, month - 1, day) : new Date(value)
+
+  if (Number.isNaN(date.getTime())) return fallback
+
+  return date.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
+}
