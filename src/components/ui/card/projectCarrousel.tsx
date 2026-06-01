@@ -1,55 +1,33 @@
 "use client"
 
-import { useRef } from "react"
+import { useRef, useEffect, useState } from "react"
+import { getProjects } from "@/services/projectService"
+import type { Project as ProjectType } from '@/types/project'
 
 type Risk = "low" | "medium" | "high"
 
-type Project = {
-  id: number
-  name: string
-  description: string
-  endDate: string
-  team: string[]
-  tasks: number
-  risk: Risk
-}
-
-const projects: Project[] = [
+const placeholderProjects: Omit<ProjectType, 'progress' | 'owner'>[] = [
   {
-    id: 1,
+    id: '1',
     name: "Sistema de Gestión",
     description: "Administra tareas y equipos",
+    startDate: '2026-01-01',
     endDate: "2026-05-10",
-    team: ["Ana", "Luis", "Carlos", "Sofía", "Miguel"],
+    priority: 'High',
+    status: 'In Progress',
     tasks: 12,
-    risk: "high",
+    team: ["Ana", "Luis", "Carlos", "Sofía", "Miguel"],
   },
   {
-    id: 2,
+    id: '2',
     name: "App Ecológica",
     description: "Recolección de datos ambientales",
+    startDate: '2026-02-01',
     endDate: "2026-06-01",
-    team: ["Laura", "Pedro"],
+    priority: 'Medium',
+    status: 'Planning',
     tasks: 5,
-    risk: "medium",
-  },
-  {
-    id: 3,
-    name: "Sistema de Gestión",
-    description: "Recolección de datos ambientales",
-    endDate: "2026-06-01",
     team: ["Laura", "Pedro"],
-    tasks: 5,
-    risk: "low",
-  },
-  {
-    id: 4,
-    name: "App Ecológica",
-    description: "Recolección de datos ambientales",
-    endDate: "2026-06-01",
-    team: ["Laura", "Pedro"],
-    tasks: 5,
-    risk: "medium",
   },
 ]
 
@@ -65,59 +43,111 @@ function formatDate(date: string) {
     .toUpperCase()
 }
 
-export default function Carrousel() {
-  const scrollRef = useRef<HTMLDivElement>(null)
+function ProjectCard({ project }: { project: ProjectType }) {
+  const [expanded, setExpanded] = useState(false)
+  const [isOverflowing, setIsOverflowing] = useState(false)
+  const descRef = useRef<HTMLParagraphElement>(null)
+
+  useEffect(() => {
+    if (descRef.current) {
+      setIsOverflowing(descRef.current.scrollHeight > descRef.current.clientHeight)
+    }
+  }, [])
+
+  const priority = (project as any).priority || 'Medium'
+  const riskKey = (priority as string).toLowerCase() as Risk
+  const risk = riskConfig[riskKey]
 
   return (
-    <div className="w-full p-4">
+    <div
+      className="flex-shrink-0 flex flex-col justify-between rounded-xl border border-zinc-200 bg-zinc-50 p-4 transition-all duration-200"
+      style={{ width: '340px', minHeight: '170px', height: expanded ? 'auto' : '170px' }}
+    >
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-semibold text-zinc-900">{project.name}</p>
+        <p
+          ref={descRef}
+          className={`text-xs text-zinc-500 leading-relaxed ${!expanded ? 'line-clamp-1' : ''}`}
+        >
+          {project.description}
+        </p>
+        {isOverflowing && (
+          <button
+            onClick={() => setExpanded(e => !e)}
+            className="text-[11px] text-zinc-400 hover:text-zinc-600 text-left w-fit"
+          >
+            {expanded ? 'see less' : 'see more'}
+          </button>
+        )}
+      </div>
+
+      <p className="text-[11px] text-zinc-400">{formatDate(project.endDate)}</p>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex -ml-1.5">
+            {(project.team ?? []).slice(0, 3).map((member, i) => (
+              <div
+                key={i}
+                className="first:ml-0 -ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-300 text-[9px] font-semibold text-amber-900"
+              >
+                {member.slice(0, 2).toUpperCase()}
+              </div>
+            ))}
+            {project.team && project.team.length > 3 && (
+              <div className="-ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-200 text-[9px] font-semibold text-amber-900">
+                +{project.team.length - 3}
+              </div>
+            )}
+          </div>
+          <div className="text-xs text-zinc-400">{project.tasks} tareas</div>
+        </div>
+
+        <div className="flex flex-col items-end gap-2">
+          <span className={`inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium ${risk.badge}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${risk.dot}`} />
+            {risk.label}
+          </span>
+          <p className="text-[11px] text-zinc-400">{formatDate(project.endDate)}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function Carrousel() {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [projects, setProjects] = useState<ProjectType[] | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+
+    async function load() {
+      try {
+        const data = await getProjects()
+        if (!mounted) return
+        setProjects(data)
+      } catch (error) {
+        if (!mounted) return
+        setProjects(placeholderProjects as unknown as ProjectType[])
+      }
+    }
+
+    load()
+
+    return () => { mounted = false }
+  }, [])
+
+  return (
+    <div className="w-full py-4">
       <div
         ref={scrollRef}
-        className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-4"
       >
-        <div className="flex gap-3">
-          {projects.map((project) => {
-            const risk = riskConfig[project.risk]
-            return (
-              <div
-                key={project.id}
-                // calc(33% - gap) en desktop → siempre se ven ~3 y pico → hay scroll
-                // en móvil muestra ~1.2 cards
-                className="flex-shrink-0 flex flex-col gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4"
-                style={{ width: "clamp(240px, 30%, 320px)" }}
-              >
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-semibold text-zinc-900">{project.name}</p>
-                  <p className="text-xs text-zinc-500 leading-relaxed">{project.description}</p>
-                </div>
-
-                <p className="text-[11px] text-zinc-400">{formatDate(project.endDate)}</p>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex">
-                    {project.team.slice(0, 3).map((member, i) => (
-                      <div
-                        key={i}
-                        className="-ml-1.5 first:ml-0 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-300 text-[9px] font-semibold text-amber-900"
-                      >
-                        {member.slice(0, 2).toUpperCase()}
-                      </div>
-                    ))}
-                    {project.team.length > 3 && (
-                      <div className="-ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-200 text-[9px] font-semibold text-amber-900">
-                        +{project.team.length - 3}
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-xs text-zinc-400">{project.tasks} issues</span>
-                </div>
-
-                <span className={`inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium ${risk.badge}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${risk.dot}`} />
-                  {risk.label}
-                </span>
-              </div>
-            )
-          })}
+        <div className="flex gap-3 items-start">
+          {(projects ?? (placeholderProjects as unknown as ProjectType[])).map((project) => (
+            <ProjectCard key={project.id} project={project} />
+          ))}
         </div>
       </div>
     </div>
