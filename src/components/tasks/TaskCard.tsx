@@ -16,6 +16,8 @@ interface Props {
 
   index: number
 
+  contextLabel?: string
+
   assignedUser?: {
     id: string
     name: string
@@ -30,6 +32,8 @@ export default function TaskCard({
   task,
 
   index,
+
+  contextLabel,
 
   assignedUser,
 
@@ -84,16 +88,24 @@ export default function TaskCard({
               {task.title}
             </h3>
 
-            <div
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                priorityColors[
+            <div className="flex flex-col items-end gap-2">
+              <div
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  priorityColors[
+                    task.priority
+                  ]
+                }`}
+              >
+                {
                   task.priority
-                ]
-              }`}
-            >
-              {
-                task.priority
-              }
+                }
+              </div>
+
+              {contextLabel && (
+                <div className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  {contextLabel}
+                </div>
+              )}
             </div>
           </div>
 

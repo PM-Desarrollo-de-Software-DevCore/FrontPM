@@ -17,7 +17,11 @@ export interface Task {
 
   progress: number
 
-  assignedTo: string
+  assignedTo: string | null
+
+  story_points?: number | null
+
+  task_number?: number
 
   end_date: string
 
