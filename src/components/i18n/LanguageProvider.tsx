@@ -254,7 +254,6 @@ const esToEnEntries: Array<[string, string]> = [
   // Módulo de Finanzas (PM-139)
   ["Finanzas", "Finance"],
   ["Resumen", "Summary"],
-  ["Reporte", "Report"],
   ["KPIs financieros, EVM y reporte del proyecto.", "Financial KPIs, EVM and project report."],
   ["Burn acumulado", "Cumulative burn"],
   ["Costo estimado acumulado", "Cumulative estimated cost"],
@@ -355,7 +354,6 @@ const esToEnEntries: Array<[string, string]> = [
   ["No hay facturas registradas.", "No invoices recorded."],
   ["¿Eliminar esta factura?", "Delete this invoice?"],
   ["Concepto (opcional)", "Concept (optional)"],
-  ["Concepto", "Concept"],
   ["Emisión", "Issued"],
   ["Fecha de emisión", "Issue date"],
   ["Selecciona la fecha de emisión.", "Select the issue date."],

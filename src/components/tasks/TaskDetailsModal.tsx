@@ -3,6 +3,15 @@
 import { useEffect, useState } from "react"
 
 import { Task } from "@/types/task"
+import { getAssignmentSuggestions, AssignmentSuggestionItem } from "@/services/assignmentSuggestionService"
+import { getToken } from "@/lib/auth"
+import {
+  getTaskComments,
+  createTaskComment,
+  updateComment,
+  deleteComment,
+} from "@/services/commentService"
+import { Comment } from "@/types/comment"
 
 interface User {
   id: string
@@ -28,6 +37,15 @@ export default function TaskDetailsModal({
   const [selectedUser, setSelectedUser] = useState(task.assignedTo || "")
   const [successMessage, setSuccessMessage] = useState("")
 
+  const [comments, setComments] = useState<Comment[]>([])
+  const [newComment, setNewComment] = useState("")
+  const [commentsLoading, setCommentsLoading] = useState(false)
+  const [commentError, setCommentError] = useState("")
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editingContent, setEditingContent] = useState("")
+
+  const taskId = task.id
+
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
@@ -36,6 +54,137 @@ export default function TaskDetailsModal({
       document.body.style.overflow = previousOverflow
     }
   }, [])
+
+  useEffect(() => {
+    setSelectedUser(task.assignedTo || "")
+  }, [task.id, task.assignedTo])
+
+  useEffect(() => {
+    async function loadComments() {
+      try {
+        const token = getToken()
+        if (!token) return
+
+        setCommentsLoading(true)
+        setCommentError("")
+
+        const data = await getTaskComments(taskId, token)
+        setComments(data)
+      } catch {
+        setCommentError("Error loading comments.")
+      } finally {
+        setCommentsLoading(false)
+      }
+    }
+
+    loadComments()
+  }, [taskId])
+
+  useEffect(() => {
+    const query = `${task.title} ${task.description || ""}`.trim()
+
+    if (query.length < 8) {
+      setSuggestions([])
+      return
+    }
+
+    let cancelled = false
+
+    const timer = window.setTimeout(async () => {
+      try {
+        setSuggestionsLoading(true)
+
+        const response = await getAssignmentSuggestions({
+          scope: "task",
+          projectId,
+          title: task.title,
+          description: task.description,
+          limit: 4,
+        })
+
+        if (!cancelled) {
+          setSuggestions(response.suggestions)
+        }
+      } catch {
+        if (!cancelled) {
+          setSuggestions([])
+        }
+      } finally {
+        if (!cancelled) {
+          setSuggestionsLoading(false)
+        }
+      }
+    }, 550)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [task.id, task.title, task.description, projectId])
+
+  async function handleCreateComment() {
+  if (!newComment.trim()) return
+
+  try {
+    const token = getToken()
+    if (!token) return
+
+    setCommentError("")
+
+    await createTaskComment(taskId, newComment, token)
+
+    const updatedComments = await getTaskComments(taskId, token)
+    setComments(updatedComments)
+
+    setNewComment("")
+  } catch {
+    setCommentError("Error creating comment.")
+  }
+}
+
+  async function handleUpdateComment(commentId: string) {
+  if (!editingContent.trim()) return
+
+  try {
+    const token = getToken()
+    if (!token) return
+
+    setCommentError("")
+
+    await updateComment(commentId, editingContent, token)
+
+    const updatedComments = await getTaskComments(taskId, token)
+    setComments(updatedComments)
+
+    setEditingCommentId(null)
+    setEditingContent("")
+  } catch {
+    setCommentError("Error updating comment.")
+  }
+}
+
+  async function handleDeleteComment(commentId: string) {
+    const confirmed = window.confirm("Are you sure you want to delete this comment?")
+    if (!confirmed) return
+
+    try {
+      const token = getToken()
+      if (!token) return
+
+      setCommentError("")
+
+      await deleteComment(commentId, token)
+
+      setComments((prevComments) =>
+        prevComments.filter((comment) => {
+          const currentCommentId = comment.id || comment.commentId
+          return currentCommentId !== commentId
+        })
+      )
+    } catch {
+      setCommentError("Error deleting comment.")
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/20 p-6 backdrop-blur-sm">
@@ -46,7 +195,10 @@ export default function TaskDetailsModal({
             <h1 className="mt-1 text-3xl font-bold text-black">{task.title}</h1>
           </div>
 
-          <button onClick={onCloseAction} className="text-3xl text-gray-400 hover:text-black">
+          <button
+            onClick={onCloseAction}
+            className="text-3xl text-gray-400 hover:text-black"
+          >
             ×
           </button>
         </div>
@@ -69,7 +221,9 @@ export default function TaskDetailsModal({
 
             <div>
               <p className="mb-2 text-sm text-gray-400">Due Date</p>
-              <p className="text-lg font-medium">{new Date(task.end_date).toLocaleDateString()}</p>
+              <p className="text-lg font-medium">
+                {new Date(task.end_date).toLocaleDateString()}
+              </p>
             </div>
 
             <div>
@@ -79,13 +233,72 @@ export default function TaskDetailsModal({
           </div>
 
           {successMessage && (
-            <div className="mb-4 rounded-2xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
+            <div className="mt-6 rounded-2xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
               {successMessage}
             </div>
           )}
 
+          <div className="mt-8 rounded-3xl border border-dashed border-gray-200 bg-gray-50 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Smart suggestions</p>
+                <p className="text-xs text-gray-500">
+                  Ranked by skill match and completed tasks
+                </p>
+              </div>
+
+              {suggestionsLoading && (
+                <span className="text-xs text-gray-400">Analyzing...</span>
+              )}
+            </div>
+
+            {suggestions.length > 0 ? (
+              <div className="space-y-2">
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion.userId}
+                    type="button"
+                    onClick={() => setSelectedUser(suggestion.userId)}
+                    className={`flex w-full items-center justify-between rounded-2xl border px-3 py-2 text-left transition hover:border-gray-300 ${
+                      selectedUser === suggestion.userId
+                        ? "border-black bg-white"
+                        : "border-gray-200 bg-white"
+                    }`}
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {suggestion.name} {suggestion.lastname}
+                      </p>
+
+                      <p className="text-xs text-gray-500">
+                        {suggestion.skill || "No skill"}
+                        {suggestion.area ? ` · ${suggestion.area}` : ""}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {suggestion.score}
+                      </p>
+                      <p className="text-[11px] text-gray-500">
+                        {suggestion.completedTasks} done
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">
+                {suggestionsLoading
+                  ? "Generating recommendations..."
+                  : "No recommendations available yet."}
+              </p>
+            )}
+          </div>
+
           <div className="mt-8">
             <p className="mb-2 text-sm text-gray-400">Assign User</p>
+
             <div className="flex gap-3">
               <select
                 value={selectedUser}
@@ -93,6 +306,7 @@ export default function TaskDetailsModal({
                 className="flex-1 h-10 rounded-2xl border border-gray-200 px-4 text-sm outline-none"
               >
                 <option value="">Select user</option>
+
                 {users.map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.name} {user.lastname}
@@ -104,7 +318,7 @@ export default function TaskDetailsModal({
                 onClick={() => {
                   if (!selectedUser) return
 
-                  onAssignAction(task.id, selectedUser)
+                  onAssignAction(taskId, selectedUser)
                   setSuccessMessage("User assigned successfully.")
 
                   setTimeout(() => {
@@ -120,13 +334,184 @@ export default function TaskDetailsModal({
 
           <div className="mt-8">
             <p className="mb-2 text-sm text-gray-400">Description</p>
-            <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-700">{task.description}</div>
+            <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-700">
+              {task.description || "No description available."}
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <p className="mb-2 text-sm text-gray-400">Comments</p>
+
+            {commentError && (
+              <div className="mb-3 rounded-2xl bg-red-100 px-4 py-3 text-sm font-medium text-red-700">
+                {commentError}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <input
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Write a comment..."
+                className="flex-1 h-10 rounded-2xl border border-gray-200 px-4 text-sm outline-none"
+              />
+
+              <button
+                onClick={handleCreateComment}
+                className="h-10
+                  rounded-2xl
+                  bg-black
+                  px-5
+                  text-sm
+                  font-semibold
+                  text-white
+                  transition-all
+                  duration-150
+                  hover:bg-neutral-800
+                  hover:shadow-lg
+                  active:scale-95
+                  active:bg-neutral-900
+                  cursor-pointer"
+              >
+                Add
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {commentsLoading ? (
+                <p className="text-sm text-gray-500">Loading comments...</p>
+              ) : comments.length === 0 ? (
+                <p className="text-sm text-gray-500">No comments yet.</p>
+              ) : (
+                comments.map((comment) => {
+                const commentId = comment.id || comment.commentId || comment.id_comment
+                const commentText =
+                  comment.content || comment.description || comment.comment || ""
+
+                const authorName =
+                  comment.author?.name ||
+                  comment.user?.name ||
+                  "User"
+
+                const authorLastName =
+                  comment.author?.lastname ||
+                  comment.user?.lastname ||
+                  ""
+
+                const authorInitials = `${authorName[0] || "U"}${authorLastName[0] || ""}`
+
+                const authorPhoto =
+                  comment.author?.profilePhoto ||
+                  comment.author?.image ||
+                  comment.user?.profilePhoto ||
+                  comment.user?.image ||
+                  ""
+
+                  if (!commentId) return null
+
+                  return (
+                  <div
+                    key={commentId}
+                    className="rounded-2xl border border-gray-200 bg-white p-4"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 text-sm font-semibold text-gray-700">
+                        {authorPhoto ? (
+                          <img
+                            src={authorPhoto}
+                            alt={authorName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          authorInitials
+                        )}
+                      </div>
+
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {authorName} {authorLastName}
+                        </p>
+
+                        {editingCommentId === commentId ? (
+                          <>
+                            <input
+                              value={editingContent}
+                              onChange={(e) => setEditingContent(e.target.value)}
+                              className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-2 text-sm outline-none"
+                            />
+
+                            <div className="mt-3 flex gap-2">
+                              <button
+                                onClick={() => handleUpdateComment(commentId)}
+                                className="h-8 rounded-xl bg-black px-3 text-xs font-medium text-white"
+                              >
+                                Save
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setEditingCommentId(null)
+                                  setEditingContent("")
+                                }}
+                                className="h-8 rounded-xl border border-gray-200 px-3 text-xs font-medium"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="mt-1 text-sm text-gray-800">{commentText}</p>
+
+                            <div className="mt-3 flex gap-3">
+                              <button
+                                onClick={() => {
+                                  setEditingCommentId(commentId)
+                                  setEditingContent(commentText)
+                                }}
+                                className="
+                                    text-xs
+                                    font-medium
+                                    text-blue-600
+                                    hover:underline
+                                    active:scale-95
+                                    transition
+                                    cursor-pointer
+                                    "
+                              >
+                                Edit
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteComment(commentId)}
+                                className="
+                                    text-xs
+                                    font-medium
+                                    text-red-500
+                                    hover:underline
+                                    active:scale-95
+                                    transition
+                                    cursor-pointer
+                                    "
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+                })
+              )}
+            </div>
           </div>
         </div>
 
         <div className="mt-8 flex justify-end gap-3">
           <button
-            onClick={() => onDeleteAction(task.id)}
+            onClick={() => onDeleteAction(taskId)}
             className="h-10 rounded-2xl bg-red-500 px-5 text-sm font-medium text-white transition hover:bg-red-600"
           >
             Delete
