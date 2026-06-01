@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { LanguageProvider } from "@/components/i18n/LanguageProvider";
 import { NotificationProvider } from "@/components/ui/notifications/NotificationProvider";
 import ThemeProvider from "@/components/ui/ThemeProvider";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 
 const figtree = Figtree({subsets:['latin'],variable:'--font-sans', preload: false});
 
@@ -33,11 +34,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={cn("font-sans", figtree.variable)}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider>
-          <LanguageProvider>
-            <NotificationProvider>{children}</NotificationProvider>
-          </LanguageProvider>
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            <LanguageProvider>
+              <NotificationProvider>{children}</NotificationProvider>
+            </LanguageProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );
