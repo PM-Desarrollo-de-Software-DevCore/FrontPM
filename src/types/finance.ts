@@ -74,3 +74,36 @@ export interface EvmData {
   dataAvailability: EvmDataAvailability
   notes: string[]
 }
+
+/** Totales del portafolio del usuario (creador o miembro). */
+export interface PortfolioSummary {
+  totalProjects: number
+  projectsWithBudget: number
+  projectsAtRisk: number
+  totalBudget: number
+  totalEstimatedSpend: number
+  totalRemaining: number
+  totalProjectedOverBudget: number
+}
+
+/** Fila por proyecto en el portafolio. */
+export interface PortfolioProject {
+  id_project: string
+  name: string
+  status: string
+  budget: number | null
+  monthlyCost: number | null
+  estimatedSpend: number | null
+  remainingBudget: number | null
+  budgetConsumedRatio: number | null
+  runwayMonths: number | null
+  budgetCoversPlannedEnd: boolean | null
+  projectedOverBudget: number | null
+  atRisk: boolean
+}
+
+/** GET /dashboard/financial-portfolio */
+export interface FinancialPortfolio {
+  summary: PortfolioSummary
+  projects: PortfolioProject[]
+}

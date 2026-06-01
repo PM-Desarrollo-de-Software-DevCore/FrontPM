@@ -4,7 +4,7 @@
  */
 
 import { apiGet } from "@/lib/api"
-import { EvmData, FinancialSummary } from "@/types/finance"
+import { EvmData, FinancialPortfolio, FinancialSummary } from "@/types/finance"
 
 /** GET /projects/:id/financial-summary — KPIs base + serie de burn. */
 export function getFinancialSummary(projectId: string): Promise<FinancialSummary> {
@@ -19,5 +19,13 @@ export function getProjectEvm(projectId: string): Promise<EvmData> {
   return apiGet<EvmData>(
     `/projects/${projectId}/evm`,
     "No se pudo obtener el análisis EVM del proyecto."
+  )
+}
+
+/** GET /dashboard/financial-portfolio — agrega todos los proyectos del usuario. */
+export function getFinancialPortfolio(): Promise<FinancialPortfolio> {
+  return apiGet<FinancialPortfolio>(
+    `/dashboard/financial-portfolio`,
+    "No se pudo obtener el portafolio financiero."
   )
 }
