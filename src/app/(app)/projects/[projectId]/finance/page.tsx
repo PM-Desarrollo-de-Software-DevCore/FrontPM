@@ -9,12 +9,16 @@ import { slugify } from "@/lib/slug"
 import FinancialSummaryPanel from "@/components/finance/FinancialSummaryPanel"
 import EvmPanel from "@/components/finance/EvmPanel"
 import ReportPanel from "@/components/finance/ReportPanel"
+import TeamRatesPanel from "@/components/finance/TeamRatesPanel"
+import TimeTrackingPanel from "@/components/finance/TimeTrackingPanel"
 
-type FinanceTab = "summary" | "evm" | "report"
+type FinanceTab = "summary" | "evm" | "team" | "hours" | "report"
 
 const TABS: { key: FinanceTab; label: string }[] = [
   { key: "summary", label: "Resumen" },
   { key: "evm", label: "EVM" },
+  { key: "team", label: "Equipo" },
+  { key: "hours", label: "Horas" },
   { key: "report", label: "Reporte" },
 ]
 
@@ -129,6 +133,8 @@ export default function ProjectFinancePage() {
 
       {tab === "summary" && <FinancialSummaryPanel projectId={projectId} />}
       {tab === "evm" && <EvmPanel projectId={projectId} />}
+      {tab === "team" && <TeamRatesPanel projectId={projectId} />}
+      {tab === "hours" && <TimeTrackingPanel projectId={projectId} />}
       {tab === "report" && <ReportPanel projectId={projectId} />}
     </div>
   )
