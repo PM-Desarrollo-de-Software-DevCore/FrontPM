@@ -43,7 +43,7 @@ const sidebarItems: SidebarItem[] = [
   },
   {
     label: "Finance",
-    href: "/dashboard/finance",
+    href: "/finance",
     icon: Wallet,
     roles: ["admin", "user"],
   },
