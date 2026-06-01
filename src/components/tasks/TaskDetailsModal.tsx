@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 
 import { Task } from "@/types/task"
-import { getAssignmentSuggestions, AssignmentSuggestionItem } from "@/services/assignmentSuggestionService"
 import { getToken } from "@/lib/auth"
 import {
   getTaskComments,
@@ -82,45 +81,9 @@ export default function TaskDetailsModal({
 
   useEffect(() => {
     const query = `${task.title} ${task.description || ""}`.trim()
-
-    if (query.length < 8) {
-      setSuggestions([])
-      return
-    }
-
-    let cancelled = false
-
-    const timer = window.setTimeout(async () => {
-      try {
-        setSuggestionsLoading(true)
-
-        const response = await getAssignmentSuggestions({
-          scope: "task",
-          projectId,
-          title: task.title,
-          description: task.description,
-          limit: 4,
-        })
-
-        if (!cancelled) {
-          setSuggestions(response.suggestions)
-        }
-      } catch {
-        if (!cancelled) {
-          setSuggestions([])
-        }
-      } finally {
-        if (!cancelled) {
-          setSuggestionsLoading(false)
-        }
-      }
-    }, 550)
-
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [task.id, task.title, task.description, projectId])
+    // Suggestions removed from detail modal — keep comments and assignment UI only
+    return undefined
+  }, [task.id, task.title, task.description])
 
   async function handleCreateComment() {
   if (!newComment.trim()) return
@@ -238,63 +201,7 @@ export default function TaskDetailsModal({
             </div>
           )}
 
-          <div className="mt-8 rounded-3xl border border-dashed border-gray-200 bg-gray-50 p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-gray-900">Smart suggestions</p>
-                <p className="text-xs text-gray-500">
-                  Ranked by skill match and completed tasks
-                </p>
-              </div>
-
-              {suggestionsLoading && (
-                <span className="text-xs text-gray-400">Analyzing...</span>
-              )}
-            </div>
-
-            {suggestions.length > 0 ? (
-              <div className="space-y-2">
-                {suggestions.map((suggestion) => (
-                  <button
-                    key={suggestion.userId}
-                    type="button"
-                    onClick={() => setSelectedUser(suggestion.userId)}
-                    className={`flex w-full items-center justify-between rounded-2xl border px-3 py-2 text-left transition hover:border-gray-300 ${
-                      selectedUser === suggestion.userId
-                        ? "border-black bg-white"
-                        : "border-gray-200 bg-white"
-                    }`}
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {suggestion.name} {suggestion.lastname}
-                      </p>
-
-                      <p className="text-xs text-gray-500">
-                        {suggestion.skill || "No skill"}
-                        {suggestion.area ? ` · ${suggestion.area}` : ""}
-                      </p>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {suggestion.score}
-                      </p>
-                      <p className="text-[11px] text-gray-500">
-                        {suggestion.completedTasks} done
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">
-                {suggestionsLoading
-                  ? "Generating recommendations..."
-                  : "No recommendations available yet."}
-              </p>
-            )}
-          </div>
+          {/* Smart suggestions removed from details modal; suggestions remain in CreateTaskModal */}
 
           <div className="mt-8">
             <p className="mb-2 text-sm text-gray-400">Assign User</p>
