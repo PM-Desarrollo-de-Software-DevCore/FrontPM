@@ -1,20 +1,20 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
+import { type DropResult } from "@hello-pangea/dnd"
 import SummarizeIcon from "@mui/icons-material/Summarize"
 import Tooltip from "@mui/material/Tooltip"
 import { useParams, useSearchParams } from "next/navigation"
 import Link from "next/link"
 
-import SprintBoard from "@/components/sprints/SprintBoard"
 import CreateSprintModal from "@/components/sprints/CreateSprintModal"
 import CreateTaskModal from "@/components/tasks/CreateTaskModal"
 import ProjectReportModal from "@/components/tasks/ProjectReportModal"
 import TaskDetailsModal from "@/components/tasks/TaskDetailsModal"
+import TaskWorkspaceViews from "@/components/tasks/TaskWorkspaceViews"
 import { useNotification } from "@/components/ui/notifications/NotificationProvider"
 
-import { getProjects } from "@/services/projectService"
+import { getProjectById, getProjects } from "@/services/projectService"
 import {
   createTask,
   deleteTask,
@@ -24,7 +24,6 @@ import {
 import {
   createSprint,
   getProjectSprints,
-  updateSprint,
 } from "@/services/sprintService"
 import { getProjectMembers } from "@/services/userService"
 
@@ -51,6 +50,8 @@ export default function TasksPage() {
 
   const [resolvedProjectId, setResolvedProjectId] = useState("")
   const [projectName, setProjectName] = useState("")
+  const [projectStartDate, setProjectStartDate] = useState("")
+  const [projectEndDate, setProjectEndDate] = useState("")
   const [tasks, setTasks] = useState<Task[]>([])
   const [sprints, setSprints] = useState<Sprint[]>([])
   const [users, setUsers] = useState<ProjectMember[]>([])
@@ -84,11 +85,23 @@ export default function TasksPage() {
           (item) => item.id === projectId || slugify(item.name) === projectId
         )
 
+        const resolvedId = project?.id || projectId
         setProjectName(project?.name || "")
-        setResolvedProjectId(project?.id || projectId)
+        setResolvedProjectId(resolvedId)
+
+        try {
+          const fullProject = await getProjectById(resolvedId)
+          setProjectStartDate(fullProject.startDate || "")
+          setProjectEndDate(fullProject.endDate || "")
+        } catch {
+          setProjectStartDate("")
+          setProjectEndDate("")
+        }
       } catch {
         setProjectName("")
         setResolvedProjectId(projectId)
+        setProjectStartDate("")
+        setProjectEndDate("")
       }
     }
 
@@ -177,7 +190,8 @@ export default function TasksPage() {
 
     const taskId = result.draggableId
     const destination = result.destination.droppableId
-    const [sprintId, statusRaw] = destination.split(":")
+    const [scope, statusRaw] = destination.split(":")
+    const draggedTask = tasks.find((task) => task.id === taskId) ?? null
 
     if (
       statusRaw !== "pending" &&
@@ -188,14 +202,23 @@ export default function TasksPage() {
     }
 
     const status: Task["status"] = statusRaw
+    const isGeneralBoard = scope === "general"
+    const nextSprintId =
+      isGeneralBoard
+        ? draggedTask?.id_sprint ?? null
+        : scope === "backlog"
+          ? null
+          : scope
 
-    const targetSprint = sprints.find((sprint) => sprint.id === sprintId)
-    if (targetSprint?.status === "completed") {
-      notifyError(
-        "Cannot move task",
-        "Tasks cannot be moved into a completed sprint."
-      )
-      return
+    if (!isGeneralBoard && nextSprintId) {
+      const targetSprint = sprints.find((sprint) => sprint.id === nextSprintId)
+      if (targetSprint?.status === "completed") {
+        notifyError(
+          "Cannot move task",
+          "Tasks cannot be moved into a completed sprint."
+        )
+        return
+      }
     }
 
     setTasks((currentTasks) =>
@@ -204,7 +227,7 @@ export default function TasksPage() {
           ? {
               ...task,
               status,
-              id_sprint: sprintId === "backlog" ? null : sprintId,
+              ...(isGeneralBoard ? {} : { id_sprint: nextSprintId }),
             }
           : task
       )
@@ -213,10 +236,12 @@ export default function TasksPage() {
     try {
       await updateTask(
         taskId,
-        {
-          status,
-          id_sprint: sprintId === "backlog" ? null : sprintId,
-        },
+        isGeneralBoard
+          ? { status }
+          : {
+              status,
+              id_sprint: nextSprintId,
+            },
         token
       )
     } catch (error) {
@@ -337,76 +362,22 @@ export default function TasksPage() {
     }
   }
 
-  const handleUpdateSprint = async (sprintId: string, data: Partial<Sprint>) => {
-    try {
-      await updateSprint(sprintId, data, token)
-      setSprints((currentSprints) =>
-        currentSprints.map((sprint) =>
-          sprint.id === sprintId ? { ...sprint, ...data } : sprint
-        )
-      )
-      notifySuccess("Sprint updated", "The sprint was updated successfully.")
-    } catch (error) {
-      notifyError(
-        "Sprint could not be updated",
-        error instanceof Error ? error.message : "Please try again."
-      )
-    }
-  }
-
-  const handleCompleteSprint = async (sprintId: string) => {
-    const confirmed = window.confirm("Are you sure you want to complete this sprint?")
-    if (!confirmed) return
-
-    const sortedSprints = [...sprints].sort(
-      (a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
-    )
-    const currentIndex = sortedSprints.findIndex((sprint) => sprint.id === sprintId)
-    const nextSprint = sortedSprints[currentIndex + 1]
-    const pendingTasks = tasks.filter(
-      (task) => task.id_sprint === sprintId && task.status !== "completed"
-    )
-
-    try {
-      if (nextSprint) {
-        for (const task of pendingTasks) {
-          await updateTask(task.id, { id_sprint: nextSprint.id }, token)
-        }
-      }
-
-      await updateSprint(sprintId, { status: "completed" }, token)
-      setSprints((currentSprints) =>
-        currentSprints.map((sprint) =>
-          sprint.id === sprintId ? { ...sprint, status: "completed" } : sprint
-        )
-      )
-
-      await loadData()
-      notifySuccess("Sprint completed", "The sprint was completed successfully.")
-    } catch (error) {
-      notifyError(
-        "Sprint could not be completed",
-        error instanceof Error ? error.message : "Please try again."
-      )
-    }
-  }
-
   const handleOpenTask = (task: Task) => {
     setSelectedTask(task)
   }
 
   return (
     <div className="p-8">
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="mb-6 flex flex-col gap-4 rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-black">Scrum Board</h1>
-          <p className="mt-2 text-gray-400">Manage project sprints and tasks</p>
+          <h1 className="text-4xl font-bold text-slate-900">Task workspace</h1>
+          <p className="mt-2 text-slate-500">Explora tareas en kanban, timeline, sprint board, tabla, calendario y roadmap.</p>
         </div>
 
-        <div className="flex items-center gap-3 self-start lg:self-auto">
+        <div className="flex flex-wrap items-center gap-3 self-start lg:self-auto">
           <Link
             href={`/projects/${projectId}/finance`}
-            className="rounded-2xl border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:shadow-md"
+            className="rounded-2xl border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:shadow-md"
           >
             Finanzas
           </Link>
@@ -427,6 +398,14 @@ export default function TasksPage() {
 
           <button
             type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="rounded-2xl border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:shadow-md"
+          >
+            + Nueva tarea
+          </button>
+
+          <button
+            type="button"
             onClick={() => setIsCreateSprintModalOpen(true)}
             className="rounded-2xl bg-blue-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-600"
           >
@@ -435,21 +414,17 @@ export default function TasksPage() {
         </div>
       </div>
 
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <SprintBoard
-          sprints={sprints}
-          tasks={tasks}
-          users={users}
-          onTaskClickAction={handleOpenTask}
-          onCreateTaskAction={handleOpenCreateTask}
-          onTaskMoveAction={handleDragEnd}
-          onUpdateSprintAction={handleUpdateSprint}
-          onCompleteSprintAction={handleCompleteSprint}
-          key={`tasks-board-${resolvedProjectId || projectId}`}
-          collapseStorageKey={`tasks-collapsed:${resolvedProjectId || projectId}`}
-          focusSprintId={focusSprintId}
-        />
-      </DragDropContext>
+      <TaskWorkspaceViews
+        projectName={projectName || projectId}
+        projectStartDate={projectStartDate}
+        projectEndDate={projectEndDate}
+        tasks={tasks}
+        sprints={sprints}
+        users={users}
+        onTaskClickAction={handleOpenTask}
+        onCreateTaskAction={handleOpenCreateTask}
+        onTaskMoveAction={handleDragEnd}
+      />
 
       <CreateTaskModal
         open={isCreateModalOpen}
@@ -476,8 +451,8 @@ export default function TasksPage() {
 
       {activeModalTask && (
         <TaskDetailsModal
+          key={activeModalTask.id}
           task={activeModalTask}
-          projectId={resolvedProjectId}
           users={users}
           onCloseAction={() => {
             if (queryTask && requestedTaskId) {
