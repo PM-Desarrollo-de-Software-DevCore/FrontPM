@@ -61,6 +61,10 @@ export interface BackendUser {
   email: string
   name: string
   lastname: string
+  profilePhoto?: string | null
+  image?: string | null
+  avatarUrl?: string | null
+  profileImageUrl?: string | null
 }
 
 async function requestJson<T>(path: string): Promise<T> {
