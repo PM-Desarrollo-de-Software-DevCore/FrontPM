@@ -148,3 +148,51 @@ export interface ProjectTimeSummary {
   byUser: TimeSummaryBucket[]
   byTask: TimeSummaryBucket[]
 }
+
+export type ExpenseCategory = "software" | "infrastructure" | "services" | "travel" | "other"
+
+/** Gasto del proyecto. Contrato sección 6. */
+export interface Expense {
+  id_expense: string
+  id_project: string
+  amount: number
+  category: ExpenseCategory
+  description: string | null
+  date: string
+  createdBy: string
+  createdAt: string
+}
+
+export type InvoiceStatus = "draft" | "sent" | "paid"
+
+/** Factura del proyecto. Contrato sección 7. */
+export interface Invoice {
+  id_invoice: string
+  id_project: string
+  amount: number
+  status: InvoiceStatus
+  concept: string | null
+  issue_date: string
+  due_date: string | null
+  period_start: string | null
+  period_end: string | null
+  id_milestone: string | null
+  createdAt: string
+}
+
+/** Resumen de facturación devuelto por GET /projects/:id/invoices. */
+export interface InvoiceSummary {
+  invoiceCount: number
+  totalDraft: number
+  totalBilled: number
+  totalPaid: number
+  totalOutstanding: number
+  budget: number | null
+  billedVsBudgetRatio: number | null
+}
+
+/** GET /projects/:id/invoices → { summary, invoices }. */
+export interface InvoicesResponse {
+  summary: InvoiceSummary
+  invoices: Invoice[]
+}
