@@ -251,6 +251,35 @@ const esToEnEntries: Array<[string, string]> = [
   ["Poner en marcha un portal central para la incorporación de clientes", "Launch a central portal for customer onboarding"],
   ["Objetivo", "Objective"],
 
+  // Módulo de Finanzas (PM-139)
+  ["Finanzas", "Finance"],
+  ["Resumen", "Summary"],
+  ["Reporte", "Report"],
+  ["KPIs financieros, EVM y reporte del proyecto.", "Financial KPIs, EVM and project report."],
+  ["Burn acumulado", "Cumulative burn"],
+  ["Costo estimado acumulado", "Cumulative estimated cost"],
+  ["Presupuesto consumido", "Budget consumed"],
+  ["Tiempo transcurrido", "Time elapsed"],
+  ["El presupuesto alcanza la fecha fin", "Budget covers the planned end date"],
+  ["El presupuesto no alcanza la fecha fin", "Budget does not cover the planned end date"],
+  ["Sobrecosto proyectado:", "Projected overrun:"],
+  ["Gasto estimado", "Estimated spend"],
+  ["Proxy: costo mensual × meses", "Proxy: monthly cost × months"],
+  ["Presupuesto restante", "Remaining budget"],
+  ["Costo por story point", "Cost per story point"],
+  ["Costo por sprint estimado", "Cost per estimated sprint"],
+  ["Curva-S (PV / EV / AC)", "S-curve (PV / EV / AC)"],
+  ["Costo de mano de obra", "Labor cost"],
+  ["Gastos", "Expenses"],
+  ["Horas registradas", "Logged hours"],
+  ["Variación de costo (CV)", "Cost variance (CV)"],
+  ["Descargar PDF", "Download PDF"],
+  ["Actualizar", "Refresh"],
+  ["No se encontró el proyecto solicitado.", "The requested project was not found."],
+  ["No se pudo resolver el proyecto.", "The project could not be resolved."],
+  ["Sin datos de burn todavía.", "No burn data yet."],
+  ["Sin serie de EVM todavía.", "No EVM series yet."],
+
 ];
 
 const enToEsEntries: Array<[string, string]> = esToEnEntries.map(([es, en]) => [en, es]);

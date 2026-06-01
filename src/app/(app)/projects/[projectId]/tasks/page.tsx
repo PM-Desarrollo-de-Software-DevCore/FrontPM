@@ -5,6 +5,7 @@ import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
 import SummarizeIcon from "@mui/icons-material/Summarize"
 import Tooltip from "@mui/material/Tooltip"
 import { useParams, useSearchParams } from "next/navigation"
+import Link from "next/link"
 
 import SprintBoard from "@/components/sprints/SprintBoard"
 import CreateSprintModal from "@/components/sprints/CreateSprintModal"
@@ -403,6 +404,13 @@ export default function TasksPage() {
         </div>
 
         <div className="flex items-center gap-3 self-start lg:self-auto">
+          <Link
+            href={`/projects/${projectId}/finance`}
+            className="rounded-2xl border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:shadow-md"
+          >
+            Finanzas
+          </Link>
+
           <Tooltip title="Generate Report" arrow placement="top">
             <span>
               <button
