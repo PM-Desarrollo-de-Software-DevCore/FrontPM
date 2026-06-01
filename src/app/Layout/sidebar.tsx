@@ -82,40 +82,65 @@ export default function SideBarLayout({
 }) {
   const pathname = usePathname()
   const { user } = useAuth()
+
   const dashboardPath = getDashboardRouteByRole(user?.role)
-  const currentRole = user?.role as SidebarRole | undefined
 
-  const visibleItems = sidebarItems.filter((item) => {
-    if (!currentRole) {
-      return false
+  const currentRole =
+    user?.role as SidebarRole | undefined
+
+  const visibleItems = sidebarItems.filter(
+    (item) => {
+      if (!currentRole) {
+        return false
+      }
+
+      return item.roles.includes(currentRole)
     }
-
-    return item.roles.includes(currentRole)
-  })
+  )
 
   const isPathActive = (href: string) => {
     if (href === "/dashboard") {
-      return pathname === dashboardPath || pathname.startsWith(`${dashboardPath}/`)
+      return (
+        pathname === dashboardPath ||
+        pathname.startsWith(
+          `${dashboardPath}/`
+        )
+      )
     }
 
-    return pathname === href || pathname.startsWith(`${href}/`)
+    return (
+      pathname === href ||
+      pathname.startsWith(`${href}/`)
+    )
   }
 
   return (
     <SidebarProvider>
-      <div className="flex pt-14">
+      <div className="flex pt-14 w-full min-h-screen">
         <Sidebar>
           <SidebarContent className="pt-3">
             <SidebarMenu>
               {visibleItems.map((item) => {
                 const Icon = item.icon
-                const href = item.label === "Dashboard" ? dashboardPath : item.href
+
+                const href =
+                  item.label === "Dashboard"
+                    ? dashboardPath
+                    : item.href
 
                 return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isPathActive(item.href)}>
+                  <SidebarMenuItem
+                    key={item.href}
+                  >
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isPathActive(
+                        item.href
+                      )}
+                    >
                       <Link href={href}>
                         <Icon className="w-4 h-4 mr-2" />
+
                         {item.label}
                       </Link>
                     </SidebarMenuButton>
@@ -126,7 +151,9 @@ export default function SideBarLayout({
           </SidebarContent>
         </Sidebar>
 
-        <main className="flex-1 pt-4">{children}</main>
+        <main className="flex-1 w-full pt-4 overflow-x-auto">
+          {children}
+        </main>
       </div>
     </SidebarProvider>
   )

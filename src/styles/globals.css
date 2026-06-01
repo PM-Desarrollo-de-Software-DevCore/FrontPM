@@ -49,72 +49,72 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --background: #f7f8fc;
+  --foreground: #0f1724;
+  --card: #ffffff;
+  --card-foreground: #0f1724;
+  --popover: #ffffff;
+  --popover-foreground: #0f1724;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #0ea5e9;
+  --secondary-foreground: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #6b7280;
+  --accent: #06b6d4;
+  --accent-foreground: #0f1724;
+  --destructive: #ef4444;
+  --border: #e6e9ef;
+  --input: #ffffff;
+  --ring: #c7d2fe;
+  --chart-1: #60a5fa;
+  --chart-2: #34d399;
+  --chart-3: #f59e0b;
+  --chart-4: #f97316;
+  --chart-5: #ef4444;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f1724;
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #dbeafe;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #e6e9ef;
+  --sidebar-ring: #c7d2fe;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #080d16;
+  --foreground: #f5f7fb;
+  --card: #0f1724;
+  --card-foreground: #ffffff;
+  --popover: #0f1724;
+  --popover-foreground: #ffffff;
+  --primary: #64b5f6;
+  --primary-foreground: #080d16;
+  --secondary: #7dd3fc;
+  --secondary-foreground: #ffffff;
+  --muted: #1a2332;
+  --muted-foreground: #a0aac0;
+  --accent: #26c6da;
+  --accent-foreground: #080d16;
+  --destructive: #ff6b6b;
+  --border: rgba(255,255,255,0.08);
+  --input: rgba(255,255,255,0.06);
+  --ring: #4f46e5;
+  --chart-1: #64b5f6;
+  --chart-2: #4ade80;
+  --chart-3: #fbbf24;
+  --chart-4: #fb923c;
+  --chart-5: #f87171;
+  --sidebar: #0a0f1a;
+  --sidebar-foreground: #f5f7fb;
+  --sidebar-primary: #64b5f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(96,165,250,0.14);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-ring: #4f46e5;
 }
 
 @layer base {
@@ -128,3 +128,96 @@
     @apply font-sans;
   }
 }
+
+/* Dark-mode legibility helpers and overrides for Tailwind classes that reduce contrast */
+.dark .text-black { color: var(--foreground) !important; }
+.dark .text-gray-900,
+.dark .text-slate-900,
+.dark .text-zinc-900 { color: var(--foreground) !important; }
+
+.dark .text-gray-800,
+.dark .text-slate-800,
+.dark .text-zinc-800 { color: var(--foreground) !important; }
+
+.dark .text-gray-700,
+.dark .text-slate-700,
+.dark .text-zinc-700 { color: var(--muted-foreground) !important; }
+
+.dark .text-gray-600,
+.dark .text-slate-600,
+.dark .text-zinc-600 { color: var(--muted-foreground) !important; }
+
+.dark .text-gray-500,
+.dark .text-slate-500,
+.dark .text-zinc-500 { color: var(--muted-foreground) !important; }
+
+.dark .text-gray-400,
+.dark .text-slate-400,
+.dark .text-zinc-400 { color: color-mix(in srgb, var(--muted-foreground) 72%, white) !important; }
+
+.dark .bg-white,
+.dark .bg-gray-50,
+.dark .bg-slate-50,
+.dark .bg-zinc-50 { background-color: var(--card) !important; color: var(--card-foreground) !important; }
+
+.dark .bg-gray-100,
+.dark .bg-slate-100,
+.dark .bg-zinc-100 { background-color: rgba(255,255,255,0.04) !important; color: var(--foreground) !important; }
+
+.dark .bg-\[\#fcfcfc\] { background-color: var(--card) !important; }
+
+.dark .border-gray-100,
+.dark .border-slate-100,
+.dark .border-zinc-100 { border-color: rgba(255,255,255,0.04) !important; }
+
+.dark .border-gray-200,
+.dark .border-slate-200,
+.dark .border-zinc-200,
+.dark .border-gray-300,
+.dark .border-slate-300,
+.dark .border-zinc-300 { border-color: rgba(255,255,255,0.08) !important; }
+
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
+  color: var(--foreground) !important;
+  font-weight: 600;
+}
+
+.text-strong {
+  color: var(--foreground) !important;
+  font-weight: 600;
+}
+
+.text-muted {
+  color: var(--muted-foreground) !important;
+}
+
+
+.dark .bg-blue-50 { background-color: rgba(100,181,246,0.08) !important; color: var(--primary-foreground) !important; }
+
+/* Inputs, selects and dropdowns */
+.dark .bg-white.input,
+.dark input.bg-white,
+.dark select.bg-white,
+.dark .appearance-none.bg-white {
+  background-color: var(--input) !important;
+  color: var(--card-foreground) !important;
+}
+
+/* Improve button/text contrast inside dark cards */
+.dark .btn { color: var(--card-foreground) !important; }
+
+/* Badge / pill background adjustments to keep contrast */
+.dark .bg-green-100 { background-color: rgba(34,197,94,0.12) !important; color: #34d399 !important; }
+.dark .bg-yellow-100 { background-color: rgba(250,204,21,0.08) !important; color: #fbbf24 !important; }
+.dark .bg-red-100 { background-color: rgba(239,68,68,0.08) !important; color: #fb7185 !important; }
+
+/* Ensure primary buttons stand out */
+.dark .bg-blue-600 { background-color: var(--primary) !important; color: var(--primary-foreground) !important; }
+
+/* Force higher contrast on muted labels inside cards */
+.dark .card-label { color: var(--muted-foreground) !important; }

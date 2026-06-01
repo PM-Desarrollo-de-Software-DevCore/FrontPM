@@ -40,7 +40,7 @@ export default function ProjectsList() {
       
       <div className="flex flex-col gap-1">
         <h2 className="text-xl font-semibold">Projects</h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted">
           Project state
         </p>
       </div>

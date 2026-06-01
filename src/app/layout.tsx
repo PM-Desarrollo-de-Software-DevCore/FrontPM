@@ -2,17 +2,22 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Figtree } from "next/font/google";
 import "../styles/globals.css";
 import { cn } from "@/lib/utils";
+import { LanguageProvider } from "@/components/i18n/LanguageProvider";
+import { NotificationProvider } from "@/components/ui/notifications/NotificationProvider";
+import ThemeProvider from "@/components/ui/ThemeProvider";
 
-const figtree = Figtree({subsets:['latin'],variable:'--font-sans'});
+const figtree = Figtree({subsets:['latin'],variable:'--font-sans', preload: false});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  preload: false,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -26,9 +31,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("font-sans", figtree.variable)}>
+    <html lang="en" suppressHydrationWarning className={cn("font-sans", figtree.variable)}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {children}
+        <ThemeProvider>
+          <LanguageProvider>
+            <NotificationProvider>{children}</NotificationProvider>
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
