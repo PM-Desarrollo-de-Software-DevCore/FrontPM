@@ -37,6 +37,7 @@ interface MilestoneTeamMember {
   id: string
   label: string
   initials: string
+  image?: string | null
 }
 
 interface MilestoneSprint {
@@ -249,10 +250,16 @@ function toProjectView(
     const label = user ? `${user.name} ${user.lastname}`.trim() : formatRoleLabel(member.role)
 
     return {
-      id: member.id_mp,
-      label,
-      initials: getInitials(label),
-    }
+    id: member.id_mp,
+    label,
+    initials: getInitials(label),
+    image:
+      user?.profileImageUrl ||
+      user?.profilePhoto ||
+      user?.image ||
+      user?.avatarUrl ||
+      null,
+  }
   })
 
   const sprintViews = sprints.map((sprint) => ({
@@ -391,14 +398,22 @@ function ProjectButton({
 
       <div className="mt-4 flex flex-wrap gap-2">
         {project.teamMembers.slice(0, 4).map((member) => (
-          <span
-            key={member.id}
-            title={member.label}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-card-foreground text-[10px] font-semibold"
-          >
-            {member.initials || "?"}
-          </span>
-        ))}
+  <div
+          key={member.id}
+          title={member.label}
+          className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-gray-100 text-xs font-semibold text-gray-700 shadow-sm cursor-pointer"
+        >
+          {member.image ? (
+            <img
+              src={member.image}
+              alt={member.label}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            member.initials || "?"
+          )}
+        </div>
+      ))}
 
         {project.teamMembers.length > 4 && (
           <span className="inline-flex h-7 min-w-[28px] items-center justify-center rounded-full border border-border bg-muted px-2 text-[10px] font-semibold text-muted-foreground">
