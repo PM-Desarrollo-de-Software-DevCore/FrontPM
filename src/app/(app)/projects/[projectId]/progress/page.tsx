@@ -270,12 +270,20 @@ export default function ProjectProgressEntriesPage() {
             </p>
           </div>
 
-          <Link
-            href={`/projects/${routeProjectId}/tasks`}
-            className="rounded-2xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:shadow-md"
-          >
-            View Tasks
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href={`/projects/${routeProjectId}/finance`}
+              className="rounded-2xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:shadow-md"
+            >
+              Finanzas
+            </Link>
+            <Link
+              href={`/projects/${routeProjectId}/tasks`}
+              className="rounded-2xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:shadow-md"
+            >
+              View Tasks
+            </Link>
+          </div>
         </div>
       </div>
 
