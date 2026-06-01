@@ -297,6 +297,32 @@ const esToEnEntries: Array<[string, string]> = [
   ["En pausa", "On hold"],
   ["No hay proyectos en tu portafolio.", "There are no projects in your portfolio."],
 
+  // Finanzas Fase 3 — equipo y horas (PM-142)
+  ["Equipo", "Team"],
+  ["Horas", "Hours"],
+  ["Miembro", "Member"],
+  ["Tarifa mensual", "Monthly rate"],
+  ["La tarifa mensual solo es visible para administradores o el PM del proyecto.", "The monthly rate is only visible to administrators or the project PM."],
+  ["Este proyecto no tiene miembros.", "This project has no members."],
+  ["Editar miembro", "Edit member"],
+  ["Guardar", "Save"],
+  ["Guardando...", "Saving..."],
+  ["Sin tarifa", "No rate"],
+  ["No se pudieron cargar los miembros del proyecto.", "The project members could not be loaded."],
+  ["Horas totales", "Total hours"],
+  ["Horas por usuario", "Hours by user"],
+  ["Horas por tarea", "Hours by task"],
+  ["Sin horas registradas.", "No hours logged."],
+  ["Registrar horas", "Log hours"],
+  ["Registra tus horas trabajadas en una tarea del proyecto.", "Log your hours worked on a project task."],
+  ["Selecciona una tarea.", "Select a task."],
+  ["Selecciona una tarea", "Select a task"],
+  ["Las horas deben estar entre 0 y 24.", "Hours must be between 0 and 24."],
+  ["Selecciona la fecha.", "Select the date."],
+  ["Descripción (opcional)", "Description (optional)"],
+  ["Horas registradas correctamente.", "Hours logged successfully."],
+  ["Registrar", "Log"],
+
 ];
 
 const enToEsEntries: Array<[string, string]> = esToEnEntries.map(([es, en]) => [en, es]);
