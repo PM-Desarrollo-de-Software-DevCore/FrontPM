@@ -254,6 +254,7 @@ const esToEnEntries: Array<[string, string]> = [
   // Módulo de Finanzas (PM-139)
   ["Finanzas", "Finance"],
   ["Resumen", "Summary"],
+  ["Reporte", "Report"],
   ["KPIs financieros, EVM y reporte del proyecto.", "Financial KPIs, EVM and project report."],
   ["Burn acumulado", "Cumulative burn"],
   ["Costo estimado acumulado", "Cumulative estimated cost"],
@@ -354,6 +355,7 @@ const esToEnEntries: Array<[string, string]> = [
   ["No hay facturas registradas.", "No invoices recorded."],
   ["¿Eliminar esta factura?", "Delete this invoice?"],
   ["Concepto (opcional)", "Concept (optional)"],
+  ["Concepto", "Concept"],
   ["Emisión", "Issued"],
   ["Fecha de emisión", "Issue date"],
   ["Selecciona la fecha de emisión.", "Select the issue date."],
@@ -363,7 +365,12 @@ const esToEnEntries: Array<[string, string]> = [
 
 ];
 
-const enToEsEntries: Array<[string, string]> = esToEnEntries.map(([es, en]) => [en, es]);
+// No revertir pares donde el inglés es substring del español (Report⊂Reporte, Concept⊂Concepto):
+// al aplicar en->es sobre el texto fuente en español, el reemplazo por substring duplicaría la
+// cola ("Reportee"/"Conceptoo"). El sentido es->en (inglés es el default) sí los traduce.
+const enToEsEntries: Array<[string, string]> = esToEnEntries
+  .filter(([es, en]) => !es.includes(en))
+  .map(([es, en]) => [en, es]);
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
