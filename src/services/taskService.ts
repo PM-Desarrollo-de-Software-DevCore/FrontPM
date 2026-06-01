@@ -14,6 +14,8 @@ type BackendTask =
 
     task_number?: number
 
+    story_points?: number | null
+
     createdAt?: string
 
     updatedAt?: string
@@ -37,6 +39,12 @@ function mapBackendTask(
 
     assignedTo:
       task.assignedTo,
+
+    story_points:
+      task.story_points,
+
+    task_number:
+      task.task_number,
 
     end_date:
       task.end_date,
