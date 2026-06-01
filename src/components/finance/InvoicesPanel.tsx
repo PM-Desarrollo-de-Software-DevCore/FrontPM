@@ -6,7 +6,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react"
 import { Invoice, InvoiceStatus, InvoiceSummary } from "@/types/finance"
 import { deleteInvoice, getProjectInvoices } from "@/services/invoiceService"
 import { useProjectRole } from "@/hooks/useProjectRole"
-import { formatMoney } from "@/lib/utils"
+import { formatDate, formatMoney } from "@/lib/utils"
 import GaugeChart from "@/components/ui/graphs/GaugeChart"
 import InvoiceFormModal from "@/components/finance/InvoiceFormModal"
 
@@ -29,12 +29,6 @@ function StatCard({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-xl font-bold text-slate-800">{value}</p>
     </div>
   )
-}
-
-function formatDate(iso: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return date.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
 }
 
 export default function InvoicesPanel({ projectId }: { projectId: string }) {

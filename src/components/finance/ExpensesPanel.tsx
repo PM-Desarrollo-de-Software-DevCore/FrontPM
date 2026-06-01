@@ -6,7 +6,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react"
 import { Expense, ExpenseCategory } from "@/types/finance"
 import { deleteExpense, getProjectExpenses } from "@/services/expenseService"
 import { useProjectRole } from "@/hooks/useProjectRole"
-import { formatMoney } from "@/lib/utils"
+import { formatDate, formatMoney } from "@/lib/utils"
 import CategoryDonut from "@/components/ui/graphs/CategoryDonut"
 import ExpenseFormModal from "@/components/finance/ExpenseFormModal"
 
@@ -16,12 +16,6 @@ const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   services: "Servicios",
   travel: "Viajes",
   other: "Otros",
-}
-
-function formatDate(iso: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return date.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
 }
 
 export default function ExpensesPanel({ projectId }: { projectId: string }) {
