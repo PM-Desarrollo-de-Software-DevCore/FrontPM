@@ -21,7 +21,6 @@ interface User {
 
 interface Props {
   task: Task
-  projectId: string
   users: User[]
   onCloseAction: () => void
   onDeleteAction: (taskId: string) => void
@@ -30,7 +29,6 @@ interface Props {
 
 export default function TaskDetailsModal({
   task,
-  projectId,
   users,
   onCloseAction,
   onDeleteAction,
@@ -38,8 +36,6 @@ export default function TaskDetailsModal({
 }: Props) {
   const [selectedUser, setSelectedUser] = useState(task.assignedTo || "")
   const [successMessage, setSuccessMessage] = useState("")
-  const [suggestions, setSuggestions] = useState<AssignmentSuggestionItem[]>([])
-  const [suggestionsLoading, setSuggestionsLoading] = useState(false)
 
   const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState("")
