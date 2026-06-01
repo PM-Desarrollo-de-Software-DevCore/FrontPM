@@ -1,637 +1,487 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
+import SummarizeIcon from "@mui/icons-material/Summarize"
+import Tooltip from "@mui/material/Tooltip"
+import { useParams, useSearchParams } from "next/navigation"
 
-type TaskStatus = "backlog" | "inProgress" | "completed";
-type TaskPriority = "High" | "Medium" | "Low";
+import SprintBoard from "@/components/sprints/SprintBoard"
+import CreateSprintModal from "@/components/sprints/CreateSprintModal"
+import CreateTaskModal from "@/components/tasks/CreateTaskModal"
+import ProjectReportModal from "@/components/tasks/ProjectReportModal"
+import TaskDetailsModal from "@/components/tasks/TaskDetailsModal"
+import { useNotification } from "@/components/ui/notifications/NotificationProvider"
 
-type Task = {
-  id: number;
-  title: string;
-  description: string;
-  assignee: string;
-  owner: string;
-  dueDate: string;
-  priority: TaskPriority;
-  status: TaskStatus;
-  comments: number;
-  attachments: number;
-};
+import { getProjects } from "@/services/projectService"
+import {
+  createTask,
+  deleteTask,
+  getProjectTasks,
+  updateTask,
+} from "@/services/taskService"
+import {
+  createSprint,
+  getProjectSprints,
+  updateSprint,
+} from "@/services/sprintService"
+import { getProjectMembers } from "@/services/userService"
 
-const initialTasks: Task[] = [
-  {
-    id: 1,
-    title: "Food Research",
-    description:
-      "Food design is required for our new project. Let's research the best practices.",
-    assignee: "Samira",
-    owner: "UI Sharks",
-    dueDate: "2026-04-20",
-    priority: "High",
-    status: "backlog",
-    comments: 8,
-    attachments: 5,
-  },
-  {
-    id: 2,
-    title: "Mockups",
-    description: "Create the first mobile mockups for the interface.",
-    assignee: "Andrea",
-    owner: "UI Sharks",
-    dueDate: "2026-04-24",
-    priority: "Medium",
-    status: "backlog",
-    comments: 6,
-    attachments: 3,
-  },
-  {
-    id: 3,
-    title: "UI Animation",
-    description: "Micro interactions and loading progress animations.",
-    assignee: "Luis",
-    owner: "Frontend Team",
-    dueDate: "2026-04-25",
-    priority: "Low",
-    status: "backlog",
-    comments: 4,
-    attachments: 2,
-  },
-  {
-    id: 4,
-    title: "User Interface",
-    description: "Design new user interface for the delivery app.",
-    assignee: "Carlos",
-    owner: "UI Sharks",
-    dueDate: "2026-04-18",
-    priority: "High",
-    status: "inProgress",
-    comments: 4,
-    attachments: 2,
-  },
-  {
-    id: 5,
-    title: "Usability Testing",
-    description: "Perform the usability testing for the newly developed app.",
-    assignee: "Elena",
-    owner: "QA Team",
-    dueDate: "2026-04-22",
-    priority: "Medium",
-    status: "inProgress",
-    comments: 5,
-    attachments: 3,
-  },
-  {
-    id: 6,
-    title: "Food Research",
-    description:
-      "Food design is required for our new project. Let's research the best practices.",
-    assignee: "Bruno",
-    owner: "Product Team",
-    dueDate: "2026-04-21",
-    priority: "Low",
-    status: "inProgress",
-    comments: 9,
-    attachments: 5,
-  },
-  {
-    id: 7,
-    title: "Mind Mapping",
-    description:
-      "Mind mapping for the food delivery app by targeting young users.",
-    assignee: "Mia",
-    owner: "Product Team",
-    dueDate: "2026-04-15",
-    priority: "Low",
-    status: "completed",
-    comments: 2,
-    attachments: 7,
-  },
-  {
-    id: 8,
-    title: "Food Research",
-    description:
-      "Food design is required for our new project. Let's research the best practices.",
-    assignee: "Leo",
-    owner: "Research Team",
-    dueDate: "2026-04-12",
-    priority: "Medium",
-    status: "completed",
-    comments: 5,
-    attachments: 5,
-  },
-  {
-    id: 9,
-    title: "User Feedback",
-    description:
-      "Perform the user survey and take necessary steps to solve the problem.",
-    assignee: "Nora",
-    owner: "UX Team",
-    dueDate: "2026-04-10",
-    priority: "High",
-    status: "completed",
-    comments: 8,
-    attachments: 5,
-  },
-];
+import { slugify } from "@/lib/slug"
+import { Sprint } from "@/types/sprint"
+import { Task } from "@/types/task"
 
-const columns: { key: TaskStatus; title: string }[] = [
-  { key: "backlog", title: "Backlog" },
-  { key: "inProgress", title: "In Progress" },
-  { key: "completed", title: "Completed" },
-];
-
-function formatDate(date: string) {
-  const parsedDate = new Date(date);
-  return parsedDate.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+interface ProjectMember {
+  id: string
+  name: string
+  lastname: string
 }
 
-function daysLabel(date: string) {
-  const today = new Date();
-  const due = new Date(date);
-  today.setHours(0, 0, 0, 0);
-  due.setHours(0, 0, 0, 0);
-
-  const diff = Math.ceil(
-    (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  if (diff <= 0) return "Due today";
-  if (diff === 1) return "1 day";
-  return `${diff} days`;
+interface CreateTaskContext {
+  sprintId: string | null
+  status: Task["status"]
 }
 
-function getPriorityClasses(priority: TaskPriority) {
-  switch (priority) {
-    case "High":
-      return "bg-red-100 text-red-500";
-    case "Medium":
-      return "bg-amber-100 text-amber-600";
-    case "Low":
-      return "bg-zinc-200 text-zinc-700";
-    default:
-      return "bg-zinc-200 text-zinc-700";
-  }
-}
+export default function TasksPage() {
+  const { notifyError, notifySuccess } = useNotification()
+  const params = useParams()
+  const searchParams = useSearchParams()
+  const projectId = params.projectId as string
 
-function getStatusClasses(status: TaskStatus) {
-  switch (status) {
-    case "completed":
-      return "bg-green-100 text-green-600";
-    case "inProgress":
-      return "bg-amber-100 text-amber-600";
-    case "backlog":
-      return "bg-zinc-200 text-zinc-700";
-    default:
-      return "bg-zinc-200 text-zinc-700";
-  }
-}
-
-function getColumnHeaderClasses(status: TaskStatus) {
-  switch (status) {
-    case "backlog":
-      return "border-l-4 border-l-zinc-400";
-    case "inProgress":
-      return "border-l-4 border-l-amber-400";
-    case "completed":
-      return "border-l-4 border-l-green-400";
-    default:
-      return "border-l-4 border-l-zinc-400";
-  }
-}
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-interface CreateTaskModalProps {
-  open: boolean;
-  onClose: () => void;
-  onCreate: (task: Task) => void;
-}
-
-function CreateTaskModal({ open, onClose, onCreate }: CreateTaskModalProps) {
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    assignee: "",
-    owner: "",
-    dueDate: "",
-    priority: "Medium" as TaskPriority,
-  });
-
-  if (!open) return null;
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    const newTask: Task = {
-      id: Date.now(),
-      title: form.title,
-      description: form.description,
-      assignee: form.assignee,
-      owner: form.owner,
-      dueDate: form.dueDate,
-      priority: form.priority,
-      status: "backlog",
-      comments: 0,
-      attachments: 0,
-    };
-
-    onCreate(newTask);
-
-    setForm({
-      title: "",
-      description: "",
-      assignee: "",
-      owner: "",
-      dueDate: "",
-      priority: "Medium",
-    });
-
-    onClose();
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 p-6 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <form
-        onSubmit={handleSubmit}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl space-y-5 rounded-2xl border bg-white p-8 shadow-xl"
-      >
-        <h2 className="text-xl font-semibold text-zinc-900">Create Task</h2>
-
-        <input
-          value={form.title}
-          placeholder="Task Title"
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-          className="w-full rounded border p-3"
-          required
-        />
-
-        <input
-          value={form.assignee}
-          placeholder="Assignee"
-          onChange={(e) => setForm({ ...form, assignee: e.target.value })}
-          className="w-full rounded border p-3"
-          required
-        />
-
-        <input
-          value={form.owner}
-          placeholder="Manager"
-          onChange={(e) => setForm({ ...form, owner: e.target.value })}
-          className="w-full rounded border p-3"
-          required
-        />
-
-        <textarea
-          value={form.description}
-          placeholder="Task Description"
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          className="w-full rounded border p-3"
-          required
-        />
-
-        <div>
-          <label className="mb-1 block text-sm text-zinc-600">Due Date</label>
-          <input
-            type="date"
-            value={form.dueDate}
-            onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-            className="w-full rounded border p-3"
-            required
-          />
-        </div>
-
-        <select
-          value={form.priority}
-          onChange={(e) =>
-            setForm({ ...form, priority: e.target.value as TaskPriority })
-          }
-          className="w-full rounded border p-3"
-        >
-          <option value="High">High Priority</option>
-          <option value="Medium">Medium Priority</option>
-          <option value="Low">Low Priority</option>
-        </select>
-
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full rounded border px-4 py-3"
-          >
-            Cancel
-          </button>
-
-          <button
-            type="submit"
-            className="w-full rounded bg-black px-4 py-3 text-white"
-          >
-            Create Task
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-export default function ProjectTasksPage() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-
-  const groupedTasks = useMemo<Record<TaskStatus, Task[]>>(() => {
-    return {
-      backlog: tasks.filter((task) => task.status === "backlog"),
-      inProgress: tasks.filter((task) => task.status === "inProgress"),
-      completed: tasks.filter((task) => task.status === "completed"),
-    };
-  }, [tasks]);
-
-  const handleDropTask = (newStatus: TaskStatus) => {
-    if (!draggedTaskId) return;
-
-    setTasks((prevTasks) =>
-      prevTasks.map((task) =>
-        task.id === draggedTaskId ? { ...task, status: newStatus } : task
-      )
-    );
-
-    if (selectedTask?.id === draggedTaskId) {
-      setSelectedTask((prev) => (prev ? { ...prev, status: newStatus } : prev));
+  const [resolvedProjectId, setResolvedProjectId] = useState("")
+  const [projectName, setProjectName] = useState("")
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [sprints, setSprints] = useState<Sprint[]>([])
+  const [users, setUsers] = useState<ProjectMember[]>([])
+  const [token] = useState(() => {
+    if (typeof window === "undefined") {
+      return ""
     }
 
-    setDraggedTaskId(null);
-  };
+    return localStorage.getItem("authToken") || ""
+  })
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [dismissedTaskQueryId, setDismissedTaskQueryId] = useState<string | null>(null)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isCreateSprintModalOpen, setIsCreateSprintModalOpen] = useState(false)
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+  const [createTaskContext, setCreateTaskContext] = useState<CreateTaskContext>({
+    sprintId: null,
+    status: "pending",
+  })
 
-  const handleCreateTask = (task: Task) => {
-    setTasks((prev) => [task, ...prev]);
-  };
+  useEffect(() => {
+    const resolveProject = async () => {
+      if (!projectId) {
+        setResolvedProjectId("")
+        return
+      }
+
+      try {
+        const projects = await getProjects()
+        const project = projects.find(
+          (item) => item.id === projectId || slugify(item.name) === projectId
+        )
+
+        setProjectName(project?.name || "")
+        setResolvedProjectId(project?.id || projectId)
+      } catch {
+        setProjectName("")
+        setResolvedProjectId(projectId)
+      }
+    }
+
+    resolveProject()
+  }, [projectId])
+
+  const loadData = useCallback(async () => {
+    if (!token || !resolvedProjectId) {
+      return
+    }
+
+    try {
+      const [taskData, sprintData, memberData] = await Promise.all([
+        getProjectTasks(resolvedProjectId, token),
+        getProjectSprints(resolvedProjectId, token),
+        getProjectMembers(resolvedProjectId),
+      ])
+
+      setTasks(taskData)
+      setSprints(sprintData)
+      setUsers(memberData)
+    } catch {
+      notifyError("Data could not be loaded", "Please try again.")
+    }
+  }, [notifyError, resolvedProjectId, token])
+
+  useEffect(() => {
+    if (!token || !resolvedProjectId) {
+      return
+    }
+
+    const initializeData = async () => {
+      try {
+        const [taskData, sprintData, memberData] = await Promise.all([
+          getProjectTasks(resolvedProjectId, token),
+          getProjectSprints(resolvedProjectId, token),
+          getProjectMembers(resolvedProjectId),
+        ])
+
+        setTasks(taskData)
+        setSprints(sprintData)
+        setUsers(memberData)
+      } catch {
+        notifyError("Data could not be loaded", "Please try again.")
+      }
+    }
+
+    void initializeData()
+  }, [notifyError, resolvedProjectId, token])
+
+  const requestedTaskId = searchParams.get("taskId")
+  const requestedSprintId = searchParams.get("sprintId")
+
+  const queryTask = useMemo(() => {
+    if (!requestedTaskId || requestedTaskId === dismissedTaskQueryId) {
+      return null
+    }
+
+    return tasks.find((task) => task.id === requestedTaskId) ?? null
+  }, [dismissedTaskQueryId, requestedTaskId, tasks])
+
+  const focusSprintId = useMemo(
+    () => queryTask?.id_sprint || requestedSprintId || null,
+    [queryTask?.id_sprint, requestedSprintId]
+  )
+  const activeModalTask = selectedTask ?? queryTask
+
+  useEffect(() => {
+    if (!resolvedProjectId || !focusSprintId) {
+      return
+    }
+
+    const collapseKey = `tasks-collapsed:${resolvedProjectId || projectId}`
+
+    try {
+      const raw = localStorage.getItem(collapseKey)
+      const parsed = raw ? (JSON.parse(raw) as Record<string, boolean>) : {}
+      localStorage.setItem(collapseKey, JSON.stringify({ ...parsed, [focusSprintId]: true }))
+    } catch {
+      localStorage.setItem(collapseKey, JSON.stringify({ [focusSprintId]: true }))
+    }
+  }, [focusSprintId, projectId, resolvedProjectId])
+
+  const handleDragEnd = async (result: DropResult) => {
+    if (!result.destination) return
+
+    const taskId = result.draggableId
+    const destination = result.destination.droppableId
+    const [sprintId, statusRaw] = destination.split(":")
+
+    if (
+      statusRaw !== "pending" &&
+      statusRaw !== "in_progress" &&
+      statusRaw !== "completed"
+    ) {
+      return
+    }
+
+    const status: Task["status"] = statusRaw
+
+    const targetSprint = sprints.find((sprint) => sprint.id === sprintId)
+    if (targetSprint?.status === "completed") {
+      notifyError(
+        "Cannot move task",
+        "Tasks cannot be moved into a completed sprint."
+      )
+      return
+    }
+
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              status,
+              id_sprint: sprintId === "backlog" ? null : sprintId,
+            }
+          : task
+      )
+    )
+
+    try {
+      await updateTask(
+        taskId,
+        {
+          status,
+          id_sprint: sprintId === "backlog" ? null : sprintId,
+        },
+        token
+      )
+    } catch (error) {
+      await loadData()
+      notifyError(
+        "Task could not be moved",
+        error instanceof Error ? error.message : "Please try again."
+      )
+    }
+  }
+
+  const handleCreateTask = async (taskData: Partial<Task>) => {
+    try {
+      const trimmedTitle = (taskData.title || "").trim()
+      if (!trimmedTitle) {
+        notifyError("Task not created", "Task title is required.")
+        return
+      }
+
+      const shouldCreateInBacklog = !taskData.assignedTo || !taskData.end_date
+
+      const cleanedTaskData: Partial<Task> = {
+        title: trimmedTitle,
+        description: taskData.description,
+        priority: taskData.priority,
+        status: shouldCreateInBacklog ? "pending" : taskData.status,
+        progress: taskData.progress ?? 0,
+        ...(taskData.end_date ? { end_date: taskData.end_date } : {}),
+        ...(shouldCreateInBacklog ? { id_sprint: null } : {}),
+        ...(!shouldCreateInBacklog && taskData.id_sprint ? { id_sprint: taskData.id_sprint } : {}),
+        ...(taskData.assignedTo ? { assignedTo: taskData.assignedTo } : {}),
+      }
+
+      await createTask(resolvedProjectId, cleanedTaskData, token)
+      setIsCreateModalOpen(false)
+      await loadData()
+      notifySuccess(
+        "Task created",
+        shouldCreateInBacklog
+          ? "Created in backlog because it is missing assignment or due date."
+          : "Task was created successfully."
+      )
+    } catch (error) {
+      notifyError(
+        "Task could not be created",
+        error instanceof Error ? error.message : "Please try again."
+      )
+    }
+  }
+
+  const handleOpenCreateTask = (sprintId: string, status: Task["status"]) => {
+    setCreateTaskContext({
+      sprintId: sprintId === "backlog" ? null : sprintId,
+      status,
+    })
+    setIsCreateModalOpen(true)
+  }
+
+  const handleOpenReport = () => {
+    setIsReportModalOpen(true)
+  }
+
+  const handleCreateSprint = async (sprintData: Partial<Sprint>) => {
+    try {
+      await createSprint(resolvedProjectId, sprintData, token)
+      setIsCreateSprintModalOpen(false)
+      await loadData()
+      notifySuccess("Sprint created", "The sprint was created successfully.")
+    } catch (error) {
+      notifyError(
+        "Sprint could not be created",
+        error instanceof Error ? error.message : "Please try again."
+      )
+    }
+  }
+
+  const handleDeleteTask = async (taskId: string) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this task? This action cannot be undone."
+    )
+
+    if (!confirmed) return
+
+    try {
+      await deleteTask(taskId, token)
+      setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId))
+      setSelectedTask(null)
+      notifySuccess("Task deleted", "The task was removed successfully.")
+    } catch (error) {
+      notifyError(
+        "Task could not be deleted",
+        error instanceof Error ? error.message : "An unexpected error occurred."
+      )
+    }
+  }
+
+  const handleAssignUser = async (taskId: string, userId: string) => {
+    try {
+      await updateTask(
+        taskId,
+        {
+          assignedTo: userId,
+        },
+        token
+      )
+
+      setTasks((currentTasks) =>
+        currentTasks.map((task) =>
+          task.id === taskId ? { ...task, assignedTo: userId } : task
+        )
+      )
+      notifySuccess("Task updated", "The assignee was updated successfully.")
+    } catch (error) {
+      notifyError(
+        "Task could not be updated",
+        error instanceof Error ? error.message : "Please try again."
+      )
+    }
+  }
+
+  const handleUpdateSprint = async (sprintId: string, data: Partial<Sprint>) => {
+    try {
+      await updateSprint(sprintId, data, token)
+      setSprints((currentSprints) =>
+        currentSprints.map((sprint) =>
+          sprint.id === sprintId ? { ...sprint, ...data } : sprint
+        )
+      )
+      notifySuccess("Sprint updated", "The sprint was updated successfully.")
+    } catch (error) {
+      notifyError(
+        "Sprint could not be updated",
+        error instanceof Error ? error.message : "Please try again."
+      )
+    }
+  }
+
+  const handleCompleteSprint = async (sprintId: string) => {
+    const confirmed = window.confirm("Are you sure you want to complete this sprint?")
+    if (!confirmed) return
+
+    const sortedSprints = [...sprints].sort(
+      (a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+    )
+    const currentIndex = sortedSprints.findIndex((sprint) => sprint.id === sprintId)
+    const nextSprint = sortedSprints[currentIndex + 1]
+    const pendingTasks = tasks.filter(
+      (task) => task.id_sprint === sprintId && task.status !== "completed"
+    )
+
+    try {
+      if (nextSprint) {
+        for (const task of pendingTasks) {
+          await updateTask(task.id, { id_sprint: nextSprint.id }, token)
+        }
+      }
+
+      await updateSprint(sprintId, { status: "completed" }, token)
+      setSprints((currentSprints) =>
+        currentSprints.map((sprint) =>
+          sprint.id === sprintId ? { ...sprint, status: "completed" } : sprint
+        )
+      )
+
+      await loadData()
+      notifySuccess("Sprint completed", "The sprint was completed successfully.")
+    } catch (error) {
+      notifyError(
+        "Sprint could not be completed",
+        error instanceof Error ? error.message : "Please try again."
+      )
+    }
+  }
+
+  const handleOpenTask = (task: Task) => {
+    setSelectedTask(task)
+  }
 
   return (
-    <main className="min-h-screen bg-white p-6">
-      <div className="w-full">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <Link
-              href="/projects"
-              className="mb-2 inline-flex text-sm text-zinc-500 hover:text-zinc-700"
-            >
-              ← Back to Projects
-            </Link>
-            <h1 className="text-3xl font-semibold text-zinc-700">Tasks</h1>
-          </div>
-
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="cursor-pointer rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50"
-          >
-            + New Task
-          </button>
+    <div className="p-8">
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-4xl font-bold text-black">Scrum Board</h1>
+          <p className="mt-2 text-gray-400">Manage project sprints and tasks</p>
         </div>
 
-        <section className="grid grid-cols-1 gap-10 xl:grid-cols-3">
-          {columns.map((column) => (
-            <div
-              key={column.key}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => handleDropTask(column.key)}
-              className="min-h-[650px] rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
-            >
-              <div
-                className={`mb-5 flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 ${getColumnHeaderClasses(
-                  column.key
-                )}`}
-              >
-                <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-bold tracking-tight text-zinc-800">
-                    {column.title}
-                  </h2>
-                  <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm font-semibold text-zinc-500">
-                    {groupedTasks[column.key].length}
-                  </span>
-                </div>
-
-                <button className="text-lg text-zinc-400">•••</button>
-              </div>
-
+        <div className="flex items-center gap-3 self-start lg:self-auto">
+          <Tooltip title="Generate Report" arrow placement="top">
+            <span>
               <button
                 type="button"
-                onClick={() => setShowCreateModal(true)}
-                className="mb-4 flex w-full cursor-pointer items-center justify-center rounded-lg border border-dashed border-red-300 bg-red-50 py-3 text-xl font-semibold text-red-400 transition hover:bg-red-100 active:scale-95"
+                onClick={handleOpenReport}
+                disabled={!resolvedProjectId}
+                aria-label="Generate Report"
+                className="grid h-11 w-11 place-items-center rounded-full bg-slate-900 text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                +
+                <SummarizeIcon className="h-5 w-5" />
               </button>
+            </span>
+          </Tooltip>
 
-              <div className="space-y-5">
-                {groupedTasks[column.key].map((task) => (
-                  <article
-                    key={task.id}
-                    draggable
-                    onDragStart={() => setDraggedTaskId(task.id)}
-                    onClick={() => setSelectedTask(task)}
-                    className="cursor-pointer rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:shadow-md"
-                  >
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <h3 className="text-lg font-bold text-zinc-800">
-                        {task.title}
-                      </h3>
-                      <div className="flex items-center gap-1 text-xs text-zinc-400">
-                        <span>🕒</span>
-                        <span>{daysLabel(task.dueDate)}</span>
-                      </div>
-                    </div>
-
-                    <p className="mb-4 text-sm leading-6 text-zinc-500">
-                      {task.description}
-                    </p>
-
-                    <div className="mb-4 flex items-center gap-4 text-sm text-zinc-400">
-                      <div className="flex items-center gap-1">
-                        <span>📎</span>
-                        <span>{task.attachments}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span>💬</span>
-                        <span>{task.comments}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <button
-                        type="button"
-                        className="rounded-full bg-cyan-50 px-2 py-1 text-[10px] font-medium text-cyan-500"
-                      >
-                        +
-                      </button>
-
-                      <div className="flex -space-x-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-amber-200 text-[10px] font-semibold text-zinc-700">
-                          {initials(task.owner)}
-                        </div>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-orange-200 text-[10px] font-semibold text-zinc-700">
-                          {initials(task.assignee)}
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          ))}
-        </section>
+          <button
+            type="button"
+            onClick={() => setIsCreateSprintModalOpen(true)}
+            className="rounded-2xl bg-blue-500 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-600"
+          >
+            + Create Sprint
+          </button>
+        </div>
       </div>
 
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <SprintBoard
+          sprints={sprints}
+          tasks={tasks}
+          users={users}
+          onTaskClickAction={handleOpenTask}
+          onCreateTaskAction={handleOpenCreateTask}
+          onTaskMoveAction={handleDragEnd}
+          onUpdateSprintAction={handleUpdateSprint}
+          onCompleteSprintAction={handleCompleteSprint}
+          key={`tasks-board-${resolvedProjectId || projectId}`}
+          collapseStorageKey={`tasks-collapsed:${resolvedProjectId || projectId}`}
+          focusSprintId={focusSprintId}
+        />
+      </DragDropContext>
+
       <CreateTaskModal
-        open={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onCreate={handleCreateTask}
+        open={isCreateModalOpen}
+        projectId={resolvedProjectId}
+        users={users}
+        initialSprintId={createTaskContext.sprintId}
+        initialStatus={createTaskContext.status}
+        onCloseAction={() => setIsCreateModalOpen(false)}
+        onSubmitAction={handleCreateTask}
       />
 
-      {selectedTask && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4"
-          onClick={() => setSelectedTask(null)}
-        >
-          <div
-            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-6 flex items-start justify-between gap-4">
-              <div>
-                <p className="mb-2 text-xs font-medium text-zinc-400">
-                  Project / Task ID - {selectedTask.id}
-                </p>
-                <h2 className="text-3xl font-semibold text-zinc-800">
-                  {selectedTask.title}
-                </h2>
-              </div>
+      <CreateSprintModal
+        open={isCreateSprintModalOpen}
+        onCloseAction={() => setIsCreateSprintModalOpen(false)}
+        onSubmitAction={handleCreateSprint}
+      />
 
-              <button
-                onClick={() => setSelectedTask(null)}
-                className="cursor-pointer text-2xl text-zinc-400 hover:text-zinc-600"
-              >
-                ×
-              </button>
-            </div>
+      <ProjectReportModal
+        open={isReportModalOpen}
+        projectId={resolvedProjectId}
+        projectName={projectName || projectId}
+        onCloseAction={() => setIsReportModalOpen(false)}
+      />
 
-            <div className="mb-6 grid grid-cols-[120px_1fr] gap-y-4 text-sm">
-              <p className="text-zinc-500">Priority</p>
-              <div>
-                <span
-                  className={`rounded-full px-4 py-1 text-xs font-semibold ${getPriorityClasses(
-                    selectedTask.priority
-                  )}`}
-                >
-                  {selectedTask.priority}
-                </span>
-              </div>
+      {activeModalTask && (
+        <TaskDetailsModal
+          task={activeModalTask}
+          projectId={resolvedProjectId}
+          users={users}
+          onCloseAction={() => {
+            if (queryTask && requestedTaskId) {
+              setDismissedTaskQueryId(requestedTaskId)
+            }
 
-              <p className="text-zinc-500">Status</p>
-              <div>
-                <span
-                  className={`rounded-full px-4 py-1 text-xs font-semibold ${getStatusClasses(
-                    selectedTask.status
-                  )}`}
-                >
-                  {selectedTask.status === "inProgress"
-                    ? "In Progress"
-                    : selectedTask.status === "completed"
-                    ? "Completed"
-                    : "Backlog"}
-                </span>
-              </div>
-
-              <p className="text-zinc-500">Manager</p>
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-200 text-[10px] font-semibold text-zinc-700">
-                  {initials(selectedTask.owner)}
-                </div>
-                <span className="text-zinc-700">{selectedTask.owner}</span>
-              </div>
-
-              <p className="text-zinc-500">Assignee</p>
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-200 text-[10px] font-semibold text-zinc-700">
-                  {initials(selectedTask.assignee)}
-                </div>
-                <span className="text-zinc-700">{selectedTask.assignee}</span>
-              </div>
-
-              <p className="text-zinc-500">Due Date</p>
-              <div className="text-zinc-700">{formatDate(selectedTask.dueDate)}</div>
-            </div>
-
-            <div className="mb-6 border-t border-zinc-200 pt-5">
-              <h3 className="mb-3 text-sm font-semibold text-zinc-700">
-                Attachments
-              </h3>
-              <div className="space-y-3 text-sm">
-                <p className="text-sky-500">📎 Document Links</p>
-                <button className="cursor-pointer text-zinc-600">
-                  + Add Attachment
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-6 border-t border-zinc-200 pt-5">
-              <h3 className="mb-3 text-sm font-semibold text-zinc-700">
-                Description
-              </h3>
-              <p className="text-sm leading-7 text-zinc-500">
-                {selectedTask.description}
-              </p>
-            </div>
-
-            <div className="border-t border-zinc-200 pt-5">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-200 text-xs font-semibold text-zinc-700">
-                  {initials(selectedTask.assignee)}
-                </div>
-                <div className="flex gap-4 text-sm text-zinc-500">
-                  <button className="cursor-pointer font-medium">Normal Text</button>
-                  <button className="cursor-pointer">B</button>
-                  <button className="cursor-pointer italic">I</button>
-                  <button className="cursor-pointer">•</button>
-                  <button className="cursor-pointer">🔗</button>
-                </div>
-              </div>
-
-              <textarea
-                placeholder="Add attachment or add comment to describe the issue..."
-                className="mb-4 min-h-[90px] w-full rounded-lg bg-zinc-50 p-3 text-sm outline-none"
-              />
-
-              <div className="flex items-center gap-3">
-                <button className="cursor-pointer rounded bg-sky-500 px-4 py-2 text-sm font-medium text-white">
-                  Save
-                </button>
-                <button
-                  onClick={() => setSelectedTask(null)}
-                  className="cursor-pointer text-sm text-zinc-500"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+            setSelectedTask(null)
+          }}
+          onDeleteAction={handleDeleteTask}
+          onAssignAction={handleAssignUser}
+        />
       )}
-    </main>
-  );
+    </div>
+  )
 }

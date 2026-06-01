@@ -1,10 +1,14 @@
 "use client"
 
 import Image from "next/image"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
-import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined"
+import { getUserCompletedTodayCount } from "@/services/taskService"
+import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
+import { getUserProfileDetails } from "@/services/userService"
+import NotificationCenter from "@/components/ui/notifications/NotificationCenter"
+import GlobalSearchBar from "@/components/Layout/GlobalSearchBar"
 
 export default function Topbar() {
   const [open, setOpen] = useState(false)
@@ -12,6 +16,52 @@ export default function Topbar() {
   const { user, logout } = useAuth()
 
   const fullName = [user?.name, user?.lastname].filter(Boolean).join(" ") || "Usuario"
+  const [completedToday, setCompletedToday] = useState<number>(0)
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchCount() {
+      if (!user) return
+      try {
+        const count = await getUserCompletedTodayCount()
+        if (!cancelled) setCompletedToday(count)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+
+    fetchCount()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchProfileImage() {
+      if (!user?.id) {
+        setProfileImageUrl(null)
+        return
+      }
+
+      try {
+        const details = await getUserProfileDetails(user.id)
+        if (!cancelled) setProfileImageUrl(details.profileImageUrl)
+      } catch {
+        if (!cancelled) setProfileImageUrl(null)
+      }
+    }
+
+    fetchProfileImage()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-sidebar-border bg-sidebar shadow-sm">
@@ -32,34 +82,9 @@ export default function Topbar() {
         <div className="flex items-center gap-3 sm:gap-6">
 
      
-          <div className="hidden md:flex items-center border border-sidebar-border rounded-xl px-3 py-2 w-64 lg:w-80 bg-background">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4 text-muted-foreground mr-2"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-4.35-4.35M16.65 10.5a6.15 6.15 0 11-12.3 0 6.15 6.15 0 0112.3 0z"
-              />
-            </svg>
+          <GlobalSearchBar />
 
-            <input
-              type="text"
-              placeholder="Search..."
-              className="bg-transparent outline-none text-sm w-full placeholder:text-muted-foreground"
-            />
-          </div>
-
-          <button className="relative">
-            <NotificationsNoneOutlinedIcon className="h-5 w-5 text-sidebar-foreground" />
-
-            <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full" />
-          </button>
+          <NotificationCenter />
 
 
           <div className="flex items-center gap-2 sm:gap-3">
@@ -74,14 +99,15 @@ export default function Topbar() {
             </div>
 
             <div className="relative">
-              <Image
-                src="/images/persona.png"
-                alt="User"
-                width={36}
-                height={36}
-                onClick={() => setOpen(!open)}
-                className="rounded-full cursor-pointer"
-              />
+                <button type="button" onClick={() => setOpen(!open)} className="block">
+                  <FramedAvatar
+                    src={profileImageUrl ?? user?.avatar ?? "/images/persona.png"}
+                    alt="User"
+                    size={36}
+                    completedTodayCount={completedToday}
+                    priority
+                  />
+                </button>
 
               {open && (
                 <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-lg z-50">

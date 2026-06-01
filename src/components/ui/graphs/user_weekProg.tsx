@@ -12,6 +12,7 @@ import {
   Filler,
 } from "chart.js"
 import { Line } from "react-chartjs-2"
+import { useWeeklyProgress } from "@/hooks/useDashboardStats"
 
 ChartJS.register(
   LineElement,
@@ -24,16 +25,51 @@ ChartJS.register(
 )
 
 
-const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+function getDaysInRange(from: string, to: string) {
+  const days: { iso: string; label: string }[] = []
+  const cur = new Date(from + "T00:00:00")
+  const end = new Date(to + "T00:00:00")
 
+  while (cur <= end) {
+    days.push({
+      iso: cur.toISOString().slice(0, 10),
+      label: cur.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit" }),
+    })
+    cur.setDate(cur.getDate() + 1)
+  }
+  return days
+}
 
-const completedTasks = [3, 4, 2, 1, 2, 1, 0]
+const getToday = () => new Date().toISOString().slice(0, 10)
+const getDateNDaysAgo = (n: number) =>
+  new Date(Date.now() - n * 864e5).toISOString().slice(0, 10)
 
-export default function ThroughputChart() {
+type Props = {
+  filters?: { sprint?: string; project?: string; dateFrom?: string; dateTo?: string }
+}
+
+export default function ThroughputChart({ filters }: Props) {
   const chartRef = useRef<any>(null)
 
-  const data = {
-    labels,
+  const dateFrom = filters?.dateFrom || getDateNDaysAgo(7)
+  const dateTo = filters?.dateTo || getToday()
+
+  const { data, loading, error } = useWeeklyProgress({
+    ...filters,
+    dateFrom,
+    dateTo,
+  })
+
+
+  const days = getDaysInRange(dateFrom, dateTo)
+
+  const completedTasks = days.map((day) => {
+    const found = data?.dailyCompletions.find((d) => d.date === day.iso)
+    return found?.completed ?? 0
+  })
+
+  const chartData = {
+    labels: days.map((d) => d.label),
     datasets: [
       {
         label: "Tasks Completed",
@@ -43,13 +79,7 @@ export default function ThroughputChart() {
           const chart = context.chart
           const { ctx, chartArea } = chart
           if (!chartArea) return null
-
-          const gradient = ctx.createLinearGradient(
-            0,
-            chartArea.top,
-            0,
-            chartArea.bottom
-          )
+          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
           gradient.addColorStop(0, "rgba(99, 102, 241, 0.4)")
           gradient.addColorStop(1, "rgba(99, 102, 241, 0.05)")
           return gradient
@@ -64,17 +94,19 @@ export default function ThroughputChart() {
     ],
   }
 
+
+  const rangeLabel = `${new Date(dateFrom + "T00:00:00").toLocaleDateString("es-MX", {
+    day: "numeric", month: "short",
+  })} – ${new Date(dateTo + "T00:00:00").toLocaleDateString("es-MX", {
+    day: "numeric", month: "short", year: "numeric",
+  })}`
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    interaction: {
-      mode: "index" as const,
-      intersect: false,
-    },
+    interaction: { mode: "index" as const, intersect: false },
     plugins: {
-      legend: {
-        display: false, 
-      },
+      legend: { display: false },
       tooltip: {
         backgroundColor: "white",
         titleColor: "#111",
@@ -84,47 +116,64 @@ export default function ThroughputChart() {
         padding: 12,
         displayColors: false,
         callbacks: {
-          label: function (context: any) {
-            return `Tasks: ${context.raw}`
-          },
+          label: (context: any) => `Tareas: ${context.raw}`,
         },
       },
     },
     scales: {
       x: {
-        grid: {
-          display: false,
+        grid: { display: false },
+        ticks: {
+
+          maxRotation: days.length > 10 ? 45 : 0,
+          autoSkip: true,
+          maxTicksLimit: 14,
         },
       },
       y: {
         beginAtZero: true,
-        grid: {
-          color: "rgba(0,0,0,0.05)",
-        },
-        ticks: {
-          stepSize: 1,
-        },
+        grid: { color: "rgba(0,0,0,0.05)" },
+        ticks: { stepSize: 1 },
       },
     },
   }
 
+  if (loading) {
+    return (
+      <div className="w-full h-full flex flex-col">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-slate-900">Detail Progress</h3>
+          <p className="text-sm text-gray-500">{rangeLabel}</p>
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-500" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="w-full h-full flex flex-col">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-slate-900"></h3>
+          <p className="text-sm text-gray-500">{rangeLabel}</p>
+        </div>
+        <div className="flex flex-1 items-center justify-center text-sm text-red-500">{error}</div>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full h-full flex flex-col">
-
-
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">
-          Weekly Progress
-        </h3>
-        <p className="text-sm text-gray-500">
-          Tasks completed per day
-        </p>
+        <h3 className="text-lg font-semibold text-slate-900">Detail Progress</h3>
+        <p className="text-sm text-gray-500">{rangeLabel}</p>
       </div>
-
       <div className="flex-1">
-        <Line ref={chartRef} data={data} options={options} />
+        <Line ref={chartRef} data={chartData} options={options} />
       </div>
-
     </div>
   )
 }
+

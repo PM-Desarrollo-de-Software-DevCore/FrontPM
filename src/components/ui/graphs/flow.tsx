@@ -3,44 +3,38 @@
 import {
   Chart as ChartJS,
   LineElement,
-  CategoryScale,
-  LinearScale,
-  PointElement,
+  ArcElement,
   Tooltip,
 } from "chart.js"
-import { Line } from "react-chartjs-2"
+import { Pie } from "react-chartjs-2"
 
-ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip)
+ChartJS.register(ArcElement, Tooltip)
 
-export default function BurndownChart() {
+type FlowChartProps = {
+  title?: string
+  description?: string
+  labels?: string[]
+  values?: number[]
+  colors?: string[]
+}
 
-  const labels = ["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7"]
-
-    const ideal = [10, 8, 6, 4, 3, 1, 0]
-    const actual = [10, 9, 7, 5, 5, 2, 1]
+export default function FlowChart({
+  title = "Flow",
+  description = "Task status distribution",
+  labels = ["Completed", "On Hold", "On Progress", "Pending"],
+  values = [32, 25, 25, 18],
+  colors = ["#16a34a", "#64748b", "#0ea5e9", "#f59e0b"],
+}: FlowChartProps) {
 
   const data = {
     labels,
     datasets: [
       {
-        label: "Ideal",
-        data: ideal,
-        borderColor: "rgba(34,197,94,0.35)", 
-        borderDash: [6, 6],
-        tension: 0.3,
-        pointRadius: 0,
-      },
-      {
-        label: "Actual",
-        data: actual,
-        borderColor: "#eab308", 
-        backgroundColor: "#eab308",
-        tension: 0.3,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        pointBackgroundColor: "#eab308",
-        pointBorderColor: "#ffffff",
-        pointBorderWidth: 2,
+        data: values,
+        backgroundColor: colors,
+        borderWidth: 0,
+        spacing: 0,
+        hoverOffset: 0,
       },
     ],
   }
@@ -61,27 +55,8 @@ export default function BurndownChart() {
         padding: 10,
         callbacks: {
           label: function (context: any) {
-            return `${context.raw} tasks remaining`
+            return `${context.label}: ${context.parsed}`
           },
-        },
-      },
-    },
-    scales: {
-      x: {
-        grid: {
-          display: false,
-        },
-        ticks: {
-          color: "#64748b",
-        },
-      },
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: "rgba(0,0,0,0.05)",
-        },
-        ticks: {
-          color: "#64748b",
         },
       },
     },
@@ -92,16 +67,16 @@ export default function BurndownChart() {
 
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-slate-900">
-          Burndown
+          {title}
         </h3>
         <p className="text-sm text-gray-500">
-          Progress of remaining tasks vs. ideal plan
+          {description}
         </p>
       </div>
 
 
       <div className="flex-1">
-        <Line data={data} options={options} />
+        <Pie data={data} options={options} />
       </div>
 
     </div>

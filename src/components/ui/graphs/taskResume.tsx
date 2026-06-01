@@ -10,15 +10,30 @@ import { Pie } from "react-chartjs-2"
 
 ChartJS.register(ArcElement, Tooltip)
 
-export default function TasksChart() {
+type TasksChartProps = {
+  completed: number
+  inProgress: number
+  pending: number
+}
+
+export default function TasksChart({ completed, inProgress, pending }: TasksChartProps) {
+  const safeCompleted = Math.max(0, completed)
+  const safeInProgress = Math.max(0, inProgress)
+  const safePending = Math.max(0, pending)
+  const total = safeCompleted + safeInProgress + safePending
+  const valueFor = (count: number) => (total > 0 ? Math.round((count / total) * 100) : 0)
+
   const data = {
-    labels: ["Completed", "On Hold", "On Progress", "Pending"],
+    labels: ["Completed", "In progress", "Pending"],
     datasets: [
       {
-        data: [32, 25, 25, 18],
+        data: [
+          valueFor(safeCompleted),
+          valueFor(safeInProgress),
+          valueFor(safePending),
+        ],
         backgroundColor: [
           "#198094",
-          "#5D5BFF",
           "#37B2F0",
           "#E14F3D",
         ],
@@ -46,7 +61,7 @@ export default function TasksChart() {
         padding: 10,
         displayColors: true,
         callbacks: {
-          label: function (context: any) {
+            label: function (context: { label?: string; parsed?: number }) {
             return `${context.label}: ${context.parsed}%`
           },
         },
@@ -55,9 +70,9 @@ export default function TasksChart() {
   }
     return (
     <div className="w-full">
-        <div className="w-full h-[260px]">
-        <Pie data={data} options={options} />
-        </div>
+      <div className="w-full h-65">
+      <Pie data={data} options={options} />
+      </div>
     </div>
     )
 }
