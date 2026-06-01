@@ -118,7 +118,11 @@ export async function getCurrentUser(): Promise<User | null> {
     })
 
     if (!response.ok) {
-      localStorage.removeItem('authToken')
+      // Solo invalidar la sesión si el servidor rechaza el token (401).
+      // Un 5xx o un blip transitorio de red no debe borrar el token ni desloguear.
+      if (response.status === 401) {
+        localStorage.removeItem('authToken')
+      }
       return null
     }
 
