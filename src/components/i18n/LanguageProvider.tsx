@@ -280,6 +280,23 @@ const esToEnEntries: Array<[string, string]> = [
   ["Sin datos de burn todavía.", "No burn data yet."],
   ["Sin serie de EVM todavía.", "No EVM series yet."],
 
+  // Finanzas Fase 2 — portafolio (PM-146)
+  ["Portafolio financiero", "Financial portfolio"],
+  ["Resumen financiero de todos tus proyectos.", "Financial overview of all your projects."],
+  ["Con presupuesto", "With budget"],
+  ["En riesgo", "At risk"],
+  ["Presupuesto total", "Total budget"],
+  ["Gasto estimado total", "Total estimated spend"],
+  ["Restante total", "Total remaining"],
+  ["Sobrecosto proyectado", "Projected overrun"],
+  ["Gasto est.", "Est. spend"],
+  ["Restante", "Remaining"],
+  ["Consumido", "Consumed"],
+  ["Estado", "Status"],
+  ["Riesgo", "Risk"],
+  ["En pausa", "On hold"],
+  ["No hay proyectos en tu portafolio.", "There are no projects in your portfolio."],
+
 ];
 
 const enToEsEntries: Array<[string, string]> = esToEnEntries.map(([es, en]) => [en, es]);
