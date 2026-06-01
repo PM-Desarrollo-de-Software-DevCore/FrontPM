@@ -11,14 +11,18 @@ import EvmPanel from "@/components/finance/EvmPanel"
 import ReportPanel from "@/components/finance/ReportPanel"
 import TeamRatesPanel from "@/components/finance/TeamRatesPanel"
 import TimeTrackingPanel from "@/components/finance/TimeTrackingPanel"
+import ExpensesPanel from "@/components/finance/ExpensesPanel"
+import InvoicesPanel from "@/components/finance/InvoicesPanel"
 
-type FinanceTab = "summary" | "evm" | "team" | "hours" | "report"
+type FinanceTab = "summary" | "evm" | "team" | "hours" | "expenses" | "invoices" | "report"
 
 const TABS: { key: FinanceTab; label: string }[] = [
   { key: "summary", label: "Resumen" },
   { key: "evm", label: "EVM" },
   { key: "team", label: "Equipo" },
   { key: "hours", label: "Horas" },
+  { key: "expenses", label: "Gastos" },
+  { key: "invoices", label: "Facturas" },
   { key: "report", label: "Reporte" },
 ]
 
@@ -135,6 +139,8 @@ export default function ProjectFinancePage() {
       {tab === "evm" && <EvmPanel projectId={projectId} />}
       {tab === "team" && <TeamRatesPanel projectId={projectId} />}
       {tab === "hours" && <TimeTrackingPanel projectId={projectId} />}
+      {tab === "expenses" && <ExpensesPanel projectId={projectId} />}
+      {tab === "invoices" && <InvoicesPanel projectId={projectId} />}
       {tab === "report" && <ReportPanel projectId={projectId} />}
     </div>
   )
