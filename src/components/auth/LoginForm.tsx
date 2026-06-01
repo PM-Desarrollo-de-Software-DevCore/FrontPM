@@ -24,10 +24,11 @@ export default function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const router = useRouter()
 
-  const { login, isLoading, error } = useAuth()
+  const { login, error } = useAuth()
 
   async function handleSubmit(e: React.FormEvent) {
     // Evita que el navegador recargue la página al enviar el formulario
@@ -45,8 +46,11 @@ export default function LoginForm() {
       return
     }
 
+    setIsSubmitting(true)
+
     // Intentar Login
     const result = await login(email, password)
+    setIsSubmitting(false)
 
     // Si no hubo error, redirigir
     if (result.success && result.redirectTo) {
@@ -60,7 +64,14 @@ export default function LoginForm() {
         <div className="absolute top-4 left-4 z-10 flex items-center gap-2 rounded-md px-3 py-2 text-zinc-900 dark:text-zinc-100">
           <Image src="/images/logo/TM_Logo_Monochrome_Neg_RGB.png" alt="DevCore" width={150} height={36} />
         </div>
-        <Image src="/images/login/techm_brand-pillar-promise.jpg" alt="Tech M Brand" fill className="object-cover" />
+        <Image
+          src="/images/login/techm_brand-pillar-promise.jpg"
+          alt="Tech M Brand"
+          fill
+          sizes="(min-width: 768px) 50vw, 100vw"
+          loading="eager"
+          className="object-cover"
+        />
       </div>
       <div className="w-full md:w-1/2 flex relative items-center justify-center p-8 text-zinc-900 dark:text-zinc-100">
         <div className="absolute top-4 left-4 z-10 flex items-center gap-2 rounded-md px-3 py-2 text-zinc-900 dark:text-zinc-100">
@@ -99,7 +110,7 @@ export default function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="nombre@empresa.com"
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-zinc-900 placeholder:text-zinc-500 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-white/15 dark:bg-white/5 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-sky-400"
               />
             </div>
@@ -115,7 +126,7 @@ export default function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Ingresa tu contraseña"
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-zinc-900 placeholder:text-zinc-500 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-white/15 dark:bg-white/5 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-sky-400"
               />
             </div>
@@ -123,7 +134,7 @@ export default function LoginForm() {
             {/* BOTÓN LOGIN */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isSubmitting}
 
               className="
                 mt-4
@@ -140,7 +151,7 @@ export default function LoginForm() {
                 dark:hover:bg-sky-400
               "
             >
-              {isLoading ? 'Cargando...' : 'Iniciar sesión'}
+              {isSubmitting ? 'Cargando...' : 'Iniciar sesión'}
             </button>
 
           </form>

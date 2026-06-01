@@ -9,12 +9,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { getUserCompletedTodayCount, getMultipleUsersCompletedTodayCount, getMyTasks } from "@/services/taskService";
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar";
 import LeaderboardAvatar from "@/components/ui/avatar/LeaderboardAvatar";
-import {
-  getUserProfileDetails,
-  getUserTechnologies,
-  UserProfileDetails,
-  UserTechnologyEntry,
-} from "@/services/userService";
+import { getCurrentUser, getToken } from "@/lib/auth";
+import { User } from "@/types/auth";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import { Task } from "@/types/task";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -151,10 +147,7 @@ export default function ProfileDashboard() {
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
   const { user } = useAuth()
 
-  const [profile, setProfile] = useState<UserProfileDetails | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [profileError, setProfileError] = useState<string | null>(null);
-  const [technologies, setTechnologies] = useState<UserTechnologyEntry[]>([]);
+  const [sessionUser, setSessionUser] = useState<User | null>(null);
   const [myTasks, setMyTasks] = useState<Task[]>([])
   const [tasksLoading, setTasksLoading] = useState(true)
   const [tasksError, setTasksError] = useState<string | null>(null)
@@ -226,60 +219,42 @@ export default function ProfileDashboard() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadProfile() {
-      if (!user?.id) {
-        setProfile(null);
-        setTechnologies([]);
-        setProfileLoading(false);
+    async function loadSessionUser() {
+      const token = getToken();
+
+      if (!token) {
+        if (!cancelled) {
+          setSessionUser(null);
+        }
         return;
       }
 
-      setProfileLoading(true);
-      setProfileError(null);
-
       try {
-        const [profileData, technologiesData] = await Promise.all([
-          getUserProfileDetails(user.id),
-          getUserTechnologies(user.id),
-        ]);
-
+        const current = await getCurrentUser();
         if (!cancelled) {
-          setProfile(profileData);
-          setTechnologies(technologiesData);
+          setSessionUser(current);
         }
-      } catch (err) {
+      } catch {
         if (!cancelled) {
-          setProfileError(err instanceof Error ? err.message : "No se pudo cargar el perfil");
-          setProfile(null);
-          setTechnologies([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setProfileLoading(false);
+          setSessionUser(null);
         }
       }
     }
 
-    loadProfile();
+    loadSessionUser();
 
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, []);
 
-  const displayName = profile ? `${profile.name} ${profile.lastname}`.trim() : `${user?.name ?? ""} ${user?.lastname ?? ""}`.trim();
-  const email = profile?.email ?? user?.email ?? "Sin correo disponible";
-  const avatarSrc = profile?.profileImageUrl ?? user?.avatar ?? "/images/persona.png";
-  const mainSkill = profile?.skill?.trim() || "No definida";
-  const areaList = splitValues(profile?.area);
-  const technologyNames = technologies.map((item) => item.technology.trim()).filter(Boolean);
-  const isAdmin = user?.role === "admin"
+  const activeUser = sessionUser ?? user
 
   useEffect(() => {
     let cancelled = false
 
     async function loadMyTasks() {
-      if (isAdmin) {
+      if (!activeUser || activeUser.role === "admin") {
         setMyTasks([])
         setTasksError(null)
         setTasksLoading(false)
@@ -311,7 +286,7 @@ export default function ProfileDashboard() {
     return () => {
       cancelled = true
     }
-  }, [isAdmin])
+  }, [activeUser])
 
   const taskStats = myTasks.reduce(
     (acc, task) => {
@@ -373,12 +348,20 @@ export default function ProfileDashboard() {
   }
 
   const profileSnapshot = {
-    name: profile?.name ?? user?.name ?? "",
-    lastname: profile?.lastname ?? user?.lastname ?? "",
-    email: profile?.email ?? user?.email ?? "",
-    skill: profile?.skill ?? null,
-    area: profile?.area ?? null,
+    name: activeUser?.name ?? "",
+    lastname: activeUser?.lastname ?? "",
+    email: activeUser?.email ?? "",
+    skill: null,
+    area: null,
   }
+
+  const displayName = `${activeUser?.name ?? ""} ${activeUser?.lastname ?? ""}`.trim() || "Usuario";
+  const email = activeUser?.email ?? "Sin correo disponible";
+  const avatarSrc = activeUser?.avatar ?? "/images/persona.png";
+  const mainSkill = "No definida";
+  const areaList: string[] = [];
+  const technologyNames: string[] = [];
+  const isAdmin = user?.role === "admin"
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-10 pt-0 pb-4 max-w-350 mx-auto overflow-x-hidden">
@@ -401,10 +384,10 @@ export default function ProfileDashboard() {
 
               <div className="space-y-1">
                 <h2 className="font-semibold text-base sm:text-lg">
-                  {profileLoading ? "Cargando perfil..." : displayName || "Usuario"}
+                  {displayName || "Usuario"}
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-500">
-                  {profileLoading ? "Obteniendo datos del usuario" : email}
+                  {email}
                 </p>
                 <div className="mt-3">
                   <ThemeToggle />
@@ -414,22 +397,16 @@ export default function ProfileDashboard() {
               <div className="grid w-full grid-cols-1 gap-3 pt-2 text-left sm:grid-cols-2">
                 <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-3">
                   <p className="text-[11px] uppercase tracking-wide text-gray-400">Skill principal</p>
-                  <p className="mt-1 text-sm font-medium text-gray-800">{profileLoading ? "..." : mainSkill}</p>
+                  <p className="mt-1 text-sm font-medium text-gray-800">{mainSkill}</p>
                 </div>
 
                 <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-3">
                   <p className="text-[11px] uppercase tracking-wide text-gray-400">Area</p>
                   <p className="mt-1 text-sm font-medium text-gray-800">
-                    {profileLoading ? "..." : areaList.length > 0 ? areaList.join(", ") : "No definida"}
+                    {areaList.length > 0 ? areaList.join(", ") : "No definida"}
                   </p>
                 </div>
               </div>
-
-              {profileError && (
-                <p className="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-left text-xs text-red-600">
-                  {profileError}
-                </p>
-              )}
             </div>
           </Card>
 

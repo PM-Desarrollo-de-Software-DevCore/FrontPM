@@ -3,32 +3,25 @@
 import { useEffect, useState } from "react";
 
 export function useTheme() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined") {
+      return "light";
+    }
 
-  useEffect(() => {
     try {
       const stored = localStorage.getItem("theme") as "light" | "dark" | null;
-      if (stored) {
-        setTheme(stored);
-        document.documentElement.classList.toggle("dark", stored === "dark");
-        setIsHydrated(true);
-        return;
+      if (stored === "light" || stored === "dark") {
+        return stored;
       }
 
       const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const initialTheme = prefersDark ? "dark" : "light";
-      setTheme(initialTheme);
-      document.documentElement.classList.toggle("dark", prefersDark);
-      setIsHydrated(true);
+      return prefersDark ? "dark" : "light";
     } catch (err) {
-      setIsHydrated(true);
+      return "light";
     }
-  }, []);
+  });
 
   useEffect(() => {
-    if (!isHydrated) return;
-    
     try {
       localStorage.setItem("theme", theme);
       document.documentElement.classList.toggle("dark", theme === "dark");
@@ -36,7 +29,41 @@ export function useTheme() {
     } catch (err) {
       // ignore
     }
-  }, [theme, isHydrated]);
+  }, [theme]);
+
+  // Listen to external theme changes (other tabs or dispatched events)
+  useEffect(() => {
+    const handleStorage = (e?: StorageEvent) => {
+      try {
+        const stored = e?.newValue ?? localStorage.getItem("theme");
+        if (stored === "dark" || stored === "light") {
+          setTheme(stored);
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    const handleCustom = (ev: Event) => {
+      try {
+        // @ts-ignore
+        const newTheme = ev?.detail?.theme as "dark" | "light" | undefined;
+        if (newTheme === "dark" || newTheme === "light") {
+          setTheme(newTheme);
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("themechange", handleCustom as EventListener);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("themechange", handleCustom as EventListener);
+    };
+  }, []);
 
   return { theme, setTheme } as const;
 }

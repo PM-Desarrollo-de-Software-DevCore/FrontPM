@@ -156,11 +156,9 @@ export async function checkServerConnection(): Promise<boolean> {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), timeout)
 
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      await fetch(API_BASE_URL, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        mode: 'no-cors',
         signal: controller.signal,
       })
 

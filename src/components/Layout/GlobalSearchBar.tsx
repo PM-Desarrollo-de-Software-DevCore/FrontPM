@@ -103,10 +103,21 @@ export default function GlobalSearchBar() {
     let cancelled = false
 
     async function loadSearchData() {
+      const token = getToken()
+
+      if (!token) {
+        if (!cancelled) {
+          setProjects([])
+          setSprints([])
+          setTasks([])
+          setUsers([])
+          setIsLoading(false)
+        }
+        return
+      }
+
       try {
         setIsLoading(true)
-
-        const token = getToken()
         const projectList = await getProjects()
 
         const projectItems = await Promise.all(
@@ -163,6 +174,7 @@ export default function GlobalSearchBar() {
       }
     }
 
+    setIsLoading(true)
     void loadSearchData()
 
     return () => {

@@ -283,11 +283,6 @@ type CompletedTodayTask = {
   updated_at?: string | null
 }
 
-type CompletedTodayCountItem = {
-  userId?: string
-  count?: number
-}
-
 type TaskListResponse = {
   success?: boolean
   data?: unknown[]
@@ -428,35 +423,9 @@ export async function getMultipleUsersCompletedTodayCount(userIds: string[]): Pr
       return result
     }
 
-    // Intenta cargar las tareas de todos los usuarios
-    const response = await fetch(`${API_URL}/tasks/completed-today`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ userIds }),
-      cache: "no-store",
-    })
-
-    if (response.ok) {
-      const data = await response.json()
-      const counts = Array.isArray(data) ? data : data.data || {}
-      
-      // Si es un array, mapear por userId
-      if (Array.isArray(counts)) {
-        counts.forEach((item) => {
-          const row = item as CompletedTodayCountItem
-          if (!row.userId) return
-          result.set(row.userId, row.count || 0)
-        })
-      } else if (typeof counts === "object") {
-        // Si es un objeto, usar como Map directo
-        Object.entries(counts).forEach(([userId, count]) => {
-          result.set(userId, count as number)
-        })
-      }
-    }
+    // El backend actual no expone un endpoint estable para conteo diario por terceros.
+    // Devolvemos un mapa vacío para evitar errores 404 en cascada por cada usuario.
+    return result
   } catch (error) {
     console.error("Error fetching completed counts for multiple users:", error)
   }
