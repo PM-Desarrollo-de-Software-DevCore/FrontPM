@@ -6,15 +6,15 @@ import {
   SidebarProvider,
   Sidebar,
   SidebarContent,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton
 } from "../../components/ui/sidebar/sidebar"
 
-import { 
-  LayoutDashboard, 
-  FolderKanban, 
+import {
+  LayoutDashboard,
+  Wallet,
+  FolderKanban,
   AlarmClockCheck,
   Flag,
   UserCircle2,
@@ -39,6 +39,12 @@ const sidebarItems: SidebarItem[] = [
     label: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+    roles: ["admin", "user"],
+  },
+  {
+    label: "Finance",
+    href: "/dashboard/finance",
+    icon: Wallet,
     roles: ["admin", "user"],
   },
   {
