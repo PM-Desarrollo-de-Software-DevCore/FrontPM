@@ -11,8 +11,14 @@ type LanguageContextValue = {
 };
 
 const STORAGE_KEY = "app-language";
+// Texto fuente (idioma base) por nodo. Se refresca cuando React reescribe el nodo
+// con contenido nuevo (p.ej. un botón que pasa de "Create User" a "Save Changes").
 const textNodeOriginalValues = new WeakMap<Text, string>();
+// Última traducción que ESTE provider escribió en el nodo. Permite distinguir un
+// cambio hecho por React (texto fuente nuevo) de uno hecho por nosotros (traducción).
+const textNodeTranslatedValues = new WeakMap<Text, string>();
 const attributeOriginalValues = new WeakMap<HTMLElement, Map<string, string>>();
+const attributeTranslatedValues = new WeakMap<HTMLElement, Map<string, string>>();
 
 const esToEnEntries: Array<[string, string]> = [
   ["Cargando sesión", "Loading session"],
@@ -180,9 +186,9 @@ const esToEnEntries: Array<[string, string]> = [
   ["Precio fijo", "Fixed price"],
   ["Retención mensual", "Monthly retainer"],
   ["Tiempo y materiales", "Time and materials"],
-  ["Save Changes", "Guardar cambios"],
-  ["Saving...", "Guardando..."],
-  ["Creating...", "Creando..."],
+  ["Guardar cambios", "Save Changes"],
+  ["Guardando...", "Saving..."],
+  ["Creando...", "Creating..."],
   ["Crear contraseña", "Create password"],
   ["Cambiar contraseña", "Change password"],
   ["Procesando CV...", "Processing CV..."],
@@ -459,15 +465,21 @@ function translateDom(language: Language) {
   }
 
   textNodes.forEach((node) => {
-    if (!textNodeOriginalValues.has(node)) {
-      textNodeOriginalValues.set(node, node.nodeValue || "");
+    const current = node.nodeValue || "";
+
+    // Si el valor actual no es la última traducción que escribimos, el texto fuente
+    // cambió (React re-renderizó el nodo) → re-cachear el original. Sin esto, un nodo
+    // reutilizado por React queda congelado en la traducción de su primer valor.
+    if (current !== textNodeTranslatedValues.get(node)) {
+      textNodeOriginalValues.set(node, current);
     }
 
-    const source = textNodeOriginalValues.get(node) || node.nodeValue || "";
+    const source = textNodeOriginalValues.get(node) ?? current;
     const translated = translateText(source, language);
     if (translated !== node.nodeValue) {
       node.nodeValue = translated;
     }
+    textNodeTranslatedValues.set(node, translated);
   });
 
   const attributesToTranslate: Array<"placeholder" | "title" | "aria-label"> = [
@@ -484,21 +496,28 @@ function translateDom(language: Language) {
     if (!attributeOriginalValues.has(element)) {
       attributeOriginalValues.set(element, new Map());
     }
+    if (!attributeTranslatedValues.has(element)) {
+      attributeTranslatedValues.set(element, new Map());
+    }
 
     const elementOriginals = attributeOriginalValues.get(element)!;
+    const elementTranslated = attributeTranslatedValues.get(element)!;
 
     attributesToTranslate.forEach((attribute) => {
       const current = element.getAttribute(attribute);
       if (!current) return;
 
-      if (!elementOriginals.has(attribute)) {
+      // Mismo criterio que los nodos de texto: si el atributo no es lo que
+      // tradujimos por última vez, React lo cambió → re-cachear el original.
+      if (current !== elementTranslated.get(attribute)) {
         elementOriginals.set(attribute, current);
       }
 
-      const translated = translateText(elementOriginals.get(attribute) || current, language);
+      const translated = translateText(elementOriginals.get(attribute) ?? current, language);
       if (translated !== current) {
         element.setAttribute(attribute, translated);
       }
+      elementTranslated.set(attribute, translated);
     });
   });
 }
