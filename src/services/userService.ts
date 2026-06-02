@@ -94,6 +94,31 @@ function getMultipartAuthHeaders(): Record<string, string> {
   };
 }
 
+/**
+ * fetch con reintentos ante errores de red o 5xx (blips de Render). No reintenta
+ * en 4xx (no se recuperan). Hace la carga del perfil confiable en redes inestables.
+ */
+async function fetchWithRetry(url: string, init: RequestInit, maxAttempts = 3): Promise<Response> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch(url, init);
+      if (response.status >= 500 && attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
+        continue;
+      }
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt === maxAttempts) break;
+      await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
+    }
+  }
+
+  throw lastError ?? new Error("No se pudo conectar con el servidor");
+}
+
 export async function getNonAdminUsers(): Promise<UserOption[]> {
   const response = await fetch(`${API_URL}/users`, {
     method: "GET",
@@ -114,7 +139,7 @@ export async function getNonAdminUsers(): Promise<UserOption[]> {
 }
 
 export async function getUsersDirectory(): Promise<UserDirectoryEntry[]> {
-  const response = await fetch(`${API_URL}/users`, {
+  const response = await fetchWithRetry(`${API_URL}/users`, {
     method: "GET",
     headers: getAuthHeaders(),
     cache: "no-store",
@@ -151,7 +176,7 @@ export async function getUserProfileDetails(userId: string): Promise<UserProfile
 }
 
 export async function getUserTechnologies(userId: string): Promise<UserTechnologyEntry[]> {
-  const response = await fetch(`${API_URL}/users/${userId}/technologies`, {
+  const response = await fetchWithRetry(`${API_URL}/users/${userId}/technologies`, {
     method: "GET",
     headers: getAuthHeaders(),
     cache: "no-store",
