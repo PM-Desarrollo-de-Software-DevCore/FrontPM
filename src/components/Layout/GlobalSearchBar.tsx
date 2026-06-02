@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 
 import { useAuth } from "@/hooks/useAuth"
@@ -99,74 +99,67 @@ export default function GlobalSearchBar() {
   const [tasks, setTasks] = useState<SearchTask[]>([])
   const [users, setUsers] = useState<UserDirectoryEntry[]>([])
 
-  useEffect(() => {
-    let cancelled = false
+  const hasLoadedRef = useRef(false)
 
-    async function loadSearchData() {
-      try {
-        setIsLoading(true)
+  // Carga perezosa: en vez de prefetchear proyectos+sprints+tareas+directorio en
+  // CADA pagina (el Topbar es global y se monta en todas las rutas), los datos del
+  // buscador se cargan una sola vez cuando el usuario interactua con el (focus/typing).
+  const ensureSearchData = useCallback(async () => {
+    if (hasLoadedRef.current) return
+    hasLoadedRef.current = true
 
-        const token = getToken()
-        const projectList = await getProjects()
+    try {
+      setIsLoading(true)
 
-        const projectItems = await Promise.all(
-          projectList.map(async (project) => {
-            try {
-              const [projectSprints, projectTasks]: [Sprint[], Task[]] = await Promise.all([
-                token ? getProjectSprints(project.id, token) : Promise.resolve([] as Sprint[]),
-                token ? getProjectTasks(project.id, token) : Promise.resolve([] as Task[]),
-              ])
+      const token = getToken()
+      const projectList = await getProjects()
 
-              return {
-                project,
-                sprints: projectSprints.map((sprint) => ({
-                  ...sprint,
-                  projectId: project.id,
-                  projectName: project.name,
-                })),
-                tasks: projectTasks.map((task) => ({
-                  ...task,
-                  projectId: project.id,
-                  projectName: project.name,
-                })),
-              }
-            } catch {
-              return {
-                project,
-                sprints: [] as SearchSprint[],
-                tasks: [] as SearchTask[],
-              }
+      const projectItems = await Promise.all(
+        projectList.map(async (project) => {
+          try {
+            const [projectSprints, projectTasks]: [Sprint[], Task[]] = await Promise.all([
+              token ? getProjectSprints(project.id, token) : Promise.resolve([] as Sprint[]),
+              token ? getProjectTasks(project.id, token) : Promise.resolve([] as Task[]),
+            ])
+
+            return {
+              project,
+              sprints: projectSprints.map((sprint) => ({
+                ...sprint,
+                projectId: project.id,
+                projectName: project.name,
+              })),
+              tasks: projectTasks.map((task) => ({
+                ...task,
+                projectId: project.id,
+                projectName: project.name,
+              })),
             }
-          })
-        )
-
-        if (!cancelled) {
-          setProjects(projectItems.map((item) => item.project))
-          setSprints(projectItems.flatMap((item) => item.sprints))
-          setTasks(projectItems.flatMap((item) => item.tasks))
-        }
-
-        if (user?.role === "admin") {
-          const directory = await getUsersDirectory()
-          if (!cancelled) {
-            setUsers(directory)
+          } catch {
+            return {
+              project,
+              sprints: [] as SearchSprint[],
+              tasks: [] as SearchTask[],
+            }
           }
-        } else if (!cancelled) {
-          setUsers([])
-        }
-      } catch (error) {
-        console.error("Error loading global search data:", error)
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
-        }
+        })
+      )
+
+      setProjects(projectItems.map((item) => item.project))
+      setSprints(projectItems.flatMap((item) => item.sprints))
+      setTasks(projectItems.flatMap((item) => item.tasks))
+
+      if (user?.role === "admin") {
+        const directory = await getUsersDirectory()
+        setUsers(directory)
+      } else {
+        setUsers([])
       }
-    }
-
-    void loadSearchData()
-
-    return () => {
-      cancelled = true
+    } catch (error) {
+      console.error("Error loading global search data:", error)
+      hasLoadedRef.current = false // permite reintentar en el proximo focus si fallo
+    } finally {
+      setIsLoading(false)
     }
   }, [user?.role])
 
@@ -314,8 +307,12 @@ export default function GlobalSearchBar() {
           onChange={(event) => {
             setQuery(event.target.value)
             setIsOpen(true)
+            void ensureSearchData()
           }}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            setIsOpen(true)
+            void ensureSearchData()
+          }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="h-auto border-0 bg-transparent px-0 py-0 text-sm shadow-none focus-visible:ring-0"
