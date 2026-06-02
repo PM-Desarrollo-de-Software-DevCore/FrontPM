@@ -22,6 +22,11 @@ export interface User {
   lastname: string
   role: UserRole
   avatar?: string
+  // skill/área/foto NO vienen en /auth/me; el AuthProvider los enriquece desde
+  // /users (la única fuente del backend) una sola vez al iniciar la sesión.
+  skill?: string | null
+  area?: string | null
+  profileImageUrl?: string | null
 }
 
 export interface AuthResponse {

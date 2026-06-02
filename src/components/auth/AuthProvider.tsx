@@ -17,6 +17,28 @@ import {
   logout as logoutUser,
 } from '@/lib/auth'
 import { AuthContext, AuthContextValue } from '@/hooks/useAuth'
+import { getUserProfileDetails } from '@/services/userService'
+
+/*
+skill/área/foto NO vienen en /auth/me. La única fuente del backend es GET /users
+(el front filtra por id). Lo hacemos UNA vez aquí —no por página— para que estos
+campos vivan en la sesión compartida y estable, en vez de en un fetch por página
+que se re-ejecuta/cancela con la red inestable. Si /users falla, conservamos la
+sesión básica (name/email/role) y skill/área quedan sin definir.
+*/
+async function enrichUserWithProfile(baseUser: User): Promise<User> {
+  try {
+    const details = await getUserProfileDetails(baseUser.id)
+    return {
+      ...baseUser,
+      skill: details.skill,
+      area: details.area,
+      profileImageUrl: details.profileImageUrl,
+    }
+  } catch {
+    return baseUser
+  }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -38,8 +60,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const currentUser = await getCurrentUser()
         if (!cancelled && currentUser) {
+          // Sesión básica primero (name/email/role) para no bloquear el ruteo.
           setUser(currentUser)
           setIsAuthenticated(true)
+          // Luego enriquecemos con skill/área/foto desde /users.
+          const enriched = await enrichUserWithProfile(currentUser)
+          if (!cancelled) setUser(enriched)
         }
       } catch (err) {
         console.error('Error verificando usuario:', err)
@@ -72,6 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setUser(currentUser)
         setIsAuthenticated(true)
+        // Enriquecer skill/área/foto en segundo plano: no bloquea el redirect.
+        enrichUserWithProfile(currentUser)
+          .then((enriched) => setUser(enriched))
+          .catch(() => {})
         return {
           success: true,
           redirectTo: getDashboardRouteByRole(currentUser.role),

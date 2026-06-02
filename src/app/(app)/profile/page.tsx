@@ -253,11 +253,14 @@ export default function ProfileDashboard() {
     };
   }, [user?.id]);
 
+  // skill/área/foto salen del perfil cargado por página si está; si ese fetch
+  // parpadea/se cancela con la red inestable, caen a la sesión enriquecida
+  // (estable, obtenida una vez por el AuthProvider). Así siempre se muestran.
   const displayName = profile ? `${profile.name} ${profile.lastname}`.trim() : `${user?.name ?? ""} ${user?.lastname ?? ""}`.trim();
   const email = profile?.email ?? user?.email ?? "Sin correo disponible";
-  const avatarSrc = profile?.profileImageUrl ?? user?.avatar ?? "/images/persona.png";
-  const mainSkill = profile?.skill?.trim() || "No definida";
-  const areaList = splitValues(profile?.area);
+  const avatarSrc = profile?.profileImageUrl ?? user?.profileImageUrl ?? user?.avatar ?? "/images/persona.png";
+  const mainSkill = (profile?.skill ?? user?.skill)?.trim() || "No definida";
+  const areaList = splitValues(profile?.area ?? user?.area);
   const technologyNames = technologies.map((item) => item.technology.trim()).filter(Boolean);
   const isAdmin = user?.role === "admin"
 
