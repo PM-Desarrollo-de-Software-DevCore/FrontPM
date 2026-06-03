@@ -2,14 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card/card"
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  ChartOptions,
-  Plugin,
-} from "chart.js"
-import { Doughnut } from "react-chartjs-2"
+import dynamic from "next/dynamic"
 import { Check, Flag } from "lucide-react"
 import {
   type BackendProject,
@@ -27,7 +20,11 @@ import {
   getUsers,
 } from "@/services/milestonesService"
 
-ChartJS.register(ArcElement, Tooltip)
+// Code-splitting: el doughnut (chart.js) se carga bajo demanda, fuera del bundle inicial de /milestones.
+const SprintProgressChart = dynamic(() => import("@/components/ui/graphs/SprintProgressChart"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full min-h-[160px] animate-pulse rounded-full bg-slate-100" />,
+})
 
 type FrontProjectStatus = "Planning" | "In Progress" | "Completed"
 type FrontProjectPriority = "High" | "Medium" | "Low"
@@ -294,64 +291,7 @@ function toProjectView(
   }
 }
 
-function SprintProgressChart({ sprint }: { sprint: MilestoneSprint }) {
-  const data = {
-    labels: ["Complete", "Remaining"],
-    datasets: [
-      {
-        data: [sprint.progress, 100 - sprint.progress],
-        backgroundColor: ["#2563eb", "#e5e7eb"],
-        borderWidth: 0,
-      },
-    ],
-  }
-
-  const options: ChartOptions<"doughnut"> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    cutout: "68%",
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        backgroundColor: "#ffffff",
-        titleColor: "#0f172a",
-        bodyColor: "#1f2937",
-        borderColor: "#cbd5e1",
-        borderWidth: 1,
-        padding: 10,
-        callbacks: {
-          label(context) {
-            return `${context.parsed}%`
-          },
-        },
-      },
-    },
-  }
-
-  const percentagePlugin: Plugin<"doughnut"> = {
-    id: "textCenter",
-    beforeDatasetsDraw(chart) {
-      const { ctx, width, height } = chart
-      ctx.save()
-
-      ctx.font = "bold 28px Arial"
-      ctx.textAlign = "center"
-      ctx.textBaseline = "middle"
-      ctx.fillStyle = "#0f172a"
-      ctx.fillText(`${sprint.progress}%`, width / 2, height / 2)
-
-      ctx.font = "14px Arial"
-      ctx.fillStyle = "#64748b"
-      ctx.fillText("Progress", width / 2, height / 2 + 25)
-
-      ctx.restore()
-    },
-  }
-
-  return <Doughnut data={data} options={options} plugins={[percentagePlugin]} />
-}
+// SprintProgressChart se movió a components/ui/graphs/SprintProgressChart.tsx (lazy-loaded)
 
 function ProjectButton({
   project,
