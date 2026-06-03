@@ -13,11 +13,9 @@ import {
 } from "@/services/assignmentSuggestionService";
 import { getNonAdminUsers, UserOption } from "@/services/userService";
 import {
-  addProjectMember,
   getProjectMembers,
   ProjectMemberRole,
-  removeProjectMember,
-  updateProjectMemberRole,
+  syncProjectMembers,
 } from "@/services/memberService";
 
 interface CreateProjectModalProps {
@@ -382,19 +380,23 @@ export default function CreateProjectModal({
           return Boolean(currentRole) && currentRole !== user.projectRole;
         });
 
-        // Escrituras de miembros en paralelo (antes: 3 bucles for...of await en serie).
-        // allSettled preserva el conteo de fallos sin abortar las demás operaciones.
-        const memberOps: Promise<void>[] = [
-          ...toAdd.map((member) => addProjectMember(project.id, member.id, member.projectRole)),
-          ...toUpdateRole.map((member) => updateProjectMemberRole(project.id, member.id, member.projectRole)),
-          ...toRemove.map((member) => removeProjectMember(project.id, member.userId)),
-        ];
-        const memberResults = await Promise.allSettled(memberOps);
-        const failedMemberOps = memberResults.filter((result) => result.status === "rejected").length;
+        // Sincronización transaccional de miembros (todo o nada) en UNA request.
+        let memberSyncFailed = false;
+        if (toAdd.length || toUpdateRole.length || toRemove.length) {
+          try {
+            await syncProjectMembers(project.id, {
+              add: toAdd.map((member) => ({ userId: member.id, role: member.projectRole })),
+              update: toUpdateRole.map((member) => ({ userId: member.id, role: member.projectRole })),
+              remove: toRemove.map((member) => member.userId),
+            });
+          } catch {
+            memberSyncFailed = true;
+          }
+        }
 
-        if (failedMemberOps > 0) {
+        if (memberSyncFailed) {
           setMemberSyncWarning(
-            "El proyecto se actualizo, pero algunos miembros no pudieron sincronizarse."
+            "El proyecto se actualizo, pero los miembros no pudieron sincronizarse."
           );
         } else {
           setInitialMembers(
@@ -412,7 +414,7 @@ export default function CreateProjectModal({
           ),
         });
 
-        if (failedMemberOps === 0) {
+        if (!memberSyncFailed) {
           closeModal();
         }
 
@@ -422,15 +424,23 @@ export default function CreateProjectModal({
       // Crear el proyecto usando el endpoint
       const newProject = await createProject(projectPayload);
 
-      // Altas de miembros en paralelo (antes: bucle for...of await en serie).
-      const memberResults = await Promise.allSettled(
-        selectedUsers.map((member) => addProjectMember(newProject.id, member.id, member.projectRole))
-      );
-      const failedMemberOps = memberResults.filter((result) => result.status === "rejected").length;
+      // Altas de miembros en UNA request transaccional.
+      let memberSyncFailed = false;
+      if (selectedUsers.length > 0) {
+        try {
+          await syncProjectMembers(newProject.id, {
+            add: selectedUsers.map((member) => ({ userId: member.id, role: member.projectRole })),
+            update: [],
+            remove: [],
+          });
+        } catch {
+          memberSyncFailed = true;
+        }
+      }
 
-      if (failedMemberOps > 0) {
+      if (memberSyncFailed) {
         setMemberSyncWarning(
-          "El proyecto se creo, pero algunos miembros no pudieron agregarse."
+          "El proyecto se creo, pero los miembros no pudieron agregarse."
         );
       }
 
