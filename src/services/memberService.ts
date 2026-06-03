@@ -86,6 +86,32 @@ export async function getAllProjectMembers(): Promise<Record<string, ProjectMemb
   return grouped;
 }
 
+export interface MemberSyncOp {
+  userId: string;
+  role: ProjectMemberRole;
+}
+
+export interface MemberSyncPayload {
+  add: MemberSyncOp[];
+  update: MemberSyncOp[];
+  remove: string[];
+}
+
+// Sincroniza altas/cambios de rol/bajas en UNA request transaccional (todo o nada),
+// en vez de un request por operación. El backend revierte todo si algo falla.
+export async function syncProjectMembers(projectId: string, payload: MemberSyncPayload): Promise<void> {
+  const response = await fetch(`${API_URL}/projects/${projectId}/members/sync`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || "No se pudieron sincronizar los miembros del proyecto");
+  }
+}
+
 export async function addProjectMember(
   projectId: string,
   userId: string,
