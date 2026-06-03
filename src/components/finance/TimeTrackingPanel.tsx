@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react"
 import { ProjectTimeSummary } from "@/types/finance"
 import { Task } from "@/types/task"
 import { createTimeEntry, getProjectTimeSummary } from "@/services/timeEntryService"
-import { getProjectMembers } from "@/services/userService"
+import { getUsersDirectory } from "@/services/userService"
 import { getProjectTasks } from "@/services/taskService"
 import { getToken } from "@/lib/auth"
 import { formatNumber } from "@/lib/utils"
@@ -45,9 +45,11 @@ export default function TimeTrackingPanel({ projectId }: { projectId: string }) 
 
     try {
       const token = getToken() || ""
+      // Nombres desde el directorio cacheado/prefetcheado (antes: userService.getProjectMembers
+      // hacía /members + /users solo para el mapa de nombres).
       const [timeSummary, users, taskList] = await Promise.all([
         getProjectTimeSummary(projectId),
-        getProjectMembers(projectId).catch(() => []),
+        getUsersDirectory().catch(() => []),
         getProjectTasks(projectId, token).catch(() => [] as Task[]),
       ])
 

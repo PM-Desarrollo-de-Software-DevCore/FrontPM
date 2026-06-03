@@ -5,7 +5,7 @@ import { Pencil } from "lucide-react"
 
 import { ProjectMemberFinance } from "@/types/finance"
 import { getProjectFinanceMembers } from "@/services/financeMembersService"
-import { getProjectMembers } from "@/services/userService"
+import { getUsersDirectory } from "@/services/userService"
 import { useProjectRole } from "@/hooks/useProjectRole"
 import { formatMoney, formatNumber } from "@/lib/utils"
 import MemberRateModal from "@/components/finance/MemberRateModal"
@@ -30,9 +30,11 @@ export default function TeamRatesPanel({ projectId }: { projectId: string }) {
     setError(null)
 
     try {
+      // Nombres desde el directorio cacheado/prefetcheado (antes: userService.getProjectMembers
+      // hacía /members + /users redundantes; getProjectFinanceMembers ya trae los miembros).
       const [financeMembers, users] = await Promise.all([
         getProjectFinanceMembers(projectId),
-        getProjectMembers(projectId).catch(() => []),
+        getUsersDirectory().catch(() => []),
       ])
 
       const nameMap: Record<string, string> = {}

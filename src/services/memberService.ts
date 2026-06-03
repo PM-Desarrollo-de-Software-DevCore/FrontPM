@@ -27,26 +27,62 @@ export async function getProjectMemberIds(projectId: string): Promise<string[]> 
   return members.map((member) => member.userId);
 }
 
-export async function getProjectMembers(projectId: string): Promise<ProjectMember[]> {
-  const response = await fetch(`${API_URL}/projects/${projectId}/members`, {
-    method: "GET",
-    headers: getAuthHeaders(),
-    cache: "no-store",
-  });
+// Caché + dedup in-flight por-proyecto de los miembros. useProjectRole (en cada panel
+// de finanzas) y otros consumidores piden /projects/:id/members repetidamente; con esto
+// comparten 1 request por proyecto. Se invalida en cada mutación de miembros (abajo).
+const PROJECT_MEMBERS_TTL_MS = 30_000;
+const projectMembersCache = new Map<string, { data: ProjectMember[]; ts: number }>();
+const projectMembersInflight = new Map<string, Promise<ProjectMember[]>>();
 
-  if (!response.ok) {
-    throw new Error("No se pudieron obtener los miembros del proyecto");
+export function invalidateProjectMembersCache(projectId?: string): void {
+  if (projectId) {
+    projectMembersCache.delete(projectId);
+    projectMembersInflight.delete(projectId);
+  } else {
+    projectMembersCache.clear();
+    projectMembersInflight.clear();
+  }
+}
+
+export async function getProjectMembers(projectId: string): Promise<ProjectMember[]> {
+  const cached = projectMembersCache.get(projectId);
+  if (cached && Date.now() - cached.ts < PROJECT_MEMBERS_TTL_MS) {
+    return cached.data;
+  }
+  const inflight = projectMembersInflight.get(projectId);
+  if (inflight) {
+    return inflight;
   }
 
-  const data = await response.json();
-  const members = Array.isArray(data) ? data : data.data || [];
+  const promise = (async () => {
+    const response = await fetch(`${API_URL}/projects/${projectId}/members`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+      cache: "no-store",
+    });
 
-  return (members as MemberRecord[])
-    .filter((member) => Boolean(member.id_user))
-    .map((member) => ({
-      userId: member.id_user as string,
-      role: member.role ?? "developer",
-    }));
+    if (!response.ok) {
+      throw new Error("No se pudieron obtener los miembros del proyecto");
+    }
+
+    const data = await response.json();
+    const raw = Array.isArray(data) ? data : data.data || [];
+    const members = (raw as MemberRecord[])
+      .filter((member) => Boolean(member.id_user))
+      .map((member) => ({
+        userId: member.id_user as string,
+        role: member.role ?? "developer",
+      }));
+    projectMembersCache.set(projectId, { data: members, ts: Date.now() });
+    return members;
+  })();
+
+  projectMembersInflight.set(projectId, promise);
+  try {
+    return await promise;
+  } finally {
+    projectMembersInflight.delete(projectId);
+  }
 }
 
 interface BulkMemberRecord {
@@ -110,6 +146,8 @@ export async function syncProjectMembers(projectId: string, payload: MemberSyncP
     const error = await response.json().catch(() => ({}));
     throw new Error(error.message || "No se pudieron sincronizar los miembros del proyecto");
   }
+
+  invalidateProjectMembersCache(projectId);
 }
 
 export async function addProjectMember(
@@ -127,6 +165,8 @@ export async function addProjectMember(
     const error = await response.json().catch(() => ({}));
     throw new Error(error.message || "No se pudo agregar miembro al proyecto");
   }
+
+  invalidateProjectMembersCache(projectId);
 }
 
 export async function removeProjectMember(projectId: string, userId: string): Promise<void> {
@@ -139,6 +179,8 @@ export async function removeProjectMember(projectId: string, userId: string): Pr
     const error = await response.json().catch(() => ({}));
     throw new Error(error.message || "No se pudo eliminar miembro del proyecto");
   }
+
+  invalidateProjectMembersCache(projectId);
 }
 
 export async function updateProjectMemberRole(
@@ -156,4 +198,6 @@ export async function updateProjectMemberRole(
     const error = await response.json().catch(() => ({}));
     throw new Error(error.message || "No se pudo actualizar rol del miembro");
   }
+
+  invalidateProjectMembersCache(projectId);
 }
