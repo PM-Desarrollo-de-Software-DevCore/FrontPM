@@ -85,7 +85,8 @@ export default function FramedAvatar({
             alt={`${alt} frame`}
             fill
             sizes={`${size + 16}px`}
-            priority
+            priority={priority}
+            loading={priority ? undefined : "lazy"}
             className="object-contain"
           />
         </div>

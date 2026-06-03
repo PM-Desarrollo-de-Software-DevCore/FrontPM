@@ -6,8 +6,15 @@ import { AlertTriangle, CheckCircle2, Info } from "lucide-react"
 import { FinancialSummary } from "@/types/finance"
 import { getFinancialSummary } from "@/services/financeSummaryService"
 import { formatMoney, formatNumber } from "@/lib/utils"
-import GaugeChart from "@/components/ui/graphs/GaugeChart"
-import BurnChart from "@/components/ui/graphs/BurnChart"
+import dynamic from "next/dynamic"
+const GaugeChart = dynamic(() => import("@/components/ui/graphs/GaugeChart"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" />,
+})
+const BurnChart = dynamic(() => import("@/components/ui/graphs/BurnChart"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" />,
+})
 
 const BILLING_LABELS: Record<string, string> = {
   fixed_price: "Precio fijo",

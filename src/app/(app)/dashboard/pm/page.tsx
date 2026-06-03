@@ -1,9 +1,14 @@
-import TaskChart from "@/components/ui/graphs/TaskChart"
-import DonutChart from "@/components/ui/graphs/DonutChart"
+"use client"
+
+import dynamic from "next/dynamic"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card/card"
-import ProgressChart from "@/components/ui/graphs/ProgressChart"
 import TotalProgress from "@/components/ui/graphs/totalProgress"
 import ProjectCard from "@/components/ui/graphs/project_dash"
+
+// Code-splitting: los charts (chart.js) salen del bundle inicial de la ruta.
+const TaskChart = dynamic(() => import("@/components/ui/graphs/TaskChart"), { ssr: false, loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" /> })
+const DonutChart = dynamic(() => import("@/components/ui/graphs/DonutChart"), { ssr: false, loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" /> })
+const ProgressChart = dynamic(() => import("@/components/ui/graphs/ProgressChart"), { ssr: false, loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" /> })
 
 
 export default function DashboardPage() {
