@@ -60,12 +60,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const currentUser = await getCurrentUser()
         if (!cancelled && currentUser) {
-          // Sesión básica primero (name/email/role) para no bloquear el ruteo.
+          // Sesión básica primero (name/email/role): basta para rutear y renderizar.
           setUser(currentUser)
           setIsAuthenticated(true)
-          // Luego enriquecemos con skill/área/foto desde /users.
-          const enriched = await enrichUserWithProfile(currentUser)
-          if (!cancelled) setUser(enriched)
+          // Enriquecer skill/área/foto desde /users en SEGUNDO PLANO: NO bloquea
+          // isLoading (igual que en login()). Antes se hacía `await` aquí, así que
+          // "Loading session" esperaba /auth/me + /users (2 round-trips a Render).
+          enrichUserWithProfile(currentUser)
+            .then((enriched) => { if (!cancelled) setUser(enriched) })
+            .catch(() => {})
         }
       } catch (err) {
         console.error('Error verificando usuario:', err)
