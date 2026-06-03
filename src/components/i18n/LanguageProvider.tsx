@@ -11,8 +11,14 @@ type LanguageContextValue = {
 };
 
 const STORAGE_KEY = "app-language";
+// Texto fuente (idioma base) por nodo. Se refresca cuando React reescribe el nodo
+// con contenido nuevo (p.ej. un botón que pasa de "Create User" a "Save Changes").
 const textNodeOriginalValues = new WeakMap<Text, string>();
+// Última traducción que ESTE provider escribió en el nodo. Permite distinguir un
+// cambio hecho por React (texto fuente nuevo) de uno hecho por nosotros (traducción).
+const textNodeTranslatedValues = new WeakMap<Text, string>();
 const attributeOriginalValues = new WeakMap<HTMLElement, Map<string, string>>();
+const attributeTranslatedValues = new WeakMap<HTMLElement, Map<string, string>>();
 
 const esToEnEntries: Array<[string, string]> = [
   ["Cargando sesión", "Loading session"],
@@ -73,7 +79,7 @@ const esToEnEntries: Array<[string, string]> = [
   ["Sin correo disponible", "No email available"],
   ["No definida", "Not defined"],
   ["Habilidad principal", "Main skill"],
-  ["Area", "Area"],
+  ["Área", "Area"],
   ["No se pudo cargar el perfil", "Could not load profile"],
   ["registradas", "registered"],
   ["No hay habilidades registradas todavía.", "No skills registered yet."],
@@ -147,6 +153,11 @@ const esToEnEntries: Array<[string, string]> = [
   ["Contraseña", "Password"],
   ["Áreas de designación", "Designation Areas"],
   ["Habilidades", "Skills"],
+  ["Editar perfil", "Edit Profile"],
+  ["Eliminar usuario", "Delete User"],
+  ["Subir CV", "Upload CV"],
+  ["Alfabético: A-Z", "Alphabetical: A-Z"],
+  ["Alfabético: Z-A", "Alphabetical: Z-A"],
   ["Crear usuario", "Create User"],
   ["Agregar", "Add"],
   ["Solo PDF. Extraerá tu información y completará automáticamente el formulario.", "PDF only. It will extract your information and auto-fill the form."],
@@ -180,9 +191,9 @@ const esToEnEntries: Array<[string, string]> = [
   ["Precio fijo", "Fixed price"],
   ["Retención mensual", "Monthly retainer"],
   ["Tiempo y materiales", "Time and materials"],
-  ["Save Changes", "Guardar cambios"],
-  ["Saving...", "Guardando..."],
-  ["Creating...", "Creando..."],
+  ["Guardar cambios", "Save Changes"],
+  ["Guardando...", "Saving..."],
+  ["Creando...", "Creating..."],
   ["Crear contraseña", "Create password"],
   ["Cambiar contraseña", "Change password"],
   ["Procesando CV...", "Processing CV..."],
@@ -231,7 +242,7 @@ const esToEnEntries: Array<[string, string]> = [
   ["Descripción del proyecto", "Project Description"],
   ["Objetivo del proyecto", "Project Objective"],
   ["Prioridad", "Priority"],
-  ["Estatus", "Status"],
+  ["Estado", "Status"],
   ["Sugerencias inteligentes de miembros", "Smart member suggestions"],
   ["Clasificados por adecuación de habilidades y tareas completadas", "Ranked by skill fit and completed tasks"],
   ["Poner en marcha un portal central para la incorporación de clientes", "Launch a central portal for customer onboarding"],
@@ -254,6 +265,7 @@ const esToEnEntries: Array<[string, string]> = [
   // Módulo de Finanzas (PM-139)
   ["Finanzas", "Finance"],
   ["Resumen", "Summary"],
+  ["Reporte", "Report"],
   ["KPIs financieros, EVM y reporte del proyecto.", "Financial KPIs, EVM and project report."],
   ["Burn acumulado", "Cumulative burn"],
   ["Costo estimado acumulado", "Cumulative estimated cost"],
@@ -354,6 +366,7 @@ const esToEnEntries: Array<[string, string]> = [
   ["No hay facturas registradas.", "No invoices recorded."],
   ["¿Eliminar esta factura?", "Delete this invoice?"],
   ["Concepto (opcional)", "Concept (optional)"],
+  ["Concepto", "Concept"],
   ["Emisión", "Issued"],
   ["Fecha de emisión", "Issue date"],
   ["Selecciona la fecha de emisión.", "Select the issue date."],
@@ -362,27 +375,27 @@ const esToEnEntries: Array<[string, string]> = [
   ["Fin del período (opcional)", "Period end (optional)"],
   ["Kanban", "Kanban"],
   ["Vista general por estado", "General view by status"],
-  ["Timeline", "Timeline"],
+  ["Cronología", "Timeline"],
   ["Gantt simplificado", "Simplified Gantt"],
-  ["Scrum board", "Scrum board"],
+  ["Tablero Scrum", "Scrum board"],
   ["Lista por sprint", "List by sprint"],
-  ["Table view", "Table view"],
+  ["Vista de tabla", "Table view"],
   ["Filtros y detalle", "Filters and details"],
-  ["Calendar", "Calendar"],
+  ["Vista de calendario", "Calendar"],
   ["Mes actual navegable", "Navigable current month"],
   ["Roadmap", "Roadmap"],
   ["Planificación y workload", "Planning and workload"],
   ["Vista tipo Gantt simplificada sin overflow horizontal.", "Simplified Gantt view without horizontal overflow."],
-  ["Task Details", "Task details"],
-  ["Priority", "Priority"],
-  ["Status", "Status"],
-  ["Due Date", "Due date"],
-  ["Progress", "Progress"],
-  ["Assign User", "Assign user"],
-  ["Select user", "Select user"],
-  ["Confirm", "Confirm"],
-  ["Description", "Description"],
-  ["User assigned successfully.", "User assigned successfully."],
+  ["Detalles de tarea", "Task Details"],
+  ["Fecha de vencimiento", "Due Date"],
+  ["Progreso", "Progress"],
+  ["Asignar usuario", "Assign User"],
+  ["Seleccionar usuario", "Select user"],
+  ["Aceptar", "Confirm"],
+  ["Descripción", "Description"],
+  ["Usuario asignado correctamente.", "User assigned successfully."],
+  ["Comentarios", "Comments"],
+  ["Sin descripción disponible.", "No description available."],
   ["Anterior", "Previous"],
   ["Siguiente", "Next"],
   ["Hoy", "Today"],
@@ -403,7 +416,12 @@ const esToEnEntries: Array<[string, string]> = [
 
 ];
 
-const enToEsEntries: Array<[string, string]> = esToEnEntries.map(([es, en]) => [en, es]);
+// No revertir pares donde el inglés es substring del español (Report⊂Reporte, Concept⊂Concepto):
+// al aplicar en->es sobre el texto fuente en español, el reemplazo por substring duplicaría la
+// cola ("Reportee"/"Conceptoo"). El sentido es->en (inglés es el default) sí los traduce.
+const enToEsEntries: Array<[string, string]> = esToEnEntries
+  .filter(([es, en]) => !es.includes(en))
+  .map(([es, en]) => [en, es]);
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
@@ -452,15 +470,21 @@ function translateDom(language: Language) {
   }
 
   textNodes.forEach((node) => {
-    if (!textNodeOriginalValues.has(node)) {
-      textNodeOriginalValues.set(node, node.nodeValue || "");
+    const current = node.nodeValue || "";
+
+    // Si el valor actual no es la última traducción que escribimos, el texto fuente
+    // cambió (React re-renderizó el nodo) → re-cachear el original. Sin esto, un nodo
+    // reutilizado por React queda congelado en la traducción de su primer valor.
+    if (current !== textNodeTranslatedValues.get(node)) {
+      textNodeOriginalValues.set(node, current);
     }
 
-    const source = textNodeOriginalValues.get(node) || node.nodeValue || "";
+    const source = textNodeOriginalValues.get(node) ?? current;
     const translated = translateText(source, language);
     if (translated !== node.nodeValue) {
       node.nodeValue = translated;
     }
+    textNodeTranslatedValues.set(node, translated);
   });
 
   const attributesToTranslate: Array<"placeholder" | "title" | "aria-label"> = [
@@ -477,21 +501,28 @@ function translateDom(language: Language) {
     if (!attributeOriginalValues.has(element)) {
       attributeOriginalValues.set(element, new Map());
     }
+    if (!attributeTranslatedValues.has(element)) {
+      attributeTranslatedValues.set(element, new Map());
+    }
 
     const elementOriginals = attributeOriginalValues.get(element)!;
+    const elementTranslated = attributeTranslatedValues.get(element)!;
 
     attributesToTranslate.forEach((attribute) => {
       const current = element.getAttribute(attribute);
       if (!current) return;
 
-      if (!elementOriginals.has(attribute)) {
+      // Mismo criterio que los nodos de texto: si el atributo no es lo que
+      // tradujimos por última vez, React lo cambió → re-cachear el original.
+      if (current !== elementTranslated.get(attribute)) {
         elementOriginals.set(attribute, current);
       }
 
-      const translated = translateText(elementOriginals.get(attribute) || current, language);
+      const translated = translateText(elementOriginals.get(attribute) ?? current, language);
       if (translated !== current) {
         element.setAttribute(attribute, translated);
       }
+      elementTranslated.set(attribute, translated);
     });
   });
 }

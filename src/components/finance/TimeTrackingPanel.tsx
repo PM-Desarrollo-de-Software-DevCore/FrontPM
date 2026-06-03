@@ -9,7 +9,11 @@ import { getProjectMembers } from "@/services/userService"
 import { getProjectTasks } from "@/services/taskService"
 import { getToken } from "@/lib/auth"
 import { formatNumber } from "@/lib/utils"
-import HoursBarChart from "@/components/ui/graphs/HoursBarChart"
+import dynamic from "next/dynamic"
+const HoursBarChart = dynamic(() => import("@/components/ui/graphs/HoursBarChart"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" />,
+})
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (

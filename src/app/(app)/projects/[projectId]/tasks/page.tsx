@@ -11,7 +11,13 @@ import CreateSprintModal from "@/components/sprints/CreateSprintModal"
 import CreateTaskModal from "@/components/tasks/CreateTaskModal"
 import ProjectReportModal from "@/components/tasks/ProjectReportModal"
 import TaskDetailsModal from "@/components/tasks/TaskDetailsModal"
-import TaskWorkspaceViews from "@/components/tasks/TaskWorkspaceViews"
+import dynamic from "next/dynamic"
+// Code-splitting: el workspace de tareas arrastra @hello-pangea/dnd (~1.2MB).
+// Se carga bajo demanda (no en el bundle inicial de la ruta) con un skeleton.
+const TaskWorkspaceViews = dynamic(() => import("@/components/tasks/TaskWorkspaceViews"), {
+  ssr: false,
+  loading: () => <div className="min-h-[400px] w-full animate-pulse rounded-2xl bg-slate-100" />,
+})
 import { useNotification } from "@/components/ui/notifications/NotificationProvider"
 
 import { getProjectById, getProjects } from "@/services/projectService"
@@ -129,28 +135,10 @@ export default function TasksPage() {
   }, [notifyError, resolvedProjectId, token])
 
   useEffect(() => {
-    if (!token || !resolvedProjectId) {
-      return
-    }
-
-    const initializeData = async () => {
-      try {
-        const [taskData, sprintData, memberData] = await Promise.all([
-          getProjectTasks(resolvedProjectId, token),
-          getProjectSprints(resolvedProjectId, token),
-          getProjectMembers(resolvedProjectId),
-        ])
-
-        setTasks(taskData)
-        setSprints(sprintData)
-        setUsers(memberData)
-      } catch {
-        notifyError("Data could not be loaded", "Please try again.")
-      }
-    }
-
-    void initializeData()
-  }, [notifyError, resolvedProjectId, token])
+    // Reusa loadData (mismo batch de tasks+sprints+members) en lugar de duplicar
+    // la logica de fetch en el montaje. loadData ya valida token/resolvedProjectId.
+    void loadData()
+  }, [loadData])
 
   const requestedTaskId = searchParams.get("taskId")
   const requestedSprintId = searchParams.get("sprintId")

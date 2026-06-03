@@ -4,8 +4,9 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card/card"
 import TotalProgress from "@/components/ui/graphs/user_projectProg"
 import ProjectCard from "@/components/ui/graphs/user_task"
-import Bugs from "@/components/ui/graphs/user_bugs"
-import WeeklyProg from "@/components/ui/graphs/user_weekProg"
+import dynamic from "next/dynamic"
+const Bugs = dynamic(() => import("@/components/ui/graphs/user_bugs"), { ssr: false, loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" /> })
+const WeeklyProg = dynamic(() => import("@/components/ui/graphs/user_weekProg"), { ssr: false, loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" /> })
 import Filters from "@/components/ui/filters/filters"
 import Overdue from "@/components/ui/graphs/overdue"
 

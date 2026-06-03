@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card/card"
-import HoursChart from "@/components/ui/graphs/hours_perTM"
-import VelocityChart from "@/components/ui/graphs/velocity"
-import FlowChart from "@/components/ui/graphs/flow"
+import dynamic from "next/dynamic"
+const HoursChart = dynamic(() => import("@/components/ui/graphs/hours_perTM"), { ssr: false, loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" /> })
+const VelocityChart = dynamic(() => import("@/components/ui/graphs/velocity"), { ssr: false, loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" /> })
+const FlowChart = dynamic(() => import("@/components/ui/graphs/flow"), { ssr: false, loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" /> })
 import { CheckCircle2, CheckSquare, Filter, Users } from "lucide-react"
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
 import { getProjects } from "@/services/projectService"

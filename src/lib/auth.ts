@@ -99,43 +99,63 @@ export function getToken(): string | null {
   return localStorage.getItem('authToken')
 }
 
-/* Función para obtener el usuario autenticado | GET /auth/me */
+/* Función para obtener el usuario autenticado | GET /auth/me
+ * Reintenta ante errores de red o 5xx (blips de Render) para que la sesión se
+ * obtenga de forma confiable en redes inestables. NO reintenta en 401 (token
+ * inválido) ni borra el token salvo en ese caso. */
 export async function getCurrentUser(): Promise<User | null> {
-  try {
-    const token = getToken()
+  const token = getToken()
 
-    if (!token) {
-      return null
-    }
-
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
-      method: 'GET',
-
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    })
-
-    if (!response.ok) {
-      localStorage.removeItem('authToken')
-      return null
-    }
-
-    const data: BackendMeResponse = await response.json()
-
-    if (!data.success || !data.data) {
-      return null
-    }
-
-    return {
-      ...data.data,
-      role: normalizeUserRole(data.data.role),
-    }
-  } catch (error) {
-    console.error('Error obtenido usuario:', error)
+  if (!token) {
     return null
   }
+
+  const maxAttempts = 3
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.status === 401) {
+        // Token rechazado por el servidor: invalidar sesión, sin reintentar.
+        localStorage.removeItem('authToken')
+        return null
+      }
+
+      if (!response.ok) {
+        // 5xx u otro: probablemente un blip; reintentar antes de rendirse.
+        if (attempt === maxAttempts) return null
+        await new Promise((resolve) => setTimeout(resolve, 600 * attempt))
+        continue
+      }
+
+      const data: BackendMeResponse = await response.json()
+
+      if (!data.success || !data.data) {
+        return null
+      }
+
+      return {
+        ...data.data,
+        role: normalizeUserRole(data.data.role),
+      }
+    } catch (error) {
+      // Error de red (Failed to fetch): reintentar; el token se conserva.
+      if (attempt === maxAttempts) {
+        console.error('Error obtenido usuario:', error)
+        return null
+      }
+      await new Promise((resolve) => setTimeout(resolve, 600 * attempt))
+    }
+  }
+
+  return null
 }
 
 /* Función para cerrar sesión */
