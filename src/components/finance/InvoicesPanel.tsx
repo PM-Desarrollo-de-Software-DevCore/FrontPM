@@ -7,7 +7,11 @@ import { Invoice, InvoiceStatus, InvoiceSummary } from "@/types/finance"
 import { deleteInvoice, getProjectInvoices } from "@/services/invoiceService"
 import { useProjectRole } from "@/hooks/useProjectRole"
 import { formatDate, formatMoney } from "@/lib/utils"
-import GaugeChart from "@/components/ui/graphs/GaugeChart"
+import dynamic from "next/dynamic"
+const GaugeChart = dynamic(() => import("@/components/ui/graphs/GaugeChart"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" />,
+})
 import InvoiceFormModal from "@/components/finance/InvoiceFormModal"
 
 const STATUS_LABELS: Record<InvoiceStatus, string> = {

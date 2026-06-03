@@ -11,7 +11,13 @@ import CreateSprintModal from "@/components/sprints/CreateSprintModal"
 import CreateTaskModal from "@/components/tasks/CreateTaskModal"
 import ProjectReportModal from "@/components/tasks/ProjectReportModal"
 import TaskDetailsModal from "@/components/tasks/TaskDetailsModal"
-import TaskWorkspaceViews from "@/components/tasks/TaskWorkspaceViews"
+import dynamic from "next/dynamic"
+// Code-splitting: el workspace de tareas arrastra @hello-pangea/dnd (~1.2MB).
+// Se carga bajo demanda (no en el bundle inicial de la ruta) con un skeleton.
+const TaskWorkspaceViews = dynamic(() => import("@/components/tasks/TaskWorkspaceViews"), {
+  ssr: false,
+  loading: () => <div className="min-h-[400px] w-full animate-pulse rounded-2xl bg-slate-100" />,
+})
 import { useNotification } from "@/components/ui/notifications/NotificationProvider"
 
 import { getProjectById, getProjects } from "@/services/projectService"

@@ -6,7 +6,11 @@ import { Info } from "lucide-react"
 import { AcSource, EvmData } from "@/types/finance"
 import { getProjectEvm } from "@/services/financeSummaryService"
 import { formatMoney, formatNumber } from "@/lib/utils"
-import EvmChart from "@/components/ui/graphs/EvmChart"
+import dynamic from "next/dynamic"
+const EvmChart = dynamic(() => import("@/components/ui/graphs/EvmChart"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" />,
+})
 
 const AC_SOURCE_LABELS: Record<AcSource, string> = {
   logged_hours: "Horas registradas (costo real)",
