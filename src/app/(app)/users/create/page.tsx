@@ -5,7 +5,7 @@ import EditIcon from "@mui/icons-material/Edit"
 import DocumentScannerIcon from "@mui/icons-material/DocumentScanner"
 import { API_BASE_URL, getToken } from "@/lib/auth"
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
-import { deleteUserProfileImage, uploadUserProfileImage } from "@/services/userService"
+import { deleteUserProfileImage, uploadUserProfileImage, getUsersRaw, invalidateUsersCache } from "@/services/userService"
 import { useNotification } from "@/components/ui/notifications/NotificationProvider"
 import { useSearchParams } from "next/navigation"
 
@@ -290,6 +290,9 @@ export default function CreateUserPage() {
           // fallback local
           setUsers((prev) => prev.filter((user) => user.id !== userId))
           if (selectedUserId === userId) resetToCreateMode()
+      } finally {
+        // El directorio cambió: invalidar la caché para que una re-navegación no muestre la lista vieja.
+        invalidateUsersCache()
       }
     }
 
@@ -301,16 +304,13 @@ export default function CreateUserPage() {
     const fetchUsers = async () => {
       setIsLoadingUsers(true)
       try {
-        const token = getToken()
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-        if (token) headers['Authorization'] = `Bearer ${token}`
+        // Directorio cacheado/deduplicado (lo warma <ShellPrefetch/> al montar el shell)
+        // => cache hit instantáneo al navegar aquí. Para admin, /users trae los campos
+        // completos (phoneNumber, area, skill...) que esta página necesita.
+        const data = await getUsersRaw()
+        if (!Array.isArray(data)) return
 
-        const res = await fetch(`${API_BASE_URL}/users`, { headers })
-        if (!res.ok) return
-          const payload: { success?: boolean; data?: BackendUser[] } = await res.json()
-        if (!payload.success || !Array.isArray(payload.data)) return
-
-        const mapped: UserPreview[] = payload.data.map((u: BackendUser, index: number) => ({
+        const mapped: UserPreview[] = data.map((u: BackendUser, index: number) => ({
           id: String(u.id ?? index),
           firstName: u.name || "",
           lastName: u.lastname || "",
@@ -651,6 +651,9 @@ export default function CreateUserPage() {
 
         notifySuccess("User updated", "The user was updated successfully.")
       }
+
+      // El directorio cambió (alta/edición): invalidar la caché para que una re-navegación no muestre datos viejos.
+      invalidateUsersCache()
     } catch {
       // fallback behaviors
       if (formMode === 'create') notifySuccess("User created", "User created locally because the server was unavailable.")

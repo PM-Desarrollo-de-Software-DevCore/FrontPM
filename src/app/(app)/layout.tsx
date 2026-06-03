@@ -2,7 +2,7 @@ import AuthGuard from "@/components/auth/AuthGuard";
 import SideBarLayout from "../Layout/sidebar";
 import Topbar from "../Layout/topbar";
 import ThemeProvider from "@/components/ui/ThemeProvider";
-import LeaderboardPrefetch from "@/components/leaderboard/LeaderboardPrefetch";
+import ShellPrefetch from "@/components/shell/ShellPrefetch";
 
 export default function AppLayout({
   children,
@@ -11,7 +11,7 @@ export default function AppLayout({
 }>) {
   return (
     <AuthGuard>
-      <LeaderboardPrefetch />
+      <ShellPrefetch />
       <Topbar />
       <ThemeProvider>
         <SideBarLayout>{children}</SideBarLayout>
