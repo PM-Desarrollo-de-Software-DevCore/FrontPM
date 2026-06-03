@@ -130,7 +130,7 @@ const USERS_RAW_TTL_MS = 30_000;
 let usersRawCache: { data: any[]; ts: number } | null = null;
 let usersRawInflight: Promise<any[]> | null = null;
 
-async function getUsersRaw(): Promise<any[]> {
+export async function getUsersRaw(): Promise<any[]> {
   if (usersRawCache && Date.now() - usersRawCache.ts < USERS_RAW_TTL_MS) {
     return usersRawCache.data;
   }
@@ -167,6 +167,16 @@ async function getUsersRaw(): Promise<any[]> {
 export function invalidateUsersCache(): void {
   usersRawCache = null;
   usersRawInflight = null;
+}
+
+// Prefetch fire-and-forget del directorio: warma la caché desde el shell de la app
+// para que la lista de usuarios (y otras vistas que usan el directorio) aparezca al
+// instante al navegar, en vez de esperar el round-trip tras la hidratación.
+export function prefetchUsersDirectory(): void {
+  if (!getToken()) return;
+  if (usersRawCache && Date.now() - usersRawCache.ts < USERS_RAW_TTL_MS) return;
+  if (usersRawInflight) return;
+  void getUsersRaw().catch(() => {});
 }
 
 export async function getNonAdminUsers(): Promise<UserOption[]> {
