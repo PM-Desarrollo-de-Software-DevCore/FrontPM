@@ -1,5 +1,7 @@
 import { getToken } from "@/lib/auth";
-import { getProjectTasks } from "@/services/taskService";
+import { getProjectTasks, mapBackendTask } from "@/services/taskService";
+import type { ProjectMember } from "@/services/memberService";
+import type { Task } from "@/types/task";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -80,6 +82,49 @@ export async function getWeeklyVelocitySeries(projectId: string, weeks = 5): Pro
     label: point.weekStart,
     value: point.totalCompleted,
   }));
+}
+
+export interface WorklogOverview {
+  tasks: Task[];
+  members: ProjectMember[];
+  weeklyProgress: WeeklyProgressData;
+  weeklyVelocity: Array<{ label: string; value: number }>;
+}
+
+// 1 request agregada que reemplaza los 4 fetches por-proyecto de la página de worklogs
+// (tasks + members + weekly-progress + weekly-velocity). El directorio de usuarios se
+// pide aparte porque ya está cacheado/prefetcheado.
+export async function getWorklogOverview(projectId: string, weeks = 5): Promise<WorklogOverview> {
+  const params = new URLSearchParams();
+  params.set("projectId", projectId);
+  params.set("weeks", String(weeks));
+
+  const response = await fetch(`${API_URL}/dashboard/worklog-overview?${params.toString()}`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("No se pudo obtener el overview de worklogs");
+  }
+
+  const data = await response.json();
+  const payload = data?.data ?? data;
+
+  return {
+    tasks: (payload?.tasks ?? []).map(mapBackendTask),
+    members: (payload?.members ?? [])
+      .filter((m: { id_user?: string }) => Boolean(m.id_user))
+      .map((m: { id_user: string; role?: ProjectMember["role"] }) => ({
+        userId: m.id_user,
+        role: m.role ?? "developer",
+      })),
+    weeklyProgress: payload?.weeklyProgress,
+    weeklyVelocity: (payload?.weeklyVelocity?.series ?? []).map(
+      (s: { weekStart: string; totalCompleted: number }) => ({ label: s.weekStart, value: s.totalCompleted })
+    ),
+  };
 }
 
 export async function getProjectWorklogTasks(projectId: string) {
