@@ -23,7 +23,7 @@ type BackendTask =
     completedAt?: string | null
   }
 
-function mapBackendTask(
+export function mapBackendTask(
   task: BackendTask
 ): Task {
   return {

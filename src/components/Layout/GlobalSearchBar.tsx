@@ -5,10 +5,8 @@ import { useRouter } from "next/navigation"
 
 import { useAuth } from "@/hooks/useAuth"
 import { getProjects } from "@/services/projectService"
-import { getProjectSprints } from "@/services/sprintService"
-import { getProjectTasks } from "@/services/taskService"
+import { getSearchIndex } from "@/services/searchService"
 import { getUsersDirectory, type UserDirectoryEntry } from "@/services/userService"
-import { getToken } from "@/lib/auth"
 import { Input } from "@/components/ui/topbar/input"
 import type { Project } from "@/types/project"
 import type { Sprint } from "@/types/sprint"
@@ -111,43 +109,23 @@ export default function GlobalSearchBar() {
     try {
       setIsLoading(true)
 
-      const token = getToken()
-      const projectList = await getProjects()
+      // 1 request agregada (search-index) en vez de 2*N (sprints+tasks por proyecto).
+      const [projectList, index] = await Promise.all([getProjects(), getSearchIndex()])
+      const projectNameById = new Map(projectList.map((project) => [project.id, project.name]))
 
-      const projectItems = await Promise.all(
-        projectList.map(async (project) => {
-          try {
-            const [projectSprints, projectTasks]: [Sprint[], Task[]] = await Promise.all([
-              token ? getProjectSprints(project.id, token) : Promise.resolve([] as Sprint[]),
-              token ? getProjectTasks(project.id, token) : Promise.resolve([] as Task[]),
-            ])
-
-            return {
-              project,
-              sprints: projectSprints.map((sprint) => ({
-                ...sprint,
-                projectId: project.id,
-                projectName: project.name,
-              })),
-              tasks: projectTasks.map((task) => ({
-                ...task,
-                projectId: project.id,
-                projectName: project.name,
-              })),
-            }
-          } catch {
-            return {
-              project,
-              sprints: [] as SearchSprint[],
-              tasks: [] as SearchTask[],
-            }
-          }
-        })
+      setProjects(projectList)
+      setSprints(
+        index.sprints.map((sprint) => ({
+          ...sprint,
+          projectName: projectNameById.get(sprint.projectId) ?? "",
+        }))
       )
-
-      setProjects(projectItems.map((item) => item.project))
-      setSprints(projectItems.flatMap((item) => item.sprints))
-      setTasks(projectItems.flatMap((item) => item.tasks))
+      setTasks(
+        index.tasks.map((task) => ({
+          ...task,
+          projectName: projectNameById.get(task.projectId) ?? "",
+        }))
+      )
 
       if (user?.role === "admin") {
         const directory = await getUsersDirectory()

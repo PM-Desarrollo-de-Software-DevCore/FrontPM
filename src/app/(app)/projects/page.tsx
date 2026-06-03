@@ -6,7 +6,7 @@ import CreateProjectModal from "@/components/project/CreateProjectModal";
 import { Project } from "@/types/project";
 import { getProjects } from "@/services/projectService";
 import { getNonAdminUsers, UserOption } from "@/services/userService";
-import { getProjectMembers, ProjectMember } from "@/services/memberService";
+import { getAllProjectMembers, ProjectMember } from "@/services/memberService";
 import { slugify } from "@/lib/slug";
 
 const initialProjects: Project[] = [
@@ -120,6 +120,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usersById, setUsersById] = useState<Record<string, UserOption>>({});
+  const [membersByProject, setMembersByProject] = useState<Record<string, ProjectMember[]>>({});
 
   // Cargar proyectos del backend al montar el componente
   useEffect(() => {
@@ -159,6 +160,20 @@ export default function ProjectsPage() {
     };
 
     loadUsers();
+  }, []);
+
+  // Miembros de TODOS los proyectos en 1 request (antes: getProjectMembers por tarjeta = N requests)
+  useEffect(() => {
+    const loadMembers = async () => {
+      try {
+        const grouped = await getAllProjectMembers();
+        setMembersByProject(grouped);
+      } catch (err) {
+        console.error("Error loading project members:", err);
+      }
+    };
+
+    loadMembers();
   }, []);
 
   const handleCreateProject = (project: Project) => {
@@ -208,6 +223,7 @@ export default function ProjectsPage() {
                 project={project}
                 onEdit={() => setEditingProject(project)}
                 usersById={usersById}
+                members={membersByProject[project.id] || []}
               />
             ))}
           </section>
@@ -228,37 +244,11 @@ export default function ProjectsPage() {
 interface ProjectCardProps {
   project: Project;
   usersById: Record<string, UserOption>;
+  members: ProjectMember[];
   onEdit: () => void;
 }
 
-function ProjectCard({ project, usersById, onEdit }: ProjectCardProps) {
-  const [members, setMembers] = useState<ProjectMember[]>([]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadMembers = async () => {
-      try {
-        const projectMembers = await getProjectMembers(project.id);
-
-        if (isMounted) {
-          setMembers(projectMembers);
-        }
-      } catch (err) {
-        console.error(`Error loading members for project ${project.id}:`, err);
-        if (isMounted) {
-          setMembers([]);
-        }
-      }
-    };
-
-    loadMembers();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [project.id]);
-
+function ProjectCard({ project, usersById, members, onEdit }: ProjectCardProps) {
   const displayMembers = members
     .map((member) => {
       const user = usersById[member.userId];

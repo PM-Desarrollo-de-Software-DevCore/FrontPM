@@ -49,6 +49,43 @@ export async function getProjectMembers(projectId: string): Promise<ProjectMembe
     }));
 }
 
+interface BulkMemberRecord {
+  id_project?: string;
+  id_user?: string;
+  role?: ProjectMemberRole;
+}
+
+// Trae los miembros de TODOS los proyectos del usuario en 1 request y los agrupa
+// por proyecto. Reemplaza el N+1 de la lista de proyectos (un getProjectMembers
+// por tarjeta => 2+N requests).
+export async function getAllProjectMembers(): Promise<Record<string, ProjectMember[]>> {
+  const response = await fetch(`${API_URL}/dashboard/projects-members`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("No se pudieron obtener los miembros de los proyectos");
+  }
+
+  const data = await response.json();
+  const payload = data?.data ?? data;
+  const list: BulkMemberRecord[] = Array.isArray(payload?.members) ? payload.members : [];
+
+  const grouped: Record<string, ProjectMember[]> = {};
+  for (const member of list) {
+    if (!member.id_project || !member.id_user) continue;
+    if (!grouped[member.id_project]) grouped[member.id_project] = [];
+    grouped[member.id_project].push({
+      userId: member.id_user,
+      role: member.role ?? "developer",
+    });
+  }
+
+  return grouped;
+}
+
 export async function addProjectMember(
   projectId: string,
   userId: string,

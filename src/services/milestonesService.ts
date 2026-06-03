@@ -112,3 +112,17 @@ export async function getProjectMembers(projectId: string): Promise<BackendProje
 export async function getUsers(): Promise<BackendUser[]> {
   return requestJson<BackendUser[]>("/users")
 }
+
+export interface MilestonesOverview {
+  projects: BackendProject[]
+  projectStats: BackendProjectStatsItem[]
+  users: BackendUser[]
+  members: BackendProjectMember[]
+  sprints: BackendSprint[]
+}
+
+// 1 request agregada que reemplaza los 3 + 2*N requests que hacía la página de milestones.
+// El backend devuelve members/sprints de todos los proyectos en queries bulk.
+export async function getMilestonesOverview(): Promise<MilestonesOverview> {
+  return requestJson<MilestonesOverview>("/dashboard/milestones-overview")
+}

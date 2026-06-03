@@ -382,31 +382,15 @@ export default function CreateProjectModal({
           return Boolean(currentRole) && currentRole !== user.projectRole;
         });
 
-        let failedMemberOps = 0;
-
-        for (const member of toAdd) {
-          try {
-            await addProjectMember(project.id, member.id, member.projectRole);
-          } catch {
-            failedMemberOps += 1;
-          }
-        }
-
-        for (const member of toUpdateRole) {
-          try {
-            await updateProjectMemberRole(project.id, member.id, member.projectRole);
-          } catch {
-            failedMemberOps += 1;
-          }
-        }
-
-        for (const member of toRemove) {
-          try {
-            await removeProjectMember(project.id, member.userId);
-          } catch {
-            failedMemberOps += 1;
-          }
-        }
+        // Escrituras de miembros en paralelo (antes: 3 bucles for...of await en serie).
+        // allSettled preserva el conteo de fallos sin abortar las demás operaciones.
+        const memberOps: Promise<void>[] = [
+          ...toAdd.map((member) => addProjectMember(project.id, member.id, member.projectRole)),
+          ...toUpdateRole.map((member) => updateProjectMemberRole(project.id, member.id, member.projectRole)),
+          ...toRemove.map((member) => removeProjectMember(project.id, member.userId)),
+        ];
+        const memberResults = await Promise.allSettled(memberOps);
+        const failedMemberOps = memberResults.filter((result) => result.status === "rejected").length;
 
         if (failedMemberOps > 0) {
           setMemberSyncWarning(
@@ -438,15 +422,11 @@ export default function CreateProjectModal({
       // Crear el proyecto usando el endpoint
       const newProject = await createProject(projectPayload);
 
-      let failedMemberOps = 0;
-
-      for (const member of selectedUsers) {
-        try {
-          await addProjectMember(newProject.id, member.id, member.projectRole);
-        } catch {
-          failedMemberOps += 1;
-        }
-      }
+      // Altas de miembros en paralelo (antes: bucle for...of await en serie).
+      const memberResults = await Promise.allSettled(
+        selectedUsers.map((member) => addProjectMember(newProject.id, member.id, member.projectRole))
+      );
+      const failedMemberOps = memberResults.filter((result) => result.status === "rejected").length;
 
       if (failedMemberOps > 0) {
         setMemberSyncWarning(
