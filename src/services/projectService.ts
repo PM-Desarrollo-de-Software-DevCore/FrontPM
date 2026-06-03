@@ -79,20 +79,60 @@ function projectFromBackendFormat(data: any): Project {
   };
 }
 
-export async function getProjects(): Promise<Project[]> {
-  const response = await fetch(`${API_URL}/projects`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
-    cache: 'no-store',
-  });
+// Caché + dedup in-flight de la lista de proyectos. La piden varias páginas
+// (worklogs, projects, milestones, dashboards) y el buscador; sin caché cada una
+// refetchea el mismo payload. Con dedup las llamadas concurrentes comparten 1 request
+// y el TTL evita refetch en navegaciones seguidas. Se invalida en cada mutación de
+// proyecto (abajo) para no mostrar listas viejas.
+const PROJECTS_TTL_MS = 30_000;
+let projectsCache: { data: Project[]; ts: number } | null = null;
+let projectsInflight: Promise<Project[]> | null = null;
 
-  if (!response.ok) {
-    throw new Error('No se pudieron obtener los proyectos');
+export function invalidateProjectsCache(): void {
+  projectsCache = null;
+  projectsInflight = null;
+}
+
+export async function getProjects(): Promise<Project[]> {
+  if (projectsCache && Date.now() - projectsCache.ts < PROJECTS_TTL_MS) {
+    return projectsCache.data;
+  }
+  if (projectsInflight) {
+    return projectsInflight;
   }
 
-  const data = await response.json();
-  const projects = Array.isArray(data) ? data : data.data || [];
-  return projects.map(projectFromBackendFormat);
+  projectsInflight = (async () => {
+    const response = await fetch(`${API_URL}/projects`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      throw new Error('No se pudieron obtener los proyectos');
+    }
+
+    const data = await response.json();
+    const raw = Array.isArray(data) ? data : data.data || [];
+    const projects = raw.map(projectFromBackendFormat);
+    projectsCache = { data: projects, ts: Date.now() };
+    return projects;
+  })();
+
+  try {
+    return await projectsInflight;
+  } finally {
+    projectsInflight = null;
+  }
+}
+
+// Prefetch fire-and-forget: warma la caché de proyectos desde el shell de la app
+// para que worklogs/projects/milestones abran sin esperar el round-trip de /projects.
+export function prefetchProjects(): void {
+  if (!getToken()) return;
+  if (projectsCache && Date.now() - projectsCache.ts < PROJECTS_TTL_MS) return;
+  if (projectsInflight) return;
+  void getProjects().catch(() => {});
 }
 
 export async function getProjectById(projectId: string): Promise<Project> {
@@ -127,6 +167,7 @@ export async function createProject(project: ProjectPayload): Promise<Project> {
 
   const data = await response.json();
   const createdProject = data.data || data;
+  invalidateProjectsCache();
   return projectFromBackendFormat(createdProject);
 }
 
@@ -145,6 +186,7 @@ export async function updateProject(projectId: string, project: Partial<ProjectP
 
   const data = await response.json();
   const updatedProject = data.data || data;
+  invalidateProjectsCache();
   return projectFromBackendFormat(updatedProject);
 }
 
@@ -164,6 +206,7 @@ export async function updateProjectStatus(
 
   const data = await response.json();
   const updatedProject = data.data || data;
+  invalidateProjectsCache();
   return projectFromBackendFormat(updatedProject);
 }
 
@@ -176,4 +219,6 @@ export async function deleteProject(projectId: string): Promise<void> {
   if (!response.ok) {
     throw new Error('No se pudo eliminar el proyecto');
   }
+
+  invalidateProjectsCache();
 }

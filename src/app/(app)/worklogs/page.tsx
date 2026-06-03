@@ -9,15 +9,10 @@ const FlowChart = dynamic(() => import("@/components/ui/graphs/flow"), { ssr: fa
 import { CheckCircle2, CheckSquare, Filter, Users } from "lucide-react"
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
 import { getProjects } from "@/services/projectService"
-import { getProjectMembers, ProjectMember } from "@/services/memberService"
+import { ProjectMember } from "@/services/memberService"
 import { getUsersDirectory, UserDirectoryEntry } from "@/services/userService"
 import { useDashboardStats } from "@/hooks/useDashboardStats"
-import {
-  getProjectWorklogTasks,
-  getWeeklyProgress,
-  getWeeklyVelocitySeries,
-  WeeklyProgressData,
-} from "@/services/worklogsService"
+import { getWorklogOverview, WeeklyProgressData } from "@/services/worklogsService"
 import type { Project } from "@/types/project"
 import type { Task } from "@/types/task"
 
@@ -128,23 +123,22 @@ export default function WorklogsPage() {
         setDetailsLoading(true)
         setDetailsError(null)
 
-        const [projectTasks, projectMembers, directory, progress, velocity] = await Promise.all([
-          getProjectWorklogTasks(selectedProjectId),
-          getProjectMembers(selectedProjectId),
+        // 1 request agregada (tasks+members+weekly-progress+weekly-velocity) en vez de 4.
+        // El directorio va aparte porque está cacheado/prefetcheado (cache hit).
+        const [overview, directory] = await Promise.all([
+          getWorklogOverview(selectedProjectId),
           getUsersDirectory(),
-          getWeeklyProgress(selectedProjectId),
-          getWeeklyVelocitySeries(selectedProjectId),
         ])
 
         if (cancelled) return
 
         const directoryById = new Map(directory.map((user) => [user.id, user]))
 
-        setTasks(projectTasks)
-        setWeeklyProgress(progress)
-        setVelocitySeries(velocity)
+        setTasks(overview.tasks)
+        setWeeklyProgress(overview.weeklyProgress)
+        setVelocitySeries(overview.weeklyVelocity)
         setMembers(
-          projectMembers
+          overview.members
             .map((member) => {
               const user = directoryById.get(member.userId)
 
