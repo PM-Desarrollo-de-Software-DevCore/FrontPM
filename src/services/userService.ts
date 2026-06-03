@@ -119,19 +119,58 @@ async function fetchWithRetry(url: string, init: RequestInit, maxAttempts = 3): 
   throw lastError ?? new Error("No se pudo conectar con el servidor");
 }
 
-export async function getNonAdminUsers(): Promise<UserOption[]> {
-  const response = await fetch(`${API_URL}/users`, {
-    method: "GET",
-    headers: getAuthHeaders(),
-    cache: "no-store",
-  });
+// Caché + dedup in-flight del directorio /users. Varios componentes piden el
+// directorio completo casi a la vez (AuthProvider, leaderboard, change-requests,
+// selección de miembros...). Sin esto se hacían N fetches del mismo payload pesado,
+// saturando las ~6 conexiones del navegador y retrasando otras requests (p.ej. el
+// leaderboard). Con dedup in-flight las llamadas concurrentes comparten 1 request;
+// el TTL corto evita refetch en navegaciones seguidas. La gestión de usuarios
+// (users/create) hace su propio fetch directo, así que siempre ve datos frescos.
+const USERS_RAW_TTL_MS = 30_000;
+let usersRawCache: { data: any[]; ts: number } | null = null;
+let usersRawInflight: Promise<any[]> | null = null;
 
-  if (!response.ok) {
-    throw new Error("No se pudieron obtener los usuarios");
+async function getUsersRaw(): Promise<any[]> {
+  if (usersRawCache && Date.now() - usersRawCache.ts < USERS_RAW_TTL_MS) {
+    return usersRawCache.data;
+  }
+  if (usersRawInflight) {
+    return usersRawInflight;
   }
 
-  const data = await response.json();
-  const users = Array.isArray(data) ? data : data.data || [];
+  usersRawInflight = (async () => {
+    const response = await fetchWithRetry(`${API_URL}/users`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error("No se pudieron obtener los usuarios");
+    }
+
+    const data = await response.json();
+    const users = Array.isArray(data) ? data : data.data || [];
+    usersRawCache = { data: users, ts: Date.now() };
+    return users;
+  })();
+
+  try {
+    return await usersRawInflight;
+  } finally {
+    usersRawInflight = null;
+  }
+}
+
+// Invalida la caché del directorio (usar tras crear/editar/borrar usuarios si se
+// necesita frescura inmediata; el TTL se auto-sana en USERS_RAW_TTL_MS de todos modos).
+export function invalidateUsersCache(): void {
+  usersRawCache = null;
+  usersRawInflight = null;
+}
+
+export async function getNonAdminUsers(): Promise<UserOption[]> {
+  const users = await getUsersRaw();
 
   return users
     .map(userFromBackendFormat)
@@ -139,19 +178,7 @@ export async function getNonAdminUsers(): Promise<UserOption[]> {
 }
 
 export async function getUsersDirectory(): Promise<UserDirectoryEntry[]> {
-  const response = await fetchWithRetry(`${API_URL}/users`, {
-    method: "GET",
-    headers: getAuthHeaders(),
-    cache: "no-store",
-  });
-
-
-  if (!response.ok) {
-    throw new Error("No se pudieron obtener los usuarios");
-  }
-
-  const data = await response.json();
-  const users = Array.isArray(data) ? data : data.data || [];
+  const users = await getUsersRaw();
 
   return users.map(userDirectoryFromBackendFormat);
 }
