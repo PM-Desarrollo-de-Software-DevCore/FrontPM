@@ -13,11 +13,7 @@ import {
   type BackendSprint,
   type BackendSprintStatus,
   type BackendUser,
-  getMilestoneProjects,
-  getProjectMembers,
-  getProjectSprints,
-  getProjectsStats,
-  getUsers,
+  getMilestonesOverview,
 } from "@/services/milestonesService"
 
 // Code-splitting: el doughnut (chart.js) se carga bajo demanda, fuera del bundle inicial de /milestones.
@@ -385,30 +381,37 @@ export default function MilestonesPage() {
         setIsLoading(true)
         setError(null)
 
-        const [projectList, projectStats, users] = await Promise.all([
-          getMilestoneProjects(),
-          getProjectsStats(),
-          getUsers(),
-        ])
+        // 1 sola request agregada (antes: 3 + 2*N requests al backend remoto).
+        const overview = await getMilestonesOverview()
 
-        const usersById = new Map(users.map((user) => [user.id, user]))
-        const statsByProjectId = new Map(projectStats.map((item) => [item.id_project, item]))
+        const usersById = new Map(overview.users.map((user) => [user.id, user]))
+        const statsByProjectId = new Map(
+          overview.projectStats.map((item) => [item.id_project, item])
+        )
 
-        const details = await Promise.all(
-          projectList.map(async (project) => {
-            const [members, sprints] = await Promise.all([
-              getProjectMembers(project.id_project),
-              getProjectSprints(project.id_project),
-            ])
+        // Agrupación en memoria de members y sprints por proyecto.
+        const membersByProject = new Map<string, BackendProjectMember[]>()
+        for (const member of overview.members) {
+          const list = membersByProject.get(member.id_project)
+          if (list) list.push(member)
+          else membersByProject.set(member.id_project, [member])
+        }
 
-            return toProjectView(
-              project,
-              statsByProjectId.get(project.id_project),
-              members,
-              usersById,
-              sprints
-            )
-          })
+        const sprintsByProject = new Map<string, BackendSprint[]>()
+        for (const sprint of overview.sprints) {
+          const list = sprintsByProject.get(sprint.id_project)
+          if (list) list.push(sprint)
+          else sprintsByProject.set(sprint.id_project, [sprint])
+        }
+
+        const details = overview.projects.map((project) =>
+          toProjectView(
+            project,
+            statsByProjectId.get(project.id_project),
+            membersByProject.get(project.id_project) ?? [],
+            usersById,
+            sprintsByProject.get(project.id_project) ?? []
+          )
         )
 
         if (isCancelled) return
@@ -488,8 +491,32 @@ export default function MilestonesPage() {
       </div>
 
       {isLoading && (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted shadow-sm">
-          Loading milestone data from backend...
+        <div
+          className="grid grid-cols-1 gap-6 md:grid-cols-3"
+          aria-busy="true"
+          aria-label="Cargando milestones"
+        >
+          <div className="col-span-1 rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <div className="mb-6 h-4 w-1/2 animate-pulse rounded bg-muted" />
+            <div className="h-60 w-full animate-pulse rounded-2xl bg-muted" />
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={`stat-skeleton-${index}`} className="h-14 animate-pulse rounded-xl bg-muted" />
+              ))}
+            </div>
+          </div>
+          <div className="col-span-1 flex flex-col gap-3">
+            <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={`sprint-skeleton-${index}`} className="h-16 w-full animate-pulse rounded-2xl bg-muted" />
+            ))}
+          </div>
+          <div className="col-span-1 flex flex-col gap-3">
+            <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={`project-skeleton-${index}`} className="h-24 w-full animate-pulse rounded-2xl bg-muted" />
+            ))}
+          </div>
         </div>
       )}
 
