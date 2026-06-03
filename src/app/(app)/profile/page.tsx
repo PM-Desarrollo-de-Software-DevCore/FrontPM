@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card/card";
 import { Button } from "@/components/ui/Button/button";
-import TaskChart from "@/components/ui/graphs/taskResume";
+import dynamic from "next/dynamic";
+const TaskChart = dynamic(() => import("@/components/ui/graphs/taskResume"), { ssr: false, loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" /> });
 import { getGlobalLeaderboard, LeaderboardEntry } from "@/services/leaderboardService";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserCompletedTodayCount, getMultipleUsersCompletedTodayCount, getMyTasks } from "@/services/taskService";

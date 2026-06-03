@@ -2,7 +2,8 @@
 
 import Carrousel from "@/components/ui/card/projectCarrousel"
 import { Card, CardContent } from "@/components/ui/card/card"
-import PerformanceChart from "@/components/ui/graphs/performaceChart"
+import dynamic from "next/dynamic"
+const PerformanceChart = dynamic(() => import("@/components/ui/graphs/performaceChart"), { ssr: false, loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" /> })
 
 export default function DashboardPage() {
   return (
