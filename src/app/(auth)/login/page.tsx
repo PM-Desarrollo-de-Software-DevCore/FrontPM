@@ -19,32 +19,27 @@ export default function LoginPage() {
     }
   }, [isLoading, isAuthenticated, router, user?.role])
 
-  // Verificar conexión con servidor solo si no está autenticado
+  // Verificación del servidor en SEGUNDO PLANO: NO bloquea el formulario.
+  // Solo sirve para mostrar un aviso no-bloqueante si el backend está frío
+  // (cold start de Render). El usuario puede empezar a escribir de inmediato.
   useEffect(() => {
-    if (isLoading) {
+    if (isLoading || isAuthenticated || serverConnected !== null) {
       return
     }
-
-    if (isAuthenticated) {
-      return
-    }
-
-    async function verifyServerConnection() {
-      const isConnected = await checkServerConnection()
-      setServerConnected(isConnected)
-    }
-
-    // Solo verificar una sola vez
-    if (serverConnected === null) {
-      verifyServerConnection()
+    let cancelled = false
+    checkServerConnection().then((ok) => {
+      if (!cancelled) setServerConnected(ok)
+    })
+    return () => {
+      cancelled = true
     }
   }, [isLoading, isAuthenticated, serverConnected])
 
-  // Mostrar pantalla de carga mientras se verifica sesión
+  // Mientras se verifica la sesión (rápido si no hay token)
   if (isLoading) {
     return (
-      <LoadingScreen 
-        message="Cargando sesión" 
+      <LoadingScreen
+        message="Cargando sesión"
         subMessage="Verificando tus credenciales..."
       />
     )
@@ -55,30 +50,18 @@ export default function LoginPage() {
     return null
   }
 
-  // Mostrar pantalla de conexión si servidor no responde
-  if (serverConnected === false) {
-    return (
-      <LoadingScreen 
-        message="Conectando con el Servidor" 
-        subMessage="El servidor está en proceso de inicio, por favor espera..."
-      />
-    )
-  }
-
-  // Mostrar formulario de login si servidor está disponible
-  if (serverConnected === true) {
-    return (
-      <main>
-        <LoginForm />
-      </main>
-    )
-  }
-
-  // Mientras se verifica la conexión (estado null)
+  // El formulario se muestra de INMEDIATO (no se bloquea por el cold start del
+  // backend). Si el servidor aún no responde, se avisa sin bloquear.
   return (
-    <LoadingScreen 
-      message="Verificando conexión" 
-      subMessage="Comprobando disponibilidad del servidor..."
-    />
+    <main>
+      {serverConnected === false && (
+        <div className="mx-auto w-full max-w-md px-4 pt-4">
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-700">
+            El servidor está despertando; el primer inicio de sesión puede tardar unos segundos.
+          </p>
+        </div>
+      )}
+      <LoginForm />
+    </main>
   )
 }
