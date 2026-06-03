@@ -9,7 +9,7 @@ type BackendSprint =
     id_sprint?: string
   }
 
-function mapSprint(
+export function mapSprint(
   sprint: BackendSprint
 ): Sprint {
 
