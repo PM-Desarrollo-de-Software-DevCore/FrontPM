@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 
-import { DragDropContext, Droppable, type DropResult } from "@hello-pangea/dnd"
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
 
 import { useLanguage } from "@/components/i18n/LanguageProvider"
 import { Sprint } from "@/types/sprint"
@@ -204,107 +204,149 @@ function ScrumBoardView({
   sprints,
   usersById,
   onTaskClickAction,
+  onTaskMoveAction,
 }: {
   tasks: Task[]
   sprints: Sprint[]
   usersById: Map<string, TaskUser>
   onTaskClickAction: (task: Task) => void
+  onTaskMoveAction: (result: DropResult) => void
 }) {
   const orderedSprints = [...sprints].sort((left, right) => new Date(left.start_date).getTime() - new Date(right.start_date).getTime())
+  const backlogTasks = tasks.filter((task) => !task.id_sprint)
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900">Backlog</h3>
-            <p className="text-sm text-slate-500">Tareas sin sprint asignado.</p>
-          </div>
-          <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
-            {tasks.filter((task) => !task.id_sprint).length} tareas
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          {tasks.filter((task) => !task.id_sprint).map((task) => {
-            const assignee = getAssignee(task, usersById)
-
-            return (
-              <button
-                key={task.id}
-                type="button"
-                onClick={() => onTaskClickAction(task)}
-                className="flex w-full items-center justify-between gap-4 rounded-3xl border border-slate-100 bg-slate-50 px-4 py-3 text-left transition hover:border-slate-300 hover:bg-white"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-900">{task.title}</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {assignee ? `${assignee.name} ${assignee.lastname}` : "Sin asignar"} · {formatDateLabel(task.end_date)} · {task.status}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2 text-xs text-slate-500">
-                  <span className="rounded-full bg-white px-3 py-1 font-semibold">{task.priority}</span>
-                  <span className="rounded-full bg-white px-3 py-1 font-semibold">{task.story_points ?? 0} pts</span>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      </section>
-
-      {orderedSprints.map((sprint) => {
-        const sprintTasks = tasks.filter((task) => task.id_sprint === sprint.id)
-
-        return (
-          <section key={sprint.id} className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900">{sprint.name}</h3>
-                <p className="text-sm text-slate-500">
-                  {formatDateLabel(sprint.start_date)} - {formatDateLabel(sprint.end_date)}
-                </p>
-              </div>
-
-              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
-                {sprintTasks.length} tareas
-              </div>
+    <DragDropContext onDragEnd={onTaskMoveAction}>
+      <div className="space-y-4">
+        <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Backlog</h3>
+              <p className="text-sm text-slate-500">Tareas sin sprint asignado.</p>
             </div>
+            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+              {backlogTasks.length} tareas
+            </div>
+          </div>
 
-            <div className="space-y-3">
-              {sprintTasks.length > 0 ? (
-                sprintTasks.map((task) => {
+          <Droppable droppableId="backlog:pending">
+            {(provided, snapshot) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className={`min-h-20 space-y-3 rounded-2xl p-2 transition ${snapshot.isDraggingOver ? "bg-slate-100" : ""}`}
+              >
+                {backlogTasks.map((task, index) => {
                   const assignee = getAssignee(task, usersById)
 
                   return (
-                    <button
-                      key={task.id}
-                      type="button"
-                      onClick={() => onTaskClickAction(task)}
-                      className="flex w-full items-center justify-between gap-4 rounded-3xl border border-slate-100 bg-slate-50 px-4 py-3 text-left transition hover:border-slate-300 hover:bg-white"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-900">{task.title}</p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {assignee ? `${assignee.name} ${assignee.lastname}` : "Sin asignar"} · {statusMeta[task.status].label} · {formatDateLabel(task.end_date)}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2 text-xs text-slate-500">
-                        <span className="rounded-full bg-white px-3 py-1 font-semibold">{task.priority}</span>
-                        <span className="rounded-full bg-white px-3 py-1 font-semibold">{task.story_points ?? 0} pts</span>
-                      </div>
-                    </button>
+                    <Draggable key={task.id} draggableId={task.id} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          onClick={() => onTaskClickAction(task)}
+                          className={`flex w-full items-center justify-between gap-4 rounded-3xl border border-slate-100 bg-slate-50 px-4 py-3 text-left transition cursor-move ${
+                            snapshot.isDragging ? "shadow-lg bg-white border-slate-300" : "hover:border-slate-300 hover:bg-white"
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-slate-900">{task.title}</p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {assignee ? `${assignee.name} ${assignee.lastname}` : "Sin asignar"} · {formatDateLabel(task.end_date)} · {task.status}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2 text-xs text-slate-500">
+                            <span className="rounded-full bg-white px-3 py-1 font-semibold">{task.priority}</span>
+                            <span className="rounded-full bg-white px-3 py-1 font-semibold">{task.story_points ?? 0} pts</span>
+                          </div>
+                        </div>
+                      )}
+                    </Draggable>
                   )
-                })
-              ) : (
-                <p className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-                  No hay tareas en este sprint.
-                </p>
-              )}
-            </div>
-          </section>
-        )
-      })}
-    </div>
+                })}
+                {provided.placeholder}
+                {backlogTasks.length === 0 && (
+                  <p className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                    No hay tareas en el backlog. Crea una nueva tarea para empezar.
+                  </p>
+                )}
+              </div>
+            )}
+          </Droppable>
+        </section>
+
+        {orderedSprints.map((sprint) => {
+          const sprintTasks = tasks.filter((task) => task.id_sprint === sprint.id)
+
+          return (
+            <section key={sprint.id} className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">{sprint.name}</h3>
+                  <p className="text-sm text-slate-500">
+                    {formatDateLabel(sprint.start_date)} - {formatDateLabel(sprint.end_date)}
+                  </p>
+                </div>
+
+                <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+                  {sprintTasks.length} tareas
+                </div>
+              </div>
+
+              <Droppable droppableId={`${sprint.id}:pending`}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`min-h-20 space-y-3 rounded-2xl p-2 transition ${snapshot.isDraggingOver ? "bg-slate-100" : ""}`}
+                  >
+                    {sprintTasks.length > 0 ? (
+                      sprintTasks.map((task, index) => {
+                        const assignee = getAssignee(task, usersById)
+
+                        return (
+                          <Draggable key={task.id} draggableId={task.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                onClick={() => onTaskClickAction(task)}
+                                className={`flex w-full items-center justify-between gap-4 rounded-3xl border border-slate-100 bg-slate-50 px-4 py-3 text-left transition cursor-move ${
+                                  snapshot.isDragging ? "shadow-lg bg-white border-slate-300" : "hover:border-slate-300 hover:bg-white"
+                                }`}
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-semibold text-slate-900">{task.title}</p>
+                                  <p className="mt-1 text-xs text-slate-500">
+                                    {assignee ? `${assignee.name} ${assignee.lastname}` : "Sin asignar"} · {statusMeta[task.status].label} · {formatDateLabel(task.end_date)}
+                                  </p>
+                                </div>
+                                <div className="flex shrink-0 items-center gap-2 text-xs text-slate-500">
+                                  <span className="rounded-full bg-white px-3 py-1 font-semibold">{task.priority}</span>
+                                  <span className="rounded-full bg-white px-3 py-1 font-semibold">{task.story_points ?? 0} pts</span>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        )
+                      })
+                    ) : (
+                      <p className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                        No hay tareas en este sprint.
+                      </p>
+                    )}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </section>
+          )
+        })}
+      </div>
+    </DragDropContext>
   )
 }
 
@@ -808,7 +850,7 @@ export default function TaskWorkspaceViews({
       )}
 
       {activeView === "scrum" && (
-        <ScrumBoardView tasks={tasks} sprints={sprints} usersById={usersById} onTaskClickAction={onTaskClickAction} />
+        <ScrumBoardView tasks={tasks} sprints={sprints} usersById={usersById} onTaskClickAction={onTaskClickAction} onTaskMoveAction={onTaskMoveAction} />
       )}
 
       {activeView === "table" && <TableView tasks={tasks} sprintsById={sprintsById} usersById={usersById} onTaskClickAction={onTaskClickAction} />}
