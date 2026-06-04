@@ -7,7 +7,7 @@ import ProjectCard from "@/components/ui/graphs/user_task"
 import Bugs from "@/components/ui/graphs/user_bugs"
 import WeeklyProg from "@/components/ui/graphs/user_weekProg"
 import Filters from "@/components/ui/filters/filters"
-import Overdue from "@/components/ui/graphs/overdue"
+import PlannedPercentage from "@/components/ui/graphs/user_plannedPer"
 
 import { useDashboardStats, useUserTasks } from "@/hooks/useDashboardStats"
 
@@ -124,14 +124,14 @@ export default function UserDashboard() {
             </CardContent>
           </Card>
 
-
-          <Card className="h-[215px]">
-            <CardContent className="h-full pt-5">
-              <div className="flex items-center justify-center h-full">
-                <Overdue filters={filters} />
-              </div>
-            </CardContent>
-          </Card>
+        <Card className="h-[215px]">
+          <CardContent className="h-full pt-5">
+            <PlannedPercentage
+              projectId={filters.project}
+              filters={filters}
+            />
+          </CardContent>
+        </Card>
         </div>
 
 

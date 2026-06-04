@@ -34,6 +34,7 @@ export type DashboardData = {
     pendingTasks: number
     overdueTasks: number
     completionPercentage: number
+
   }[]
   myTasks: {
     totalTasks: number
@@ -185,6 +186,82 @@ export type WeeklyProgressData = {
   }
   totalCompleted: number
   dailyCompletions: DailyCompletion[]
+}
+
+
+export type ProjectChart = {
+  id_project: string
+  name: string
+  status: string
+  priority: string
+  start_date: string
+  end_date: string
+  totalTasks: number
+  completedTasks: number
+  inProgressTasks: number
+  pendingTasks: number
+  completionPercentage: number
+  plannedPercentage: number
+  scheduleVariance: number
+  isOverdue: boolean
+  daysRemaining: number
+}
+
+export type RealVsPlannedData = {
+  summary: {
+    totalProjects: number
+    planningProjects: number
+    inProgressProjects: number
+    completedProjects: number
+    overdueProjects: number
+    totalTasks: number
+    completedTasks: number
+    inProgressTasks: number
+    pendingTasks: number
+  }
+  projectsByStatus: { status: string; count: number }[]
+  projectsByPriority: { priority: string; count: number }[]
+  projectsChart: ProjectChart[]
+}
+
+export function useRealVsPlanned(filters?: { project?: string; dateFrom?: string; dateTo?: string }) {
+  const [data, setData] = useState<RealVsPlannedData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(true)
+      setError(null)
+
+      const token = localStorage.getItem("authToken")
+      if (!token) { setError("No hay sesión activa"); setLoading(false); return }
+
+      try {
+        const query = buildQueryString(filters)
+        const res = await fetch(`${BASE_URL}/dashboard/projects-stats${query}`, {
+          method: "GET",
+          headers: getHeaders(token),
+        })
+
+        if (res.status === 401) { setError("Sesión expirada, vuelve a iniciar sesión"); setLoading(false); return }
+        if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`)
+
+        const json = await res.json()
+        if (!json.success) throw new Error("La respuesta del servidor indica fallo")
+
+        setData(json.data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error desconocido")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [filters?.project, filters?.dateFrom, filters?.dateTo])
+
+  return { data, loading, error }
 }
 
 export function useWeeklyProgress(filters?: FiltersOptions) {
