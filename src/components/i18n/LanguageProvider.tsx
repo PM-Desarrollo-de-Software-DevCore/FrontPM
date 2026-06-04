@@ -413,6 +413,15 @@ const esToEnEntries: Array<[string, string]> = [
   ["Sin descripción", "No description"],
   ["No hay miembros para calcular workload.", "There are no members to calculate workload."],
   ["tareas asignadas", "assigned tasks"],
+  ["Oscuro", "Dark"],
+  ["Claro", "Light"],
+  ["Pista de aterrizaje", "Runway"],
+  ["Coste por punto de historia", "Cost per story point"],
+  ["El proyecto no tiene story points estimados; no se puede calcular el costo por story point.", "The project does not have estimated story points; it is not possible to calculate the cost per story point."],
+  ["El gasto es una estimacion: asume un costo mensual constante desde el inicio hasta hoy (no hay captura de costo real).", "The expense is an estimate: it assumes a constant monthly cost from the start until today (actual costs are not tracked)."],
+  ["Costo", "Cost"],
+  ["Presupuesto", "Budget"],
+
 
 ];
 
