@@ -49,11 +49,11 @@ BASE_URL=http://localhost:3000
 
 # Credenciales de admin
 ADMIN_EMAIL=admin@test.com
-ADMIN_PASSWORD=TestAdmin123
+ADMIN_PASSWORD=Admin123
 
 # Credenciales de usuario
-USER_EMAIL=ejemplo2@gmail.com
-USER_PASSWORD=prueba123
+USER_EMAIL=user@test.com
+USER_PASSWORD=User123
 ```
 
 Ejemplo de ejecución con variables:
