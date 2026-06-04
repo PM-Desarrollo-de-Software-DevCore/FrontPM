@@ -106,15 +106,11 @@ export async function createSprint(
 
   if (!response.ok) {
 
-    const text =
-      await response.text()
-
-    console.error(
-      text
-    )
+    const text = await response.text()
+    const message = JSON.parse(text).message;
 
     throw new Error(
-      "Error creating sprint"
+      message || "Error creating sprint"
     )
   }
 
@@ -148,15 +144,11 @@ export async function updateSprint(
 
   if (!response.ok) {
 
-    const text =
-      await response.text()
-
-    console.error(
-      text
-    )
+    const text = await response.text()
+    const message = JSON.parse(text).message;
 
     throw new Error(
-      "Error updating sprint"
+      message || "Error updating sprint"
     )
   }
 
@@ -182,15 +174,11 @@ export async function deleteSprint(
 
   if (!response.ok) {
 
-    const text =
-      await response.text()
-
-    console.error(
-      text
-    )
+    const text = await response.text()
+    const message = JSON.parse(text).message;
 
     throw new Error(
-      "Error deleting sprint"
+      message || "Error deleting sprint"
     )
   }
 

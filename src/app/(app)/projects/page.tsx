@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import CreateProjectModal from "@/components/project/CreateProjectModal";
 import { Project } from "@/types/project";
@@ -8,88 +8,6 @@ import { getProjects } from "@/services/projectService";
 import { getNonAdminUsers, UserOption } from "@/services/userService";
 import { getAllProjectMembers, ProjectMember } from "@/services/memberService";
 import { slugify } from "@/lib/slug";
-
-const initialProjects: Project[] = [
-  {
-    id: "apollo-control",
-    name: "Apollo Control",
-    description:
-      "Real-time project management platform for planning, tracking, and delivery.",
-    status: "In Progress",
-    progress: 70,
-    tasks: 18,
-    owner: "DevCore Team",
-    startDate: "2026-04-01",
-    endDate: "2026-05-15",
-    priority: "High",
-    team: ["Frontend", "Backend", "QA"],
-  },
-  {
-    id: "mobile-app",
-    name: "Mobile App",
-    description: "Mobile application for task tracking and team collaboration.",
-    status: "Completed",
-    progress: 100,
-    tasks: 10,
-    owner: "UX Team",
-    startDate: "2026-04-10",
-    endDate: "2026-06-01",
-    priority: "Medium",
-    team: ["UX", "Frontend"],
-  },
-  {
-    id: "risk-engine",
-    name: "Risk Engine",
-    description: "Risk calculation and analytics module for project insights.",
-    status: "Completed",
-    progress: 100,
-    tasks: 24,
-    owner: "Backend Team",
-    startDate: "2026-03-01",
-    endDate: "2026-04-05",
-    priority: "High",
-    team: ["Backend", "Data"],
-  },
-  {
-    id: "dashboard-ui",
-    name: "Dashboard UI",
-    description: "Design and implementation of the main dashboard interface.",
-    status: "In Progress",
-    progress: 55,
-    tasks: 12,
-    owner: "Frontend Team",
-    startDate: "2026-04-05",
-    endDate: "2026-05-20",
-    priority: "Medium",
-    team: ["Frontend", "Design"],
-  },
-  {
-    id: "api-integration",
-    name: "API Integration",
-    description: "Frontend and backend integration for project workflows.",
-    status: "Planning",
-    progress: 10,
-    tasks: 8,
-    owner: "Fullstack Team",
-    startDate: "2026-04-15",
-    endDate: "2026-06-10",
-    priority: "High",
-    team: ["Frontend", "Backend"],
-  },
-  {
-    id: "client-portal",
-    name: "Client Portal",
-    description: "Portal for client visibility, updates, and milestone tracking.",
-    status: "Planning",
-    progress: 15,
-    tasks: 14,
-    owner: "Product Team",
-    startDate: "2026-04-22",
-    endDate: "2026-06-18",
-    priority: "Low",
-    team: ["Product", "Frontend"],
-  },
-];
 
 function formatDate(date: string) {
   const parsedDate = new Date(date);
@@ -115,7 +33,7 @@ function getStatusClasses(status: Project["status"]) {
 }
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -134,8 +52,6 @@ export default function ProjectsPage() {
         const errorMessage = err instanceof Error ? err.message : "Error al cargar proyectos";
         setError(errorMessage);
         console.error("Error loading projects:", err);
-        // Mantener los datos iniciales en caso de error
-        setProjects(initialProjects);
       } finally {
         setLoading(false);
       }
@@ -249,6 +165,16 @@ interface ProjectCardProps {
 }
 
 function ProjectCard({ project, usersById, members, onEdit }: ProjectCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const descRef = useRef<HTMLParagraphElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  useEffect(() => {
+    if (descRef.current) {
+      setIsOverflowing(descRef.current.scrollHeight > descRef.current.clientHeight)
+    }
+  }, [])
+
   const displayMembers = members
     .map((member) => {
       const user = usersById[member.userId];
@@ -278,7 +204,7 @@ function ProjectCard({ project, usersById, members, onEdit }: ProjectCardProps) 
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
+              className="h-5 w-5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -304,7 +230,28 @@ function ProjectCard({ project, usersById, members, onEdit }: ProjectCardProps) 
 
       <div className="mb-3 h-px bg-zinc-300" />
 
-      <p className="mb-4 text-xs leading-5 text-zinc-500">{project.description}</p>
+      
+      {/* <p className="mb-4 text-xs leading-5 text-zinc-500">{project.description}</p> */}
+      <div className="hrink-0 flex flex-col justify-between  transition-all duration-200"
+        style={{ minHeight: 50, height: expanded ? 'auto' : 50 }}>
+        <div className="flex flex-col gap-1">
+          <p
+            ref={descRef}
+            className={`text-xs text-zinc-500 leading-relaxed ${!expanded ? 'line-clamp-1' : ''}`}
+          >
+            {project.description}
+          </p>
+          {isOverflowing && (
+            <button
+              onClick={() => setExpanded(e => !e)}
+              className="text-[11px] text-zinc-400 hover:text-zinc-600 text-left w-fit"
+            >
+              {expanded ? 'see less' : 'see more'}
+            </button>
+          )}
+        </div>
+      </div>
+      
 
       <div className="mb-4">
         <p className="text-xs font-semibold text-red-400">

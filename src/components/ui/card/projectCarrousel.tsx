@@ -61,7 +61,7 @@ function ProjectCard({ project }: { project: ProjectType }) {
   return (
     <div
       className="flex-shrink-0 flex flex-col justify-between rounded-xl border border-zinc-200 bg-zinc-50 p-4 transition-all duration-200"
-      style={{ width: '340px', minHeight: '170px', height: expanded ? 'auto' : '170px' }}
+      style={{ width: '340px', minHeight: '170px', height: expanded ? 'auto' : '70px' }}
     >
       <div className="flex flex-col gap-1">
         <p className="text-sm font-semibold text-zinc-900">{project.name}</p>
