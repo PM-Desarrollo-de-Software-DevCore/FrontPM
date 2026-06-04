@@ -533,7 +533,7 @@ export default function CreateProjectModal({
                     <label className={labelClass}>Client</label>
                     <input
                       value={form.client}
-                      placeholder="Acme Corp"
+                      placeholder="Corporate Client"
                       onChange={(e) => setForm({ ...form, client: e.target.value })}
                       className={fieldClass}
                       required
@@ -553,7 +553,7 @@ export default function CreateProjectModal({
                     />
                   </div>
 
-                  <div>
+                  {/* <div>
                     <label className={labelClass}>Methodology</label>
                     <select
                       value={form.methodology}
@@ -567,7 +567,7 @@ export default function CreateProjectModal({
                       <option value="waterfall">Waterfall</option>
                       <option value="hybrid">Hybrid</option>
                     </select>
-                  </div>
+                  </div> */}
 
                   <div>
                     <label className={labelClass}>Start Date</label>
@@ -631,7 +631,7 @@ export default function CreateProjectModal({
                     </select>
                   </div>
 
-                  <div>
+                  {/* <div>
                     <label className={labelClass}>Status</label>
                     <select
                       value={form.status}
@@ -643,7 +643,7 @@ export default function CreateProjectModal({
                       <option value="In Progress">In Progress</option>
                       <option value="Completed">Completed</option>
                     </select>
-                  </div>
+                  </div> */}
                 </div>
               </section>
 

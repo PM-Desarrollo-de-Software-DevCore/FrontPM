@@ -4,8 +4,8 @@ async function login(page: Page) {
   await page.context().clearCookies();
   await page.goto('/login');
   await page.evaluate(() => localStorage.clear());
-  await page.fill('#standard-email', process.env.USER_EMAIL || 'ejemplo2@gmail.com');
-  await page.fill('#standard-password', process.env.USER_PASSWORD || 'prueba123');
+  await page.fill('#email', process.env.USER_EMAIL || 'user@test.com');
+  await page.fill('#password', process.env.USER_PASSWORD || 'User123');
   await page.click('button:has-text("Iniciar sesión")');
   await page.waitForURL(/\/dashboard\/admin$/, { timeout: 10000 });
 }
