@@ -608,38 +608,74 @@ export default function ProfileDashboard() {
 
           <Card className="rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100">
 
-            <h2 className="font-semibold mb-4 text-sm sm:text-base">
+            <div className="mb-4">
+            <h2 className="font-semibold text-sm sm:text-base">
               Leaderboard
             </h2>
+            <p className="text-xs text-gray-500">
+              Ranking por story points de tareas completadas
+            </p>
+          </div>
 
             {leaderboardLoading ? (
               <p className="text-xs sm:text-sm text-gray-500">Cargando...</p>
             ) : leaderboardError ? (
               <p className="text-xs sm:text-sm text-red-500">{leaderboardError}</p>
             ) : leaderboard.length === 0 ? (
-              <p className="text-xs sm:text-sm text-gray-500">Sin datos todavía</p>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Aún no hay usuarios en el leaderboard. Completa tareas para ganar puntos.
+              </p>
             ) : (
               <div className="flex flex-col gap-3 sm:gap-4">
-                {leaderboard.map((entry) => (
-                  <div key={entry.userId} className="flex justify-between items-center">
+                {leaderboard.map((entry, index) => {
+  const isCurrentUser = entry.userId === user?.id
 
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <LeaderboardAvatar
-                        src={entry.profileImageUrl ?? "/images/persona.png"}
-                        alt={`${entry.name} ${entry.lastname}`}
-                        size={48}
-                        completedTodayCount={leaderboardCounts.get(entry.userId) ?? 0}
-                      />
-                      <span className="text-xs sm:text-sm">
-                        {entry.name} {entry.lastname}
-                      </span>
-                    </div>
+  const medal =
+    index === 0 ? "🥇" :
+    index === 1 ? "🥈" :
+    index === 2 ? "🥉" :
+    `#${index + 1}`
 
-                    <span className="text-xs sm:text-sm font-medium">
-                      {entry.points}
-                    </span>
-                  </div>
-                ))}
+  return (
+    <div
+      key={entry.userId}
+      className={`flex justify-between items-center rounded-xl px-3 py-2 border ${
+        isCurrentUser
+          ? "bg-purple-50 border-purple-300"
+          : "bg-white border-gray-100"
+      }`}
+    >
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className="w-8 text-center font-bold text-sm">
+          {medal}
+        </span>
+
+        <LeaderboardAvatar
+          src={entry.profileImageUrl ?? "/images/persona.png"}
+          alt={`${entry.name} ${entry.lastname}`}
+          size={48}
+          completedTodayCount={leaderboardCounts.get(entry.userId) ?? 0}
+        />
+
+        <div>
+          <p className="text-xs sm:text-sm font-medium">
+            {entry.name} {entry.lastname}
+          </p>
+
+          {isCurrentUser && (
+            <p className="text-[11px] text-purple-600 font-medium">
+              Tú
+            </p>
+          )}
+        </div>
+      </div>
+
+      <span className="text-xs sm:text-sm font-bold text-purple-700">
+        {entry.points} pts
+      </span>
+    </div>
+  )
+})}
               </div>
             )}
           </Card>

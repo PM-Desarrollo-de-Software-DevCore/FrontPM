@@ -261,6 +261,7 @@ export default function TasksPage() {
         ...(shouldCreateInBacklog ? { id_sprint: null } : {}),
         ...(!shouldCreateInBacklog && taskData.id_sprint ? { id_sprint: taskData.id_sprint } : {}),
         ...(taskData.assignedTo ? { assignedTo: taskData.assignedTo } : {}),
+        ...(taskData.story_points !== undefined ? { story_points: taskData.story_points } : {}),
       }
 
       await createTask(resolvedProjectId, cleanedTaskData, token)
@@ -349,6 +350,52 @@ export default function TasksPage() {
       )
     }
   }
+
+  const handleUpdateStoryPoints = async (
+  taskId: string,
+  storyPoints: number | null
+) => {
+  try {
+    await updateTask(
+      taskId,
+      {
+        story_points: storyPoints,
+      },
+      token
+    )
+
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              story_points: storyPoints,
+            }
+          : task
+      )
+    )
+
+    if (selectedTask?.id === taskId) {
+      setSelectedTask({
+        ...selectedTask,
+        story_points: storyPoints,
+      })
+    }
+
+    notifySuccess(
+      "Story Points Updated",
+      "Story points were updated successfully."
+    )
+  } catch (error) {
+    notifyError(
+      "Story Points Error",
+      error instanceof Error
+        ? error.message
+        : "Could not update story points."
+    )
+  }
+}
+
 
   const handleOpenTask = (task: Task) => {
     setSelectedTask(task)
@@ -451,6 +498,7 @@ export default function TasksPage() {
           }}
           onDeleteAction={handleDeleteTask}
           onAssignAction={handleAssignUser}
+          onUpdateStoryPointsAction={handleUpdateStoryPoints}
         />
       )}
     </div>

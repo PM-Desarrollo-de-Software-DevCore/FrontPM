@@ -37,6 +37,7 @@ export default function CreateTaskModal({
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium")
   const [endDate, setEndDate] = useState("")
   const [assignedTo, setAssignedTo] = useState("")
+  const [storyPoints, setStoryPoints] = useState("")
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<Task["status"]>("pending")
   const [suggestions, setSuggestions] = useState<AssignmentSuggestionItem[]>([])
@@ -127,6 +128,7 @@ export default function CreateTaskModal({
       status: selectedStatus,
       id_sprint: selectedSprintId,
       ...(assignedTo ? { assignedTo } : {}),
+      ...(storyPoints ? { story_points: Number(storyPoints) } : {}),
     })
 
     setTitle("")
@@ -134,6 +136,7 @@ export default function CreateTaskModal({
     setPriority("medium")
     setEndDate("")
     setAssignedTo("")
+    setStoryPoints("")
     setSelectedSprintId(null)
     setSelectedStatus("pending")
     setSuggestions([])
@@ -227,6 +230,25 @@ export default function CreateTaskModal({
                   {user.name} {user.lastname}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-600">
+              Story Points
+            </label>
+
+            <select
+              value={storyPoints}
+              onChange={(e) => setStoryPoints(e.target.value)}
+              className="h-12 w-full rounded-2xl border border-gray-200 px-4 text-sm outline-none"
+            >
+              <option value="">Sin asignar</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
             </select>
           </div>
 

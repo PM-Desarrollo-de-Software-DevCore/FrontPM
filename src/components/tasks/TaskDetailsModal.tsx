@@ -24,6 +24,11 @@ interface Props {
   onCloseAction: () => void
   onDeleteAction: (taskId: string) => void
   onAssignAction: (taskId: string, userId: string) => void
+
+  onUpdateStoryPointsAction: (
+    taskId: string,
+    storyPoints: number | null
+  ) => Promise<void>
 }
 
 export default function TaskDetailsModal({
@@ -32,10 +37,11 @@ export default function TaskDetailsModal({
   onCloseAction,
   onDeleteAction,
   onAssignAction,
+  onUpdateStoryPointsAction,
 }: Props) {
   const [selectedUser, setSelectedUser] = useState(task.assignedTo || "")
+  const [storyPoints, setStoryPoints] = useState(task.story_points ? String(task.story_points) : "")
   const [successMessage, setSuccessMessage] = useState("")
-
   const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState("")
   const [commentsLoading, setCommentsLoading] = useState(false)
@@ -57,6 +63,10 @@ export default function TaskDetailsModal({
   useEffect(() => {
     setSelectedUser(task.assignedTo || "")
   }, [task.id, task.assignedTo])
+
+  useEffect(() => {
+  setStoryPoints(task.story_points ? String(task.story_points) : "")
+}, [task.id, task.story_points])
 
   useEffect(() => {
     async function loadComments() {
@@ -193,6 +203,54 @@ export default function TaskDetailsModal({
               <p className="mb-2 text-sm text-gray-400">Progress</p>
               <p className="text-lg font-medium">{task.progress}%</p>
             </div>
+            <div>
+            <p className="mb-2 text-sm text-gray-400">Story Points</p>
+
+            <div className="flex gap-3">
+              <select
+                value={storyPoints}
+                onChange={(e) => setStoryPoints(e.target.value)}
+                className="h-10 flex-1 rounded-2xl border border-gray-200 px-4 text-sm outline-none"
+              >
+                <option value="">None</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+
+              <button
+                onClick={async () => {
+                  try {
+                    await onUpdateStoryPointsAction(
+                      taskId,
+                      storyPoints
+                        ? Number(storyPoints)
+                        : null
+                    )
+
+                    setSuccessMessage(
+                      "Story points updated successfully."
+                    )
+
+                    setTimeout(() => {
+                      setSuccessMessage("")
+                    }, 3000)
+
+                  } catch (error: any) {
+                    setSuccessMessage(
+                      error.message ||
+                      "Error updating story points"
+                    )
+                  }
+                }}
+                className="h-10 rounded-2xl bg-black px-4 text-sm font-medium text-white"
+              >
+                Save
+              </button>
+            </div>
+          </div>
           </div>
 
           {successMessage && (
