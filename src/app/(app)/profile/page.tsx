@@ -151,7 +151,7 @@ export default function ProfileDashboard() {
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
   const { user } = useAuth()
-
+  
   const [profile, setProfile] = useState<UserProfileDetails | null>(null);
   const [technologies, setTechnologies] = useState<UserTechnologyEntry[]>([]);
   const [myTasks, setMyTasks] = useState<Task[]>([])
@@ -161,7 +161,7 @@ export default function ProfileDashboard() {
   const [completedToday, setCompletedToday] = useState<number>(0)
   const [completedLoading, setCompletedLoading] = useState<boolean>(true)
   const [leaderboardCounts, setLeaderboardCounts] = useState<Map<string, number>>(new Map())
-
+  
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [myRequests, setMyRequests] = useState<ProfileChangeRequest[]>([])
   const [requestsLoading, setRequestsLoading] = useState(false)
@@ -370,6 +370,11 @@ export default function ProfileDashboard() {
     area: profile?.area ?? null,
   }
 
+  const myFrameCount =
+  leaderboardCounts.get(user?.id ?? "") ??
+  completedToday ??
+  0
+
   return (
     <div className="w-full px-4 sm:px-6 lg:px-10 pt-0 pb-4 max-w-350 mx-auto overflow-x-hidden">
 
@@ -380,13 +385,11 @@ export default function ProfileDashboard() {
           <Card className="rounded-2xl shadow-sm p-4 sm:p-6 text-center border border-gray-100">
             <div className="flex flex-col items-center gap-3">
 
-              <FramedAvatar
+              <LeaderboardAvatar
                 src={avatarSrc}
                 alt="profile"
                 size={100}
-                completedTodayCount={completedLoading ? null : completedToday}
-                priority
-                frameSize="xl"
+                completedTodayCount={completedLoading ? null : myFrameCount}
               />
 
               <div className="space-y-1">
@@ -651,11 +654,15 @@ export default function ProfileDashboard() {
         </span>
 
         <LeaderboardAvatar
-          src={entry.profileImageUrl ?? "/images/persona.png"}
-          alt={`${entry.name} ${entry.lastname}`}
-          size={48}
-          completedTodayCount={leaderboardCounts.get(entry.userId) ?? 0}
-        />
+        src={entry.profileImageUrl ?? "/images/persona.png"}
+        alt={`${entry.name} ${entry.lastname}`}
+        size={48}
+        completedTodayCount={
+          entry.userId === user?.id
+            ? myFrameCount
+            : leaderboardCounts.get(entry.userId) ?? 0
+        }
+      />
 
         <div>
           <p className="text-xs sm:text-sm font-medium">
