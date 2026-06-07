@@ -4,10 +4,11 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card/card"
 import TotalProgress from "@/components/ui/graphs/user_projectProg"
 import ProjectCard from "@/components/ui/graphs/user_task"
-import Bugs from "@/components/ui/graphs/user_bugs"
+import Leaderboard from "@/components/ui/graphs/leaderboard"
 import WeeklyProg from "@/components/ui/graphs/user_weekProg"
 import Filters from "@/components/ui/filters/filters"
 import PlannedPercentage from "@/components/ui/graphs/user_plannedPer"
+
 
 import { useDashboardStats, useUserTasks } from "@/hooks/useDashboardStats"
 
@@ -138,7 +139,7 @@ export default function UserDashboard() {
         <Card className="h-[450px] overflow-hidden">
           <CardContent className="h-full pt-5 flex items-center justify-center">
             <div className="w-full h-full">
-              <Bugs />
+              <Leaderboard />
             </div>
           </CardContent>
         </Card>

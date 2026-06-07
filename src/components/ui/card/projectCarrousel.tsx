@@ -1,35 +1,11 @@
 "use client"
-
+import { slugify } from "@/lib/slug";
 import { useRef, useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { getProjects } from "@/services/projectService"
 import type { Project as ProjectType } from '@/types/project'
 
 type Risk = "low" | "medium" | "high"
-
-const placeholderProjects: Omit<ProjectType, 'progress' | 'owner'>[] = [
-  {
-    id: '1',
-    name: "Sistema de Gestión",
-    description: "Administra tareas y equipos",
-    startDate: '2026-01-01',
-    endDate: "2026-05-10",
-    priority: 'High',
-    status: 'In Progress',
-    tasks: 12,
-    team: ["Ana", "Luis", "Carlos", "Sofía", "Miguel"],
-  },
-  {
-    id: '2',
-    name: "App Ecológica",
-    description: "Recolección de datos ambientales",
-    startDate: '2026-02-01',
-    endDate: "2026-06-01",
-    priority: 'Medium',
-    status: 'Planning',
-    tasks: 5,
-    team: ["Laura", "Pedro"],
-  },
-]
 
 const riskConfig: Record<Risk, { label: string; dot: string; badge: string }> = {
   low:    { label: "Low",    dot: "bg-green-500",  badge: "bg-green-50 text-green-800" },
@@ -43,7 +19,29 @@ function formatDate(date: string) {
     .toUpperCase()
 }
 
+function SkeletonCard() {
+  return (
+    <div
+      className="flex-shrink-0 rounded-xl border border-zinc-200 bg-zinc-50 p-4 animate-pulse"
+      style={{ width: '340px', height: '170px' }}
+    >
+      <div className="h-3 w-2/3 bg-zinc-200 rounded mb-2" />
+      <div className="h-2.5 w-full bg-zinc-100 rounded mb-1" />
+      <div className="h-2.5 w-4/5 bg-zinc-100 rounded mb-auto" />
+      <div className="mt-auto pt-6 flex items-center justify-between">
+        <div className="flex gap-1">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-6 w-6 rounded-full bg-zinc-200" />
+          ))}
+        </div>
+        <div className="h-6 w-16 rounded-md bg-zinc-200" />
+      </div>
+    </div>
+  )
+}
+
 function ProjectCard({ project }: { project: ProjectType }) {
+  const router = useRouter()
   const [expanded, setExpanded] = useState(false)
   const [isOverflowing, setIsOverflowing] = useState(false)
   const descRef = useRef<HTMLParagraphElement>(null)
@@ -60,7 +58,8 @@ function ProjectCard({ project }: { project: ProjectType }) {
 
   return (
     <div
-      className="flex-shrink-0 flex flex-col justify-between rounded-xl border border-zinc-200 bg-zinc-50 p-4 transition-all duration-200"
+      onClick={() => router.push(`/projects/${slugify(project.name)}/tasks`)}
+      className="flex-shrink-0 flex flex-col justify-between rounded-xl border border-zinc-200 bg-zinc-50 p-4 transition-all duration-200 cursor-pointer hover:border-zinc-300 hover:shadow-sm"
       style={{ width: '340px', minHeight: '170px', height: expanded ? 'auto' : '170px' }}
     >
       <div className="flex flex-col gap-1">
@@ -73,7 +72,7 @@ function ProjectCard({ project }: { project: ProjectType }) {
         </p>
         {isOverflowing && (
           <button
-            onClick={() => setExpanded(e => !e)}
+            onClick={(e) => { e.stopPropagation(); setExpanded(v => !v) }}
             className="text-[11px] text-zinc-400 hover:text-zinc-600 text-left w-fit"
           >
             {expanded ? 'see less' : 'see more'}
@@ -81,26 +80,21 @@ function ProjectCard({ project }: { project: ProjectType }) {
         )}
       </div>
 
-      <p className="text-[11px] text-zinc-400">{formatDate(project.endDate)}</p>
-
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex -ml-1.5">
-            {(project.team ?? []).slice(0, 3).map((member, i) => (
-              <div
-                key={i}
-                className="first:ml-0 -ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-300 text-[9px] font-semibold text-amber-900"
-              >
-                {member.slice(0, 2).toUpperCase()}
-              </div>
-            ))}
-            {project.team && project.team.length > 3 && (
-              <div className="-ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-200 text-[9px] font-semibold text-amber-900">
-                +{project.team.length - 3}
-              </div>
-            )}
-          </div>
-          <div className="text-xs text-zinc-400">{project.tasks} tareas</div>
+        <div className="flex -ml-1.5">
+          {(project.team ?? []).slice(0, 3).map((member, i) => (
+            <div
+              key={i}
+              className="first:ml-0 -ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-300 text-[9px] font-semibold text-amber-900"
+            >
+              {member.slice(0, 2).toUpperCase()}
+            </div>
+          ))}
+          {project.team && project.team.length > 3 && (
+            <div className="-ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-200 text-[9px] font-semibold text-amber-900">
+              +{project.team.length - 3}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col items-end gap-2">
@@ -118,6 +112,7 @@ function ProjectCard({ project }: { project: ProjectType }) {
 export default function Carrousel() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [projects, setProjects] = useState<ProjectType[] | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
@@ -127,14 +122,15 @@ export default function Carrousel() {
         const data = await getProjects()
         if (!mounted) return
         setProjects(data)
-      } catch (error) {
+      } catch {
         if (!mounted) return
-        setProjects(placeholderProjects as unknown as ProjectType[])
+        setProjects([])
+      } finally {
+        if (mounted) setLoading(false)
       }
     }
 
     load()
-
     return () => { mounted = false }
   }, [])
 
@@ -145,9 +141,12 @@ export default function Carrousel() {
         className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-4"
       >
         <div className="flex gap-3 items-start">
-          {(projects ?? (placeholderProjects as unknown as ProjectType[])).map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
+          {loading
+            ? [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
+            : projects?.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))
+          }
         </div>
       </div>
     </div>

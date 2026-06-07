@@ -471,3 +471,120 @@ export async function getMultipleUsersCompletedTodayCount(userIds: string[]): Pr
 
   return result
 }
+
+// ─── tipos internos ───────────────────────────────────────────────────────────
+
+type BackendSprint = {
+  id_sprint: string
+  id_project?: string
+  project?: {
+    name: string
+  }
+}
+
+type BackendProject = {
+  name: string
+}
+
+export type UnassignedTask = {
+  id: string
+  title: string
+  project: string
+}
+
+type UnassignedBackendTask = {
+  id_task: string
+  title: string
+  assignedTo: string | null
+}
+
+// ─── helpers privados ─────────────────────────────────────────────────────────
+
+async function fetchJson<T>(path: string, token: string): Promise<T | null> {
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    })
+    if (!res.ok) return null
+    return res.json() as Promise<T>
+  } catch {
+    return null
+  }
+}
+
+async function resolveProjectNameFromSprint(sprintId: string, token: string): Promise<string> {
+  const sprint = await fetchJson<BackendSprint>(`/sprints/${sprintId}`, token)
+  if (!sprint) return "Sin proyecto"
+
+  if (sprint.project?.name) return sprint.project.name
+
+  if (sprint.id_project) {
+    const project = await fetchJson<BackendProject>(`/projects/${sprint.id_project}`, token)
+    return project?.name ?? "Sin proyecto"
+  }
+
+  return "Sin proyecto"
+}
+
+// ─── export ───────────────────────────────────────────────────────────────────
+export async function getUnassignedTasks(): Promise<UnassignedTask[]> {
+  try {
+    const token = getToken()
+    if (!token) return []
+
+    // 1. Traer todos los proyectos
+    const projectsRes = await fetch(`${API_URL}/projects`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    })
+    if (!projectsRes.ok) return []
+
+    const projectsData = await projectsRes.json()
+    const projects: { id_project: string; name: string }[] = Array.isArray(projectsData)
+      ? projectsData
+      : projectsData.data ?? []
+
+    // 2. Por cada proyecto traer sus tareas y filtrar sin asignar
+    const results = await Promise.all(
+      projects.map(async (project) => {
+        const tasksRes = await fetch(`${API_URL}/projects/${project.id_project}/tasks`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        })
+        if (!tasksRes.ok) return []
+
+        const tasksData = await tasksRes.json()
+        const tasks: UnassignedBackendTask[] = Array.isArray(tasksData)
+          ? tasksData
+          : tasksData.data ?? []
+
+        return tasks
+          .filter((t) => !t.assignedTo)
+          .map((t) => ({
+            id: t.id_task,
+            title: t.title,
+            project: project.name,
+          }))
+      })
+    )
+
+    return results.flat()
+  } catch (error) {
+    console.error("GET UNASSIGNED TASKS ERROR:", error)
+    return []
+  }
+}
+
