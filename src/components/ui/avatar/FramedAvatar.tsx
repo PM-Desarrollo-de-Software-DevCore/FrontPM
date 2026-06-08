@@ -19,17 +19,17 @@ type FramedAvatarProps = {
 // Marco por posición del leaderboard: 1º diamante, 2º plata, 3º bronce; del 4º en
 // adelante sin marco.
 function getRankFrameSource(rank?: number | null) {
-  if (rank === 1) return "/images/marco/Marco_diamante.svg"
-  if (rank === 2) return "/images/marco/Marco_plata.svg"
-  if (rank === 3) return "/images/marco/Marco_bronce.svg"
+  if (rank === 1) return "/images/marco/Marco_diamante.webp"
+  if (rank === 2) return "/images/marco/Marco_plata.webp"
+  if (rank === 3) return "/images/marco/Marco_bronce.webp"
   return null
 }
 
 function getFrameSource(completedTodayCount?: number | null) {
-  if (completedTodayCount === 1) return "/images/marco/Marco_bronce.svg"
-  if (completedTodayCount === 2) return "/images/marco/Marco_plata.svg"
+  if (completedTodayCount === 1) return "/images/marco/Marco_bronce.webp"
+  if (completedTodayCount === 2) return "/images/marco/Marco_plata.webp"
   if (completedTodayCount !== null && completedTodayCount !== undefined && completedTodayCount >= 3) {
-    return "/images/marco/Marco_diamante.svg"
+    return "/images/marco/Marco_diamante.webp"
   }
 
   return null
@@ -38,7 +38,7 @@ function getFrameSource(completedTodayCount?: number | null) {
 function getFrameSourceWithDefault(completedTodayCount?: number | null, showDefault?: boolean) {
   const frame = getFrameSource(completedTodayCount)
   if (frame) return frame
-  if (showDefault) return "/images/marco/Marco_bronce.svg"
+  if (showDefault) return "/images/marco/Marco_bronce.webp"
   return null
 }
 
