@@ -382,6 +382,7 @@ export default function CreateProjectModal({
 
         // Sincronización transaccional de miembros (todo o nada) en UNA request.
         let memberSyncFailed = false;
+        let memberSyncError = "";
         if (toAdd.length || toUpdateRole.length || toRemove.length) {
           try {
             await syncProjectMembers(project.id, {
@@ -389,14 +390,17 @@ export default function CreateProjectModal({
               update: toUpdateRole.map((member) => ({ userId: member.id, role: member.projectRole })),
               remove: toRemove.map((member) => member.userId),
             });
-          } catch {
+          } catch (err) {
             memberSyncFailed = true;
+            memberSyncError = err instanceof Error ? err.message : "";
           }
         }
 
         if (memberSyncFailed) {
           setMemberSyncWarning(
-            "El proyecto se actualizo, pero los miembros no pudieron sincronizarse."
+            memberSyncError
+              ? `El proyecto se actualizó, pero los miembros no pudieron sincronizarse: ${memberSyncError}`
+              : "El proyecto se actualizó, pero los miembros no pudieron sincronizarse."
           );
         } else {
           setInitialMembers(
@@ -426,6 +430,7 @@ export default function CreateProjectModal({
 
       // Altas de miembros en UNA request transaccional.
       let memberSyncFailed = false;
+      let memberSyncError = "";
       if (selectedUsers.length > 0) {
         try {
           await syncProjectMembers(newProject.id, {
@@ -433,14 +438,17 @@ export default function CreateProjectModal({
             update: [],
             remove: [],
           });
-        } catch {
+        } catch (err) {
           memberSyncFailed = true;
+          memberSyncError = err instanceof Error ? err.message : "";
         }
       }
 
       if (memberSyncFailed) {
         setMemberSyncWarning(
-          "El proyecto se creo, pero los miembros no pudieron agregarse."
+          memberSyncError
+            ? `El proyecto se creó, pero los miembros no pudieron agregarse: ${memberSyncError}`
+            : "El proyecto se creó, pero los miembros no pudieron agregarse."
         );
       }
 
@@ -451,7 +459,9 @@ export default function CreateProjectModal({
         ),
       });
 
-      closeModal();
+      if (!memberSyncFailed) {
+        closeModal();
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error al crear el proyecto";
       setError(errorMessage);
