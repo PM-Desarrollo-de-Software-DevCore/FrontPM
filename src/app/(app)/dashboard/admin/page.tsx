@@ -2,8 +2,10 @@
 
 import Carrousel from "@/components/ui/card/projectCarrousel"
 import { Card, CardContent } from "@/components/ui/card/card"
-import dynamic from "next/dynamic"
-const PerformanceChart = dynamic(() => import("@/components/ui/graphs/performaceChart"), { ssr: false, loading: () => <div className="h-full w-full min-h-[200px] animate-pulse rounded-xl bg-slate-100" /> })
+import StatsRow from "@/components/ui/graphs/stats_cards"
+import Leaderboard from "@/components/ui/graphs/user_table"
+import UnassignedTasks from "@/components/ui/graphs/unssaingedTasks"
+import Logs from "@/components/ui/graphs/logs"
 
 export default function DashboardPage() {
   return (
@@ -14,43 +16,28 @@ export default function DashboardPage() {
           Dashboard
         </h1>
 
-<Card className="w-full">
-  <CardContent style={{ padding: 2 }}>
-    <Carrousel />
-  </CardContent>
-</Card>
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 items-start">
+          <Card className="w-full">
+            <CardContent style={{ padding: 2 }}>
+              <Carrousel />
+            </CardContent>
+          </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
-
-          <div className="lg:col-span-2 flex flex-col">
-            <Card className="flex flex-col h-[420px] overflow-hidden">
-              <div className="p-4 sm:p-5 border-b">
-                <h2 className="text-base sm:text-lg font-semibold">Logs</h2>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 sm:p-5 flex flex-col gap-4">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="rounded-xl border border-border px-4 py-3 shadow-sm bg-card">
-                    <p className="text-sm font-semibold text-strong">
-                      User updated project settings
-                    </p>
-                    <p className="text-xs text-muted mt-1">
-                      Logs · 2 mins ago
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-
-          <div className="lg:col-span-4 flex flex-col">
-            <Card className="h-[420px] overflow-hidden">
-              <CardContent className="pt-5 h-full">
-                <PerformanceChart />
-              </CardContent>
-            </Card>
-          </div>
-
+          <StatsRow />
         </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[7fr_5fr_5fr] gap-4 items-stretch">
+          <div className="min-h-[400px] max-h-[500px] overflow-y-auto">
+            <Logs />
+          </div>
+          <div className="min-h-[400px] max-h-[500px] overflow-y-auto">
+            <Leaderboard />
+          </div>
+          <div className="min-h-[400px] max-h-[500px] overflow-y-auto">
+            <UnassignedTasks />
+          </div>
+        </div>
+
       </div>
     </div>
   )
