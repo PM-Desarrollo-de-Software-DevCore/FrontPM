@@ -433,6 +433,11 @@ const esToEnEntries: Array<[string, string]> = [
 // cola ("Reportee"/"Conceptoo"). El sentido es->en (inglés es el default) sí los traduce.
 const enToEsEntries: Array<[string, string]> = esToEnEntries
   .filter(([es, en]) => !es.includes(en))
+  // Tampoco revertir si el inglés aparece dentro del español FUENTE de OTRA entrada
+  // (p.ej. "Milestones" vive literalmente en "Milestones generados desde los sprints..."):
+  // revertir en->es sobre ese source en español lo corrompería ("Hitos generados...").
+  // El revert del texto ya mostrado se recalcula desde el source cacheado, no desde aquí.
+  .filter(([es, en]) => !esToEnEntries.some(([otherEs]) => otherEs !== es && otherEs.includes(en)))
   .map(([es, en]) => [en, es]);
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
