@@ -138,15 +138,16 @@ export default function Carrousel() {
     <div className="w-full py-4">
       <div
         ref={scrollRef}
-        className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-4"
+        className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-8"
       >
-        <div className="flex gap-3 items-start">
+        <div className="flex gap-3 items-stretch">
           {loading
             ? [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
             : projects?.map((project) => (
                 <ProjectCard key={project.id} project={project} />
               ))
           }
+          <div className="flex-shrink-0 w-4" />
         </div>
       </div>
     </div>
