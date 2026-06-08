@@ -23,7 +23,7 @@ interface Props {
   users: User[]
   onCloseAction: () => void
   onDeleteAction: (taskId: string) => void
-  onAssignAction: (taskId: string, userId: string) => void
+  onAssignAction: (taskId: string, userId: string) => void | Promise<void>
 }
 
 export default function TaskDetailsModal({
@@ -222,15 +222,18 @@ export default function TaskDetailsModal({
               </select>
 
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!selectedUser) return
 
-                  onAssignAction(taskId, selectedUser)
-                  setSuccessMessage("User assigned successfully.")
-
-                  setTimeout(() => {
-                    setSuccessMessage("")
-                  }, 3000)
+                  try {
+                    await onAssignAction(taskId, selectedUser)
+                    setSuccessMessage("User assigned successfully.")
+                    setTimeout(() => {
+                      setSuccessMessage("")
+                    }, 3000)
+                  } catch {
+                    // El padre ya muestra el error con notifyError; no fingimos éxito.
+                  }
                 }}
                 className="h-10 rounded-2xl bg-black px-4 text-sm font-medium text-white transition hover:opacity-90"
               >
