@@ -2,6 +2,9 @@
 
 import { useRef, useEffect, useState } from "react"
 import { getProjects } from "@/services/projectService"
+import { getUsersDirectory, UserDirectoryEntry } from "@/services/userService"
+import { getAllProjectMembers, ProjectMember } from "@/services/memberService"
+import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
 import type { Project as ProjectType } from '@/types/project'
 
 type Risk = "low" | "medium" | "high"
@@ -43,7 +46,7 @@ function formatDate(date: string) {
     .toUpperCase()
 }
 
-function ProjectCard({ project }: { project: ProjectType }) {
+function ProjectCard({ project, usersById, members }: { project: ProjectType; usersById: Record<string, UserDirectoryEntry>; members: ProjectMember[] }) {
   const [expanded, setExpanded] = useState(false)
   const [isOverflowing, setIsOverflowing] = useState(false)
   const descRef = useRef<HTMLParagraphElement>(null)
@@ -54,9 +57,21 @@ function ProjectCard({ project }: { project: ProjectType }) {
     }
   }, [])
 
-  const priority = (project as any).priority || 'Medium'
+  const priority = project.priority || 'Medium'
   const riskKey = (priority as string).toLowerCase() as Risk
   const risk = riskConfig[riskKey]
+
+  const displayMembers = members
+    .map((member) => {
+      const user = usersById[member.userId]
+      if (!user) return null
+      return {
+        id: member.userId,
+        label: `${user.name} ${user.lastname}`.trim() || user.email,
+        profileImageUrl: user.profileImageUrl,
+      }
+    })
+    .filter((m): m is { id: string; label: string; profileImageUrl: string | null } => Boolean(m))
 
   return (
     <div
@@ -85,18 +100,19 @@ function ProjectCard({ project }: { project: ProjectType }) {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="flex -ml-1.5">
-            {(project.team ?? []).slice(0, 3).map((member, i) => (
+          <div className="flex -space-x-1.5">
+            {displayMembers.slice(0, 3).map((member, i) => (
               <div
-                key={i}
-                className="first:ml-0 -ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-300 text-[9px] font-semibold text-amber-900"
+                key={`${project.id}-${member.id}-${i}`}
+                className="rounded-full border-2 border-white bg-white"
+                title={member.label}
               >
-                {member.slice(0, 2).toUpperCase()}
+                <FramedAvatar src={member.profileImageUrl} alt={member.label} size={20} />
               </div>
             ))}
-            {project.team && project.team.length > 3 && (
-              <div className="-ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-200 text-[9px] font-semibold text-amber-900">
-                +{project.team.length - 3}
+            {displayMembers.length > 3 && (
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-200 text-[9px] font-semibold text-amber-900">
+                +{displayMembers.length - 3}
               </div>
             )}
           </div>
@@ -118,6 +134,8 @@ function ProjectCard({ project }: { project: ProjectType }) {
 export default function Carrousel() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [projects, setProjects] = useState<ProjectType[] | null>(null)
+  const [usersById, setUsersById] = useState<Record<string, UserDirectoryEntry>>({})
+  const [membersByProject, setMembersByProject] = useState<Record<string, ProjectMember[]>>({})
 
   useEffect(() => {
     let mounted = true
@@ -127,13 +145,40 @@ export default function Carrousel() {
         const data = await getProjects()
         if (!mounted) return
         setProjects(data)
-      } catch (error) {
+      } catch {
         if (!mounted) return
         setProjects(placeholderProjects as unknown as ProjectType[])
       }
     }
 
     load()
+
+    return () => { mounted = false }
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+
+    async function loadMembers() {
+      try {
+        const [users, grouped] = await Promise.all([
+          getUsersDirectory(),
+          getAllProjectMembers(),
+        ])
+        if (!mounted) return
+        setUsersById(
+          users.reduce<Record<string, UserDirectoryEntry>>((acc, u) => {
+            acc[u.id] = u
+            return acc
+          }, {})
+        )
+        setMembersByProject(grouped)
+      } catch {
+        // Sin miembros/fotos: las tarjetas caen al placeholder de avatar.
+      }
+    }
+
+    loadMembers()
 
     return () => { mounted = false }
   }, [])
@@ -146,7 +191,7 @@ export default function Carrousel() {
       >
         <div className="flex gap-3 items-start">
           {(projects ?? (placeholderProjects as unknown as ProjectType[])).map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard key={project.id} project={project} usersById={usersById} members={membersByProject[project.id] || []} />
           ))}
         </div>
       </div>
