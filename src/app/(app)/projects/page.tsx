@@ -5,8 +5,9 @@ import Link from "next/link";
 import CreateProjectModal from "@/components/project/CreateProjectModal";
 import { Project } from "@/types/project";
 import { getProjects } from "@/services/projectService";
-import { getNonAdminUsers, UserOption } from "@/services/userService";
+import { getUsersDirectory, UserDirectoryEntry } from "@/services/userService";
 import { getAllProjectMembers, ProjectMember } from "@/services/memberService";
+import FramedAvatar from "@/components/ui/avatar/FramedAvatar";
 import { slugify } from "@/lib/slug";
 
 function formatDate(date: string) {
@@ -37,7 +38,7 @@ export default function ProjectsPage() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [usersById, setUsersById] = useState<Record<string, UserOption>>({});
+  const [usersById, setUsersById] = useState<Record<string, UserDirectoryEntry>>({});
   const [membersByProject, setMembersByProject] = useState<Record<string, ProjectMember[]>>({});
 
   // Cargar proyectos del backend al montar el componente
@@ -63,9 +64,9 @@ export default function ProjectsPage() {
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        const users = await getNonAdminUsers();
+        const users = await getUsersDirectory();
         setUsersById(
-          users.reduce<Record<string, UserOption>>((acc, user) => {
+          users.reduce<Record<string, UserDirectoryEntry>>((acc, user) => {
             acc[user.id] = user;
             return acc;
           }, {})
@@ -159,7 +160,7 @@ export default function ProjectsPage() {
 
 interface ProjectCardProps {
   project: Project;
-  usersById: Record<string, UserOption>;
+  usersById: Record<string, UserDirectoryEntry>;
   members: ProjectMember[];
   onEdit: () => void;
 }
@@ -183,12 +184,16 @@ function ProjectCard({ project, usersById, members, onEdit }: ProjectCardProps) 
         return {
           id: member.userId,
           label: `${user.name} ${user.lastname}`.trim() || user.email,
+          profileImageUrl: user.profileImageUrl,
         };
       }
 
       return null;
     })
-    .filter((member): member is { id: string; label: string } => Boolean(member));
+    .filter(
+      (member): member is { id: string; label: string; profileImageUrl: string | null } =>
+        Boolean(member)
+    );
 
   return (
     <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:shadow-md">
@@ -264,10 +269,10 @@ function ProjectCard({ project, usersById, members, onEdit }: ProjectCardProps) 
           {displayMembers.slice(0, 4).map((member, index) => (
             <div
               key={`${project.id}-${member.id}-${index}`}
-              className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-amber-300 text-[10px] font-semibold text-zinc-800"
+              className="rounded-full border-2 border-white bg-white"
               title={member.label}
             >
-              {member.label.slice(0, 2).toUpperCase()}
+              <FramedAvatar src={member.profileImageUrl} alt={member.label} size={24} />
             </div>
           ))}
 
