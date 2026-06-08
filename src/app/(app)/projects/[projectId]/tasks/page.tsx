@@ -347,6 +347,7 @@ export default function TasksPage() {
         "Task could not be updated",
         error instanceof Error ? error.message : "Please try again."
       )
+      throw error
     }
   }
 
