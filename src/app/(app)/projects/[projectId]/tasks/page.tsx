@@ -19,6 +19,7 @@ const TaskWorkspaceViews = dynamic(() => import("@/components/tasks/TaskWorkspac
   loading: () => <div className="min-h-[400px] w-full animate-pulse rounded-2xl bg-slate-100" />,
 })
 import { useNotification } from "@/components/ui/notifications/NotificationProvider"
+import { useConfirm } from "@/components/ui/confirm/ConfirmProvider"
 
 import { getProjectById, getProjects } from "@/services/projectService"
 import {
@@ -50,6 +51,7 @@ interface CreateTaskContext {
 
 export default function TasksPage() {
   const { notifyError, notifySuccess } = useNotification()
+  const confirm = useConfirm()
   const params = useParams()
   const searchParams = useSearchParams()
   const projectId = params.projectId as string
@@ -200,10 +202,10 @@ export default function TasksPage() {
 
     if (!isGeneralBoard && nextSprintId) {
       const targetSprint = sprints.find((sprint) => sprint.id === nextSprintId)
-      if (targetSprint?.status === "completed") {
+      if (targetSprint?.status === "finished") {
         notifyError(
           "Cannot move task",
-          "Tasks cannot be moved into a completed sprint."
+          "Tasks cannot be moved into a finished sprint."
         )
         return
       }
@@ -307,9 +309,13 @@ export default function TasksPage() {
   }
 
   const handleDeleteTask = async (taskId: string) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this task? This action cannot be undone."
-    )
+    const confirmed = await confirm({
+      title: "Delete task",
+      description:
+        "Are you sure you want to delete this task? This action cannot be undone.",
+      confirmLabel: "Delete",
+      tone: "danger",
+    })
 
     if (!confirmed) return
 
@@ -326,28 +332,12 @@ export default function TasksPage() {
     }
   }
 
-  const handleAssignUser = async (taskId: string, userId: string) => {
-    try {
-      await updateTask(
-        taskId,
-        {
-          assignedTo: userId,
-        },
-        token
-      )
-
-      setTasks((currentTasks) =>
-        currentTasks.map((task) =>
-          task.id === taskId ? { ...task, assignedTo: userId } : task
-        )
-      )
-      notifySuccess("Task updated", "The assignee was updated successfully.")
-    } catch (error) {
-      notifyError(
-        "Task could not be updated",
-        error instanceof Error ? error.message : "Please try again."
-      )
-    }
+  // El modal aplica todos los cambios en una sola llamada a updateTask y luego
+  // sincroniza el estado local (lista + tarea seleccionada) con este callback.
+  const handleTaskUpdated = (taskId: string, changes: Partial<Task>) => {
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, ...changes } : t)))
+    setSelectedTask((prev) => (prev && prev.id === taskId ? { ...prev, ...changes } : prev))
+    notifySuccess("Task updated", "Changes were saved successfully.")
   }
 
   const handleOpenTask = (task: Task) => {
@@ -450,7 +440,7 @@ export default function TasksPage() {
             setSelectedTask(null)
           }}
           onDeleteAction={handleDeleteTask}
-          onAssignAction={handleAssignUser}
+          onTaskUpdatedAction={handleTaskUpdated}
         />
       )}
     </div>

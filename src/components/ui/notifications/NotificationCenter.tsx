@@ -10,6 +10,8 @@ import { getMyNotifications, markAllNotificationsAsRead, NotificationRecord } fr
 const CATEGORY_LABELS: Record<string, string> = {
   project_created: "Proyecto",
   project_completed: "Proyecto finalizado",
+  project_updated: "Proyecto actualizado",
+  project_deleted: "Proyecto eliminado",
   project_member_added: "Proyecto",
   task_assigned: "Tarea",
   task_commented: "Comentario",

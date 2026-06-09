@@ -388,6 +388,17 @@ function TimelineView({
 
   const totalMs = Math.max(1, timelineBounds.end.getTime() - timelineBounds.start.getTime())
   const sprintsById = useMemo(() => new Map(sprints.map((sprint) => [sprint.id, sprint])), [sprints])
+  const sortedTasks = useMemo(
+    () =>
+      tasks
+        .slice()
+        .sort(
+          (left, right) =>
+            getTaskTimelineRange(left, sprintsById).start.getTime() -
+            getTaskTimelineRange(right, sprintsById).start.getTime()
+        ),
+    [tasks, sprintsById]
+  )
   const markers = useMemo(() => {
     const markerCount = 5
     return Array.from({ length: markerCount }, (_, index) => {
@@ -413,21 +424,26 @@ function TimelineView({
       </div>
 
       <div className="space-y-4">
-        <div className="relative h-10 rounded-3xl border border-slate-100 bg-slate-50 px-4">
-          {markers.map((marker) => (
-            <div key={marker.left} className="absolute top-2 h-6 -translate-x-1/2 text-[11px] font-semibold text-slate-500" style={{ left: marker.left }}>
-              <span className="block whitespace-nowrap rounded-full bg-white px-2 py-1 shadow-sm">{marker.label}</span>
-            </div>
-          ))}
+        <div className="relative h-10 rounded-3xl border border-slate-100 bg-slate-50">
+          <div className="absolute inset-x-4 inset-y-2">
+            {markers.map((marker) => (
+              <div key={marker.left} className="absolute top-0 -translate-x-1/2 text-[11px] font-semibold text-slate-500" style={{ left: marker.left }}>
+                <span className="block whitespace-nowrap rounded-full bg-white px-2 py-1 shadow-sm">{marker.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {tasks
-          .slice()
-          .sort((left, right) => getTaskTimelineRange(left, sprintsById).start.getTime() - getTaskTimelineRange(right, sprintsById).start.getTime())
-          .map((task) => {
+        {sortedTasks.length === 0 ? (
+          <p className="rounded-[28px] border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+            No hay tareas para mostrar en el timeline.
+          </p>
+        ) : (
+          sortedTasks.map((task) => {
             const range = getTaskTimelineRange(task, sprintsById)
             const startRatio = Math.max(0, Math.min(1, (range.start.getTime() - timelineBounds.start.getTime()) / totalMs))
-            const endRatio = Math.max(startRatio + 0.02, Math.min(1, (range.end.getTime() - timelineBounds.start.getTime()) / totalMs))
+            const endRatio = Math.max(startRatio, Math.min(1, (range.end.getTime() - timelineBounds.start.getTime()) / totalMs))
+            const widthRatio = endRatio - startRatio
             const sprintLabel = getSprintLabel(task, sprintsById)
             const assignee = getAssignee(task, usersById)
 
@@ -446,23 +462,26 @@ function TimelineView({
                 </div>
 
                 <div className="relative h-12 overflow-hidden rounded-3xl bg-white">
-                  <div className="absolute inset-y-3 left-3 right-3 rounded-full bg-slate-100" />
-                  <div
-                    className="absolute inset-y-3 rounded-full bg-sky-500/70 shadow-sm"
-                    style={{
-                      left: `calc(12px + ${startRatio * 100}%)`,
-                      width: `max(10px, calc(${(endRatio - startRatio) * 100}% - 24px))`,
-                    }}
-                  >
-                    <div className="flex h-full items-center justify-between gap-3 px-3 text-[11px] font-semibold text-white">
-                      <span className="truncate">{formatDateLabel(task.end_date)}</span>
-                      <span>{task.progress}%</span>
+                  <div className="absolute inset-x-4 inset-y-3">
+                    <div className="absolute inset-0 rounded-full bg-slate-100" />
+                    <div
+                      className={`absolute inset-y-0 rounded-full shadow-sm ${statusMeta[task.status].color}`}
+                      style={{
+                        left: `${startRatio * 100}%`,
+                        width: `max(12px, ${widthRatio * 100}%)`,
+                      }}
+                    >
+                      <div className="flex h-full items-center justify-between gap-3 px-3 text-[11px] font-semibold text-white">
+                        <span className="truncate">{formatDateLabel(task.end_date)}</span>
+                        <span className="shrink-0">{task.progress}%</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </button>
             )
-          })}
+          })
+        )}
       </div>
     </section>
   )

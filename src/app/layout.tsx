@@ -4,6 +4,7 @@ import "../styles/globals.css";
 import { cn } from "@/lib/utils";
 import { LanguageProvider } from "@/components/i18n/LanguageProvider";
 import { NotificationProvider } from "@/components/ui/notifications/NotificationProvider";
+import { ConfirmProvider } from "@/components/ui/confirm/ConfirmProvider";
 import ThemeProvider from "@/components/ui/ThemeProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 
@@ -37,7 +38,9 @@ export default function RootLayout({
         <AuthProvider>
           <ThemeProvider>
             <LanguageProvider>
-              <NotificationProvider>{children}</NotificationProvider>
+              <NotificationProvider>
+                <ConfirmProvider>{children}</ConfirmProvider>
+              </NotificationProvider>
             </LanguageProvider>
           </ThemeProvider>
         </AuthProvider>
