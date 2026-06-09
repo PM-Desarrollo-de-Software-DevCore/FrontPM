@@ -1,8 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "../Button/button"
 import { useUserTasks, UserTask } from "@/hooks/useDashboardStats"
+import { slugify } from "@/lib/slug"
 
 type FilterStatus = "all" | "pending" | "in_progress" | "completed" | "overdue"
 
@@ -44,6 +46,7 @@ type Props = {
 }
 
 export default function ProjectsList({ filters }: Props) {
+  const router = useRouter()
   const [filter, setFilter] = useState<FilterStatus>("all")
   const { data, loading, error } = useUserTasks(filters)
 
@@ -132,6 +135,10 @@ export default function ProjectsList({ filters }: Props) {
         {filteredTasks.map((task) => (
           <div
             key={task.id_task}
+            onClick={() => {
+              const projectSlug = slugify(task.project.name)
+              router.push(`/projects/${projectSlug}/tasks?taskId=${task.id_task}`)
+            }}
             className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-4 shadow-sm hover:shadow-md transition w-full min-w-0 cursor-pointer"
           >
 

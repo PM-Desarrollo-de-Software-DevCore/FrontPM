@@ -2,6 +2,8 @@
 
 import { Task } from "@/types/task"
 import { getToken } from "@/lib/auth"
+import { getSearchIndex } from "@/services/searchService"
+import { getProjects } from "@/services/projectService"
 
 const API_URL =
   process.env
@@ -332,10 +334,7 @@ export async function getMyTasks() {
   }
 }
 
-/*
-  Obtener el número de tareas completadas hoy por el usuario autenticado.
-  Usa `/users/me/tasks`, que es el endpoint real del backend.
-*/
+
 export async function getUserCompletedTodayCount() {
   try {
     const token = getToken()
@@ -377,10 +376,7 @@ export async function getUserCompletedTodayCount() {
   }
 }
 
-/*
-  Obtener el número de tareas completadas hoy por un usuario específico.
-  Intenta varios endpoints: /users/{userId}/tasks, /users/{userId}/completed-today, etc.
-*/
+
 export async function getUserCompletedTodayCountById(userId: string) {
   try {
     const token = getToken()
@@ -388,7 +384,7 @@ export async function getUserCompletedTodayCountById(userId: string) {
       return 0
     }
 
-    // Intenta el endpoint directo para un usuario específico
+
     const response = await fetch(`${API_URL}/users/${userId}/tasks`, {
       method: "GET",
       headers: {
@@ -423,10 +419,7 @@ export async function getUserCompletedTodayCountById(userId: string) {
   }
 }
 
-/*
-  Obtener conteos de tareas completadas hoy para múltiples usuarios.
-  Carga todas las tareas y devuelve un Map de userId -> count
-*/
+
 export async function getMultipleUsersCompletedTodayCount(userIds: string[]): Promise<Map<string, number>> {
   const result = new Map<string, number>()
   
@@ -436,7 +429,7 @@ export async function getMultipleUsersCompletedTodayCount(userIds: string[]): Pr
       return result
     }
 
-    // Intenta cargar las tareas de todos los usuarios
+  
     const response = await fetch(`${API_URL}/tasks/completed-today`, {
       method: "POST",
       headers: {
@@ -451,7 +444,7 @@ export async function getMultipleUsersCompletedTodayCount(userIds: string[]): Pr
       const data = await response.json()
       const counts = Array.isArray(data) ? data : data.data || {}
       
-      // Si es un array, mapear por userId
+
       if (Array.isArray(counts)) {
         counts.forEach((item) => {
           const row = item as CompletedTodayCountItem
@@ -459,7 +452,7 @@ export async function getMultipleUsersCompletedTodayCount(userIds: string[]): Pr
           result.set(row.userId, row.count || 0)
         })
       } else if (typeof counts === "object") {
-        // Si es un objeto, usar como Map directo
+
         Object.entries(counts).forEach(([userId, count]) => {
           result.set(userId, count as number)
         })
@@ -470,4 +463,38 @@ export async function getMultipleUsersCompletedTodayCount(userIds: string[]): Pr
   }
 
   return result
+}
+
+
+export type UnassignedTask = {
+  id: string
+  title: string
+  project: string
+}
+
+export async function getUnassignedTasks(): Promise<UnassignedTask[]> {
+  try {
+    const token = getToken()
+    if (!token) return []
+
+    const [projects, searchIndex] = await Promise.all([
+      getProjects(),
+      getSearchIndex(),
+    ])
+
+    const projectNames = new Map<string, string>(
+      projects.map((project) => [project.id, project.name])
+    )
+
+    return searchIndex.tasks
+      .filter((task) => !task.assignedTo)
+      .map((t) => ({
+        id: t.id,
+        title: t.title,
+        project: projectNames.get(t.projectId) ?? "Sin proyecto",
+      }))
+  } catch (error) {
+    console.error("GET UNASSIGNED TASKS ERROR:", error)
+    return []
+  }
 }
