@@ -9,7 +9,11 @@
     "lint": "eslint",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:install": "npx playwright install"
+    "test:e2e:install": "npx playwright install",
+    "test:unit": "jest",
+    "test:unit:watch": "jest --watch",
+    "test:e2e:entrega": "playwright test --config playwright-entrega.config.ts",
+    "test:e2e:entrega:headed": "playwright test --config playwright-entrega.config.ts --headed"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -38,13 +42,19 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.36.0",
+    "@swc/core": "^1.15.40",
+    "@swc/jest": "^0.2.39",
     "@tailwindcss/postcss": "^4",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.11",
     "typescript": "5.9.3"
   }
 }

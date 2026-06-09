@@ -6,7 +6,7 @@ import {
   ProjectPriority,
   ProjectStatus,
 } from "@/types/project";
-import { createProject, ProjectPayload, updateProject } from "@/services/projectService";
+import { createProject, ProjectPayload, updateProject, deleteProject } from "@/services/projectService";
 import {
   AssignmentSuggestionItem,
   getAssignmentSuggestions,
@@ -17,6 +17,10 @@ import {
   ProjectMemberRole,
   syncProjectMembers,
 } from "@/services/memberService";
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
+import { Tooltip } from "@mui/material";
+import { useNotification } from "@/components/ui/notifications/NotificationProvider"
+import { useConfirm } from "@/components/ui/confirm/ConfirmProvider"
 
 interface CreateProjectModalProps {
   onCreate?: (project: Project) => void;
@@ -61,12 +65,10 @@ export default function CreateProjectModal({
   const isOpen = isEditMode ? Boolean(open) : internalOpen;
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [memberSyncWarning, setMemberSyncWarning] = useState<string | null>(
     null
   );
   const [usersLoading, setUsersLoading] = useState(false);
-  const [usersError, setUsersError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<AssignmentSuggestionItem[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [userQuery, setUserQuery] = useState("");
@@ -76,6 +78,8 @@ export default function CreateProjectModal({
     Array<{ userId: string; role: ProjectMemberRole }>
   >([]);
   const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
+  const { notifyError, notifySuccess } = useNotification()
+  const confirm = useConfirm()
 
   const emptyFormState: ProjectFormState = {
     name: "",
@@ -120,8 +124,6 @@ export default function CreateProjectModal({
   };
 
   const closeModal = () => {
-    setError(null);
-    setUsersError(null);
     setMemberSyncWarning(null);
     setUserQuery("");
     setAdvancedSettingsOpen(false);
@@ -139,9 +141,6 @@ export default function CreateProjectModal({
 
   useEffect(() => {
     if (!isOpen) return;
-
-    setError(null);
-    setUsersError(null);
     setMemberSyncWarning(null);
 
     if (isEditMode && project) {
@@ -237,7 +236,6 @@ export default function CreateProjectModal({
     const loadUsers = async () => {
       try {
         setUsersLoading(true);
-        setUsersError(null);
         const users = await getNonAdminUsers();
         setAvailableUsers(users);
 
@@ -263,7 +261,7 @@ export default function CreateProjectModal({
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Error al cargar usuarios";
-        setUsersError(errorMessage);
+        notifyError("Alert", errorMessage);
       } finally {
         setUsersLoading(false);
       }
@@ -314,7 +312,6 @@ export default function CreateProjectModal({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     setMemberSyncWarning(null);
 
     try {
@@ -325,7 +322,7 @@ export default function CreateProjectModal({
       const trimmedObjective = form.projectObjective.trim();
 
       if (!trimmedName || !trimmedDescription || !trimmedClient || !trimmedProjectType || !trimmedObjective) {
-        setError("Completa los campos esenciales del proyecto antes de guardar.");
+        notifyError("Alert", "Completa los campos esenciales del proyecto antes de guardar.");
         setLoading(false);
         return;
       }
@@ -335,7 +332,7 @@ export default function CreateProjectModal({
       const endDate = new Date(form.endDate);
       
       if (startDate >= endDate) {
-        setError("La fecha de inicio debe ser anterior a la fecha de fin");
+        notifyError("Alert", "La fecha de inicio debe ser anterior a la fecha de fin.");
         setLoading(false);
         return;
       }
@@ -459,13 +456,47 @@ export default function CreateProjectModal({
         ),
       });
 
-      if (!memberSyncFailed) {
-        closeModal();
-      }
+      notifySuccess("Success", "Project created successfully!");
+
+      closeModal();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error al crear el proyecto";
-      setError(errorMessage);
+      notifyError("Alert", errorMessage);
       console.error("Error creating project:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!project?.id) return;
+
+    const confirmed = await confirm({
+      title: "Delete project",
+      description:
+        "Are you sure you want to delete this project? This action cannot be undone.",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+
+      await deleteProject(project.id);
+
+      closeModal();
+
+      // Opcional: refrescar lista
+      window.location.reload();
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Error deleting project";
+
+      notifyError("Alert", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -493,30 +524,49 @@ export default function CreateProjectModal({
             className="flex w-full max-w-4xl max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-3xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900 md:p-8"
           >
             <div className="mb-5 border-b border-zinc-100 pb-5 dark:border-white/10">
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-300">
-                {isEditMode ? "Edit Project" : "New Project"}
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-100">
-                {isEditMode ? "Edit Project" : "Create Project"}
-              </h2>
-              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-300">
-                Fill out the essentials first, then open advanced settings if you need budget or billing details.
-              </p>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-300">
+                    {isEditMode ? "Actual Project" : "New Project"}
+                  </p>
+
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-100">
+                    {isEditMode ? "Edit Project" : "Create Project"}
+                  </h2>
+
+                  <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-300">
+                    Fill out the essentials first, then open advanced settings if you need budget or billing details.
+                  </p>
+                </div>
+
+                {isEditMode && (
+                  <Tooltip title="Delete Project" arrow>
+                    <button
+                      type="button"
+                      onClick={handleDeleteProject}
+                      disabled={loading}
+                      className="ml-4 flex items-center gap-2 rounded-lg border border-red-500 px-3 py-2 text-red-500 transition hover:bg-red-500/10 disabled:opacity-50"
+                    >
+                      <DeleteOutlinedIcon fontSize="small" />
+                      Delete
+                    </button>
+                  </Tooltip>
+                )}
+              </div>
             </div>
 
             <div className="flex-1 space-y-5 overflow-y-auto pr-1">
-              {error && (
+              {/* {error && (
                 <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
                   {error}
                 </div>
-              )}
+              )} */}
 
-              {memberSyncWarning && (
+              {/* {memberSyncWarning && (
                 <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
                   {memberSyncWarning}
                 </div>
-              )}
-
+              )} */}
               <section className="rounded-3xl border border-zinc-200 bg-zinc-50/70 p-5 dark:border-white/10 dark:bg-slate-800/60">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
@@ -716,11 +766,11 @@ export default function CreateProjectModal({
                     disabled={loading || usersLoading}
                   />
 
-                  {usersError && (
+                  {/* {usersError && (
                     <p className="mt-2 text-sm text-red-600">{usersError}</p>
-                  )}
+                  )} */}
 
-                  {!usersError && userQuery.trim().length > 0 && (
+                  {/* {!usersError && userQuery.trim().length > 0 && (
                     <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-44 overflow-auto rounded-2xl border border-zinc-200 bg-white shadow-lg dark:border-white/10 dark:bg-slate-900">
                       {filteredUsers.length > 0 ? (
                         filteredUsers.map((user) => (
@@ -738,7 +788,7 @@ export default function CreateProjectModal({
                         <p className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-300">No se encontraron usuarios.</p>
                       )}
                     </div>
-                  )}
+                  )} */}
 
                   {selectedUsers.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">

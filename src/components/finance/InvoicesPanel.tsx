@@ -6,6 +6,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react"
 import { Invoice, InvoiceStatus, InvoiceSummary } from "@/types/finance"
 import { deleteInvoice, getProjectInvoices } from "@/services/invoiceService"
 import { useProjectRole } from "@/hooks/useProjectRole"
+import { useConfirm } from "@/components/ui/confirm/ConfirmProvider"
 import { formatDate, formatMoney } from "@/lib/utils"
 import dynamic from "next/dynamic"
 const GaugeChart = dynamic(() => import("@/components/ui/graphs/GaugeChart"), {
@@ -37,6 +38,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 
 export default function InvoicesPanel({ projectId }: { projectId: string }) {
   const { canManageFinance } = useProjectRole(projectId)
+  const confirm = useConfirm()
   const [summary, setSummary] = useState<InvoiceSummary | null>(null)
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
@@ -64,7 +66,14 @@ export default function InvoicesPanel({ projectId }: { projectId: string }) {
   }, [load])
 
   const handleDelete = async (invoiceId: string) => {
-    if (typeof window !== "undefined" && !window.confirm("¿Eliminar esta factura?")) return
+    const confirmed = await confirm({
+      title: "Eliminar factura",
+      description: "¿Seguro que deseas eliminar esta factura? Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar",
+      cancelLabel: "Cancelar",
+      tone: "danger",
+    })
+    if (!confirmed) return
     setDeletingId(invoiceId)
     try {
       await deleteInvoice(invoiceId)

@@ -6,6 +6,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react"
 import { Expense, ExpenseCategory } from "@/types/finance"
 import { deleteExpense, getProjectExpenses } from "@/services/expenseService"
 import { useProjectRole } from "@/hooks/useProjectRole"
+import { useConfirm } from "@/components/ui/confirm/ConfirmProvider"
 import { formatDate, formatMoney } from "@/lib/utils"
 import dynamic from "next/dynamic"
 const CategoryDonut = dynamic(() => import("@/components/ui/graphs/CategoryDonut"), {
@@ -24,6 +25,7 @@ const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
 
 export default function ExpensesPanel({ projectId }: { projectId: string }) {
   const { canManageFinance } = useProjectRole(projectId)
+  const confirm = useConfirm()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -48,7 +50,14 @@ export default function ExpensesPanel({ projectId }: { projectId: string }) {
   }, [load])
 
   const handleDelete = async (expenseId: string) => {
-    if (typeof window !== "undefined" && !window.confirm("¿Eliminar este gasto?")) return
+    const confirmed = await confirm({
+      title: "Eliminar gasto",
+      description: "¿Seguro que deseas eliminar este gasto? Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar",
+      cancelLabel: "Cancelar",
+      tone: "danger",
+    })
+    if (!confirmed) return
     setDeletingId(expenseId)
     try {
       await deleteExpense(expenseId)

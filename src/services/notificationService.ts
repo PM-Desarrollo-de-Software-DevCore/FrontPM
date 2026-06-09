@@ -4,6 +4,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 
 export type NotificationCategory =
   | "project_created"
+  | "project_updated"
+  | "project_deleted"
   | "project_completed"
   | "project_member_added"
   | "task_assigned"

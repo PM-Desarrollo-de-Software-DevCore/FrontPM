@@ -108,7 +108,10 @@ function mapSprintStatus(status: BackendSprintStatus): FrontSprintStatus {
 function formatDate(date: string | null, locale = "en-GB") {
   if (!date) return "TBD"
 
-  return new Date(date).toLocaleDateString(locale, {
+  const parsed = new Date(date)
+  if (Number.isNaN(parsed.getTime())) return "TBD"
+
+  return parsed.toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -116,7 +119,10 @@ function formatDate(date: string | null, locale = "en-GB") {
 }
 
 function formatShortDate(date: string) {
-  return new Date(date).toLocaleDateString("en-US", {
+  const parsed = new Date(date)
+  if (Number.isNaN(parsed.getTime())) return "TBD"
+
+  return parsed.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   })
@@ -352,7 +358,7 @@ function ProjectButton({
       ))}
 
         {project.teamMembers.length > 4 && (
-          <span className="inline-flex h-7 min-w-[28px] items-center justify-center rounded-full border border-border bg-muted px-2 text-[10px] font-semibold text-muted-foreground">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-muted text-xs font-semibold text-muted-foreground shadow-sm">
             +{project.teamMembers.length - 4}
           </span>
         )}
@@ -629,7 +635,7 @@ export default function MilestonesPage() {
                   selectedTimeline.map((item, index) => (
                     <div key={item.id} className="relative">
                       {index < selectedTimeline.length - 1 && (
-                        <div className="absolute left-3 top-8 h-10 w-0.5 bg-border" />
+                        <div className="absolute left-[9px] top-7 -bottom-4 w-0.5 bg-border" />
                       )}
 
                       <div className="flex gap-3">
