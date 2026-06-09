@@ -6,7 +6,7 @@ import CreateProjectModal from "@/components/project/CreateProjectModal";
 import { Project } from "@/types/project";
 import { getProjects } from "@/services/projectService";
 import { getProjectsStats } from "@/services/milestonesService";
-import { getNonAdminUsers, UserOption } from "@/services/userService";
+import { getUsersDirectory, UserDirectoryEntry } from "@/services/userService";
 import { getAllProjectMembers, ProjectMember } from "@/services/memberService";
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar";
 import { slugify } from "@/lib/slug";

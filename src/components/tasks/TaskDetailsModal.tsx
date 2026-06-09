@@ -31,7 +31,8 @@ interface Props {
   users: User[]
   onCloseAction: () => void
   onDeleteAction: (taskId: string) => void
-  onAssignAction: (taskId: string, userId: string) => void | Promise<void>
+  onAssignAction?: (taskId: string, userId: string) => void | Promise<void>
+  onTaskUpdatedAction?: (taskId: string, changes: Partial<Task>) => void
 }
 
 export default function TaskDetailsModal({
@@ -39,6 +40,7 @@ export default function TaskDetailsModal({
   users,
   onCloseAction,
   onDeleteAction,
+  onAssignAction,
   onTaskUpdatedAction,
 }: Props) {
   const confirm = useConfirm()
@@ -47,6 +49,7 @@ export default function TaskDetailsModal({
   const [selectedStatus, setSelectedStatus] = useState<Task["status"]>(task.status)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
 
   const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState("")
@@ -287,7 +290,7 @@ export default function TaskDetailsModal({
                   if (!selectedUser) return
 
                   try {
-                    await onAssignAction(taskId, selectedUser)
+                    await onAssignAction?.(taskId, selectedUser)
                     setSuccessMessage("User assigned successfully.")
                     setTimeout(() => {
                       setSuccessMessage("")
@@ -301,6 +304,10 @@ export default function TaskDetailsModal({
                 Confirm
               </button>
             </div>
+
+            {successMessage && (
+              <p className="mt-2 text-sm text-green-600">{successMessage}</p>
+            )}
           </div>
 
           <div className="mt-8">
