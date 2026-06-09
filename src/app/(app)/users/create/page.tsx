@@ -7,6 +7,7 @@ import { API_BASE_URL, getToken } from "@/lib/auth"
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
 import { deleteUserProfileImage, uploadUserProfileImage, getUsersRaw, invalidateUsersCache } from "@/services/userService"
 import { useNotification } from "@/components/ui/notifications/NotificationProvider"
+import { useConfirm } from "@/components/ui/confirm/ConfirmProvider"
 import { useSearchParams } from "next/navigation"
 
 type UserPreview = {
@@ -110,6 +111,7 @@ const emptyForm: UserForm = {
 
 export default function CreateUserPage() {
   const { notifySuccess, notifyError } = useNotification()
+  const confirm = useConfirm()
   const searchParams = useSearchParams()
   const [users, setUsers] = useState<UserPreview[]>([])
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
@@ -255,13 +257,16 @@ export default function CreateUserPage() {
     handledUserIdRef.current = requestedUserId
   }, [loadUserIntoForm, searchParams, users])
 
-  const handleDeleteUser = (userId: string) => {
+  const handleDeleteUser = async (userId: string) => {
     const userToDelete = users.find((user) => user.id === userId)
     if (!userToDelete) return
 
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${userToDelete.firstName} ${userToDelete.lastName}?`
-    )
+    const confirmed = await confirm({
+      title: "Delete user",
+      description: `Are you sure you want to delete ${userToDelete.firstName} ${userToDelete.lastName}? This action cannot be undone.`,
+      confirmLabel: "Delete",
+      tone: "danger",
+    })
 
     if (!confirmed) return
 
@@ -693,11 +698,13 @@ export default function CreateUserPage() {
     }))
   }
 
-  const handleRoleToggle = () => {
+  const handleRoleToggle = async () => {
     const newRole = form.role === "admin" ? "user" : "admin"
-    const confirmed = window.confirm(
-      `Are you sure you want to change the user role to ${newRole}?`
-    )
+    const confirmed = await confirm({
+      title: "Change user role",
+      description: `Are you sure you want to change the user role to ${newRole}?`,
+      confirmLabel: "Change role",
+    })
 
     if (!confirmed) return
 

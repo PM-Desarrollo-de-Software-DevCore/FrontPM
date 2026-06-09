@@ -20,6 +20,7 @@ export interface UserOption {
   lastname: string;
   email: string;
   role: "admin" | "user";
+  profileImageUrl?: string | null;
 }
 
 export interface UserDirectoryEntry {
@@ -62,6 +63,7 @@ function userFromBackendFormat(user: BackendUser): UserOption {
     lastname: user.lastname ?? "",
     email: user.email ?? "",
     role: normalizeRole(user.globalRole ?? user.role),
+    profileImageUrl: user.profileImageUrl ?? null,
   };
 }
 
@@ -383,6 +385,9 @@ export async function getProjectMembers(
             fullUser.globalRole ||
               fullUser.role
           ),
+
+        profileImageUrl:
+          fullUser.profileImageUrl ?? null,
       }
     })
     .filter(Boolean) as UserOption[]

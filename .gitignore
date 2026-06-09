@@ -45,3 +45,6 @@ next-env.d.ts
 /test-results
 /tests/playwright-report
 /tests/test-results
+
+# claude
+.claude

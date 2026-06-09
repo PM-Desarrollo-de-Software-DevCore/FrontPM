@@ -11,6 +11,8 @@ import {
   deleteComment,
 } from "@/services/commentService"
 import { Comment } from "@/types/comment"
+import { updateTask } from "@/services/taskService"
+import { useConfirm } from "@/components/ui/confirm/ConfirmProvider"
 
 interface User {
   id: string
@@ -18,12 +20,19 @@ interface User {
   lastname: string
 }
 
+const STATUS_OPTIONS: { value: Task["status"]; label: string }[] = [
+  { value: "pending", label: "Pending" },
+  { value: "in_progress", label: "In progress" },
+  { value: "completed", label: "Completed" },
+]
+
 interface Props {
   task: Task
   users: User[]
   onCloseAction: () => void
   onDeleteAction: (taskId: string) => void
-  onAssignAction: (taskId: string, userId: string) => void | Promise<void>
+  onAssignAction?: (taskId: string, userId: string) => void | Promise<void>
+  onTaskUpdatedAction?: (taskId: string, changes: Partial<Task>) => void
 }
 
 export default function TaskDetailsModal({
@@ -32,8 +41,14 @@ export default function TaskDetailsModal({
   onCloseAction,
   onDeleteAction,
   onAssignAction,
+  onTaskUpdatedAction,
 }: Props) {
+  const confirm = useConfirm()
   const [selectedUser, setSelectedUser] = useState(task.assignedTo || "")
+  const [endDate, setEndDate] = useState(task.end_date ? task.end_date.slice(0, 10) : "")
+  const [selectedStatus, setSelectedStatus] = useState<Task["status"]>(task.status)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
 
   const [comments, setComments] = useState<Comment[]>([])
@@ -57,6 +72,14 @@ export default function TaskDetailsModal({
   useEffect(() => {
     setSelectedUser(task.assignedTo || "")
   }, [task.id, task.assignedTo])
+
+  useEffect(() => {
+    setSelectedStatus(task.status)
+  }, [task.id, task.status])
+
+  useEffect(() => {
+    setEndDate(task.end_date ? task.end_date.slice(0, 10) : "")
+  }, [task.id, task.end_date])
 
   useEffect(() => {
     async function loadComments() {
@@ -127,7 +150,12 @@ export default function TaskDetailsModal({
 }
 
   async function handleDeleteComment(commentId: string) {
-    const confirmed = window.confirm("Are you sure you want to delete this comment?")
+    const confirmed = await confirm({
+      title: "Delete comment",
+      description: "Are you sure you want to delete this comment?",
+      confirmLabel: "Delete",
+      tone: "danger",
+    })
     if (!confirmed) return
 
     try {
@@ -146,6 +174,37 @@ export default function TaskDetailsModal({
       )
     } catch {
       setCommentError("Error deleting comment.")
+    }
+  }
+
+  const normalizedAssignee = selectedUser || null
+  const currentEndDate = task.end_date ? task.end_date.slice(0, 10) : ""
+
+  const changes: Partial<Task> = {
+    ...(selectedStatus !== task.status ? { status: selectedStatus } : {}),
+    ...(endDate !== currentEndDate ? { end_date: endDate } : {}),
+    ...(normalizedAssignee !== (task.assignedTo || null)
+      ? { assignedTo: normalizedAssignee }
+      : {}),
+  }
+
+  const hasChanges = Object.keys(changes).length > 0
+
+  async function handleSaveChanges() {
+    if (!hasChanges) return
+    const token = getToken()
+    if (!token) return
+    try {
+      setIsSaving(true)
+      setSaveError("")
+      await updateTask(taskId, changes, token)
+      onTaskUpdatedAction?.(taskId, changes)
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : "Error saving changes."
+      )
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -177,16 +236,27 @@ export default function TaskDetailsModal({
 
             <div>
               <p className="mb-2 text-sm text-gray-400">Status</p>
-              <div className="inline-flex rounded-full bg-green-100 px-4 py-1 text-sm text-green-600">
-                {task.status}
-              </div>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value as Task["status"])}
+                className="h-9 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-gray-400"
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
               <p className="mb-2 text-sm text-gray-400">Due Date</p>
-              <p className="text-lg font-medium">
-                {new Date(task.end_date).toLocaleDateString()}
-              </p>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="h-9 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-gray-400"
+              />
             </div>
 
             <div>
@@ -194,12 +264,6 @@ export default function TaskDetailsModal({
               <p className="text-lg font-medium">{task.progress}%</p>
             </div>
           </div>
-
-          {successMessage && (
-            <div className="mt-6 rounded-2xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
-              {successMessage}
-            </div>
-          )}
 
           {/* Smart suggestions removed from details modal; suggestions remain in CreateTaskModal */}
 
@@ -226,7 +290,7 @@ export default function TaskDetailsModal({
                   if (!selectedUser) return
 
                   try {
-                    await onAssignAction(taskId, selectedUser)
+                    await onAssignAction?.(taskId, selectedUser)
                     setSuccessMessage("User assigned successfully.")
                     setTimeout(() => {
                       setSuccessMessage("")
@@ -240,6 +304,10 @@ export default function TaskDetailsModal({
                 Confirm
               </button>
             </div>
+
+            {successMessage && (
+              <p className="mt-2 text-sm text-green-600">{successMessage}</p>
+            )}
           </div>
 
           <div className="mt-8">
@@ -419,10 +487,14 @@ export default function TaskDetailsModal({
           </div>
         </div>
 
-        <div className="mt-8 flex justify-end gap-3">
+        {saveError && (
+          <p className="mt-4 text-sm font-medium text-red-600">{saveError}</p>
+        )}
+
+        <div className="mt-6 flex items-center justify-end gap-3">
           <button
             onClick={() => onDeleteAction(taskId)}
-            className="h-10 rounded-2xl bg-red-500 px-5 text-sm font-medium text-white transition hover:bg-red-600"
+            className="mr-auto h-10 rounded-2xl bg-red-500 px-5 text-sm font-medium text-white transition hover:bg-red-600"
           >
             Delete
           </button>
@@ -432,6 +504,14 @@ export default function TaskDetailsModal({
             className="h-10 rounded-2xl border border-gray-200 px-5 text-sm font-medium transition hover:bg-gray-100"
           >
             Close
+          </button>
+
+          <button
+            onClick={handleSaveChanges}
+            disabled={!hasChanges || isSaving}
+            className="h-10 rounded-2xl bg-black px-5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-40"
+          >
+            {isSaving ? "Saving..." : "Save changes"}
           </button>
         </div>
       </div>

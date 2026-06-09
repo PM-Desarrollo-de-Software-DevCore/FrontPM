@@ -19,6 +19,7 @@ import {
 import { getProjects } from "@/services/projectService"
 import { slugify } from "@/lib/slug"
 import { useAuth } from "@/hooks/useAuth"
+import { useConfirm } from "@/components/ui/confirm/ConfirmProvider"
 
 type FilterValue = "all" | ProgressEntryType
 
@@ -43,6 +44,7 @@ export default function ProjectProgressEntriesPage() {
   const routeProjectId = params.projectId as string
   const { user } = useAuth()
 
+  const confirm = useConfirm()
   const [resolvedProject, setResolvedProject] = useState<{ id: string; name: string } | null>(null)
   const [projectError, setProjectError] = useState<string | null>(null)
   const [resolvingProject, setResolvingProject] = useState(true)
@@ -191,10 +193,14 @@ export default function ProjectProgressEntriesPage() {
   }
 
   const handleDelete = async (entryId: string) => {
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm("¿Eliminar este registro?")
-      if (!confirmed) return
-    }
+    const confirmed = await confirm({
+      title: "Eliminar registro",
+      description: "¿Seguro que deseas eliminar este registro? Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar",
+      cancelLabel: "Cancelar",
+      tone: "danger",
+    })
+    if (!confirmed) return
 
     setDeletingId(entryId)
 

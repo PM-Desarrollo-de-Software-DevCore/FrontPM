@@ -5,6 +5,7 @@ import Link from "next/link";
 import CreateProjectModal from "@/components/project/CreateProjectModal";
 import { Project } from "@/types/project";
 import { getProjects } from "@/services/projectService";
+import { getProjectsStats } from "@/services/milestonesService";
 import { getUsersDirectory, UserDirectoryEntry } from "@/services/userService";
 import { getAllProjectMembers, ProjectMember } from "@/services/memberService";
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar";
@@ -40,6 +41,7 @@ export default function ProjectsPage() {
   const [error, setError] = useState<string | null>(null);
   const [usersById, setUsersById] = useState<Record<string, UserDirectoryEntry>>({});
   const [membersByProject, setMembersByProject] = useState<Record<string, ProjectMember[]>>({});
+  const [taskCountByProject, setTaskCountByProject] = useState<Record<string, number>>({});
 
   // Cargar proyectos del backend al montar el componente
   useEffect(() => {
@@ -93,6 +95,26 @@ export default function ProjectsPage() {
     loadMembers();
   }, []);
 
+  // Conteo real de tareas por proyecto (el endpoint /projects no lo devuelve).
+  // Se obtiene del agregado de dashboard projects-stats.
+  useEffect(() => {
+    const loadTaskCounts = async () => {
+      try {
+        const stats = await getProjectsStats();
+        setTaskCountByProject(
+          stats.reduce<Record<string, number>>((acc, item) => {
+            acc[item.id_project] = item.totalTasks;
+            return acc;
+          }, {})
+        );
+      } catch (err) {
+        console.error("Error loading project task counts:", err);
+      }
+    };
+
+    loadTaskCounts();
+  }, []);
+
   const handleCreateProject = (project: Project) => {
     setProjects((prevProjects) => [project, ...prevProjects]);
   };
@@ -133,7 +155,7 @@ export default function ProjectsPage() {
             </div>
           </div>
         ) : (
-          <section className="grid w-full grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <section className="grid w-full auto-rows-fr grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {projects.map((project, index) => (
               <ProjectCard
                 key={`${project.id || project.name}-${index}`}
@@ -141,6 +163,7 @@ export default function ProjectsPage() {
                 onEdit={() => setEditingProject(project)}
                 usersById={usersById}
                 members={membersByProject[project.id] || []}
+                taskCount={taskCountByProject[project.id] ?? project.tasks}
               />
             ))}
           </section>
@@ -162,10 +185,11 @@ interface ProjectCardProps {
   project: Project;
   usersById: Record<string, UserDirectoryEntry>;
   members: ProjectMember[];
+  taskCount: number;
   onEdit: () => void;
 }
 
-function ProjectCard({ project, usersById, members, onEdit }: ProjectCardProps) {
+function ProjectCard({ project, usersById, members, taskCount, onEdit }: ProjectCardProps) {
   const [expanded, setExpanded] = useState(false);
   const descRef = useRef<HTMLParagraphElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -184,27 +208,32 @@ function ProjectCard({ project, usersById, members, onEdit }: ProjectCardProps) 
         return {
           id: member.userId,
           label: `${user.name} ${user.lastname}`.trim() || user.email,
-          profileImageUrl: user.profileImageUrl,
+          image: user.profileImageUrl ?? null,
         };
       }
 
       return null;
     })
     .filter(
-      (member): member is { id: string; label: string; profileImageUrl: string | null } =>
+      (member): member is { id: string; label: string; image: string | null } =>
         Boolean(member)
     );
 
   return (
-    <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+    <article className="flex h-full flex-col rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:shadow-md">
       <div className="mb-2 flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-zinc-900">{project.name}</h2>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <h2
+            className="min-w-0 flex-1 truncate text-lg font-semibold text-zinc-900"
+            title={project.name}
+          >
+            {project.name}
+          </h2>
 
           <button
             type="button"
             onClick={onEdit}
-            className="cursor-pointer text-zinc-500 transition hover:text-zinc-700"
+            className="shrink-0 cursor-pointer text-zinc-500 transition hover:text-zinc-700"
             aria-label={`Edit ${project.name}`}
           >
             <svg
@@ -225,7 +254,7 @@ function ProjectCard({ project, usersById, members, onEdit }: ProjectCardProps) 
         </div>
 
         <span
-          className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${getStatusClasses(
+          className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold ${getStatusClasses(
             project.status
           )}`}
         >
@@ -269,10 +298,19 @@ function ProjectCard({ project, usersById, members, onEdit }: ProjectCardProps) 
           {displayMembers.slice(0, 4).map((member, index) => (
             <div
               key={`${project.id}-${member.id}-${index}`}
-              className="rounded-full border-2 border-white bg-white"
+              className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-amber-300 text-[10px] font-semibold text-zinc-800"
               title={member.label}
             >
-              <FramedAvatar src={member.profileImageUrl} alt={member.label} size={24} />
+              {member.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={member.image}
+                  alt={member.label}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                member.label.slice(0, 2).toUpperCase()
+              )}
             </div>
           ))}
 
@@ -298,11 +336,11 @@ function ProjectCard({ project, usersById, members, onEdit }: ProjectCardProps) 
               d="M9 12h6m-6 4h6M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"
             />
           </svg>
-          <span>{project.tasks} issues</span>
+          <span>{taskCount} tasks</span>
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="mt-auto flex gap-2">
         <Link
           href={`/projects/${slugify(project.name)}/tasks`}
           className="inline-flex flex-1 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"

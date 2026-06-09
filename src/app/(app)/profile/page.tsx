@@ -17,6 +17,7 @@ import {
   UserTechnologyEntry,
 } from "@/services/userService";
 import { useLanguage } from "@/components/i18n/LanguageProvider";
+import { useConfirm } from "@/components/ui/confirm/ConfirmProvider";
 import { Task } from "@/types/task";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import RequestModificationModal from "@/components/profile/RequestModificationModal";
@@ -147,6 +148,7 @@ function formatChangeValue(value: unknown): string {
 
 export default function ProfileDashboard() {
   const { language, toggleLanguage } = useLanguage();
+  const confirm = useConfirm();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
@@ -343,10 +345,14 @@ export default function ProfileDashboard() {
   }
 
   const handleCancelRequest = async (requestId: string) => {
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm("¿Cancelar esta solicitud?")
-      if (!confirmed) return
-    }
+    const confirmed = await confirm({
+      title: "Cancelar solicitud",
+      description: "¿Seguro que deseas cancelar esta solicitud de modificación?",
+      confirmLabel: "Cancelar solicitud",
+      cancelLabel: "Volver",
+      tone: "danger",
+    })
+    if (!confirmed) return
 
     setCancellingRequestId(requestId)
 

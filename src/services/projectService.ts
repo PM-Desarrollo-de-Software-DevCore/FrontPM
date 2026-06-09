@@ -55,27 +55,59 @@ function projectToBackendFormat(project: Partial<ProjectPayload>) {
 }
 
 
-function projectFromBackendFormat(data: any): Project {
+interface BackendProject {
+  id?: string;
+  id_project?: string;
+  name?: string;
+  description?: string;
+  client?: string;
+  project_type?: string;
+  projectType?: string;
+  project_objective?: string;
+  projectObjective?: string;
+  methodology?: string;
+  estimated_sprints?: number;
+  estimatedSprints?: number;
+  budget?: number;
+  monthly_cost?: number;
+  monthlyCost?: number;
+  billing_model?: string;
+  billingModel?: string;
+  start_date?: string;
+  end_date?: string;
+  priority?: string;
+  status?: string;
+  progress?: number;
+  tasks?: number;
+  owner?: string;
+  team?: string[];
+}
+
+function projectFromBackendFormat(data: BackendProject): Project {
   return {
-    id: data.id || data.id_project,
-    name: data.name,
-    description: data.description,
+    id: data.id ?? data.id_project ?? '',
+    name: data.name ?? '',
+    description: data.description ?? '',
     client: data.client,
-    projectType: data.project_type || data.projectType,
-    projectObjective: data.project_objective || data.projectObjective,
+    projectType: data.project_type ?? data.projectType,
+    projectObjective: data.project_objective ?? data.projectObjective,
     methodology: data.methodology,
     estimatedSprints: data.estimated_sprints ?? data.estimatedSprints,
     budget: data.budget,
     monthlyCost: data.monthly_cost ?? data.monthlyCost,
-    billingModel: data.billing_model || data.billingModel,
-    startDate: data.start_date,
-    endDate: data.end_date,
-    priority: data.priority?.charAt(0).toUpperCase() + data.priority?.slice(1) || 'Medium',
-    status: data.status?.charAt(0).toUpperCase() + data.status?.slice(1) || 'Planning',
-    progress: data.progress || 0,
-    tasks: data.tasks || 0,
-    owner: data.owner || '',
-    team: data.team || [],
+    billingModel: data.billing_model ?? data.billingModel,
+    startDate: data.start_date ?? '',
+    endDate: data.end_date ?? '',
+    priority: (data.priority
+      ? data.priority.charAt(0).toUpperCase() + data.priority.slice(1)
+      : 'Medium') as Project['priority'],
+    status: (data.status
+      ? data.status.charAt(0).toUpperCase() + data.status.slice(1)
+      : 'Planning') as Project['status'],
+    progress: data.progress ?? 0,
+    tasks: data.tasks ?? 0,
+    owner: data.owner ?? '',
+    team: data.team ?? [],
   };
 }
 
