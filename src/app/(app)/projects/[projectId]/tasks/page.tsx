@@ -44,6 +44,7 @@ import {
 import { getProjectMembers } from "@/services/userService"
 
 import { useProjectRole } from "@/hooks/useProjectRole"
+import { getToken } from "@/lib/auth"
 import { slugify } from "@/lib/slug"
 import { Sprint } from "@/types/sprint"
 import { Task } from "@/types/task"
@@ -74,13 +75,7 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [sprints, setSprints] = useState<Sprint[]>([])
   const [users, setUsers] = useState<ProjectMember[]>([])
-  const [token] = useState(() => {
-    if (typeof window === "undefined") {
-      return ""
-    }
-
-    return localStorage.getItem("authToken") || ""
-  })
+  const [token] = useState(() => getToken() || "")
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [dismissedTaskQueryId, setDismissedTaskQueryId] = useState<string | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
