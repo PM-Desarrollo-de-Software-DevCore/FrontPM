@@ -31,7 +31,7 @@ interface Props {
   users: User[]
   onCloseAction: () => void
   onDeleteAction: (taskId: string) => void
-  onTaskUpdatedAction?: (taskId: string, changes: Partial<Task>) => void
+  onAssignAction: (taskId: string, userId: string) => void | Promise<void>
 }
 
 export default function TaskDetailsModal({
@@ -267,19 +267,40 @@ export default function TaskDetailsModal({
           <div className="mt-8">
             <p className="mb-2 text-sm text-gray-400">Assign User</p>
 
-            <select
-              value={selectedUser}
-              onChange={(e) => setSelectedUser(e.target.value)}
-              className="h-10 w-full rounded-2xl border border-gray-200 px-4 text-sm outline-none"
-            >
-              <option value="">Unassigned</option>
+            <div className="flex gap-3">
+              <select
+                value={selectedUser}
+                onChange={(e) => setSelectedUser(e.target.value)}
+                className="flex-1 h-10 rounded-2xl border border-gray-200 px-4 text-sm outline-none"
+              >
+                <option value="">Select user</option>
 
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name} {user.lastname}
-                </option>
-              ))}
-            </select>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} {user.lastname}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                onClick={async () => {
+                  if (!selectedUser) return
+
+                  try {
+                    await onAssignAction(taskId, selectedUser)
+                    setSuccessMessage("User assigned successfully.")
+                    setTimeout(() => {
+                      setSuccessMessage("")
+                    }, 3000)
+                  } catch {
+                    // El padre ya muestra el error con notifyError; no fingimos éxito.
+                  }
+                }}
+                className="h-10 rounded-2xl bg-black px-4 text-sm font-medium text-white transition hover:opacity-90"
+              >
+                Confirm
+              </button>
+            </div>
           </div>
 
           <div className="mt-8">

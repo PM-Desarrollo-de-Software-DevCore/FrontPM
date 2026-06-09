@@ -15,7 +15,7 @@ export default function TotalProgress({ dashboardData, projectId, loading, error
         ?.completionPercentage
     : undefined
 
-  const progress = projectProgress ?? dashboardData?.summary.completionPercentage ?? 0
+  const progress = projectProgress ?? dashboardData?.summary?.completionPercentage ?? 0
 
   return (
     <div className="w-full h-full flex flex-col">

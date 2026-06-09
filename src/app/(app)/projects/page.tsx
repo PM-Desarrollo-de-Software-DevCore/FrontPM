@@ -8,6 +8,7 @@ import { getProjects } from "@/services/projectService";
 import { getProjectsStats } from "@/services/milestonesService";
 import { getNonAdminUsers, UserOption } from "@/services/userService";
 import { getAllProjectMembers, ProjectMember } from "@/services/memberService";
+import FramedAvatar from "@/components/ui/avatar/FramedAvatar";
 import { slugify } from "@/lib/slug";
 
 function formatDate(date: string) {
@@ -38,7 +39,7 @@ export default function ProjectsPage() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [usersById, setUsersById] = useState<Record<string, UserOption>>({});
+  const [usersById, setUsersById] = useState<Record<string, UserDirectoryEntry>>({});
   const [membersByProject, setMembersByProject] = useState<Record<string, ProjectMember[]>>({});
   const [taskCountByProject, setTaskCountByProject] = useState<Record<string, number>>({});
 
@@ -65,9 +66,9 @@ export default function ProjectsPage() {
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        const users = await getNonAdminUsers();
+        const users = await getUsersDirectory();
         setUsersById(
-          users.reduce<Record<string, UserOption>>((acc, user) => {
+          users.reduce<Record<string, UserDirectoryEntry>>((acc, user) => {
             acc[user.id] = user;
             return acc;
           }, {})
@@ -182,7 +183,7 @@ export default function ProjectsPage() {
 
 interface ProjectCardProps {
   project: Project;
-  usersById: Record<string, UserOption>;
+  usersById: Record<string, UserDirectoryEntry>;
   members: ProjectMember[];
   taskCount: number;
   onEdit: () => void;

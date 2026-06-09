@@ -282,19 +282,18 @@ export default function CreateUserPage() {
         })
 
         if (!res.ok) {
-          // fallback to local delete if server fails
-          setUsers((prev) => prev.filter((user) => user.id !== userId))
-        } else {
-          setUsers((prev) => prev.filter((user) => user.id !== userId))
+          const errorBody = await res.json().catch(() => ({} as { message?: string }))
+          notifyError("No se pudo eliminar el usuario", errorBody.message || `Error ${res.status}`)
+          return
         }
 
+        setUsers((prev) => prev.filter((user) => user.id !== userId))
         if (selectedUserId === userId) {
           resetToCreateMode()
         }
-        } catch {
-          // fallback local
-          setUsers((prev) => prev.filter((user) => user.id !== userId))
-          if (selectedUserId === userId) resetToCreateMode()
+        notifySuccess("Usuario eliminado", "El usuario se eliminó correctamente.")
+        } catch (error) {
+          notifyError("No se pudo eliminar el usuario", error instanceof Error ? error.message : "Error de conexión con el servidor")
       } finally {
         // El directorio cambió: invalidar la caché para que una re-navegación no muestre la lista vieja.
         invalidateUsersCache()
@@ -584,20 +583,12 @@ export default function CreateUserPage() {
 
             setUsers((prev) => [mapped, ...prev])
           }
+          resetToCreateMode()
+          notifySuccess("User created", "The user was created successfully.")
         } else {
-          // fallback local create
-          const newUser: UserPreview = {
-            id: String(Date.now()),
-            ...form,
-            createdAt: getTodayDate(),
-            profileImageUrl: profileImagePreview,
-            status: 'Active',
-          }
-          setUsers((prev) => [newUser, ...prev])
+          const errorBody = await res.json().catch(() => ({} as { message?: string }))
+          notifyError("No se pudo crear el usuario", errorBody.message || `Error ${res.status}`)
         }
-
-        resetToCreateMode()
-        notifySuccess("User created", "The user was created successfully.")
       } else if (formMode === 'edit' && selectedUserId) {
         // update
         const res = await fetch(`${API_BASE_URL}/users/${selectedUserId}`, {
@@ -644,25 +635,20 @@ export default function CreateUserPage() {
             setProfileImageFile(null)
             setProfileImagePreview(uploadedImageUrl ?? null)
           }
+          notifySuccess("User updated", "The user was updated successfully.")
         } else {
-          // fallback local update
-          setUsers((prev) => prev.map((user) => user.id === selectedUserId ? ({
-            ...user,
-            ...form,
-            password: form.password || user.password,
-            profileImageUrl: profileImagePreview,
-          }) : user))
+          const errorBody = await res.json().catch(() => ({} as { message?: string }))
+          notifyError("No se pudo actualizar el usuario", errorBody.message || `Error ${res.status}`)
         }
-
-        notifySuccess("User updated", "The user was updated successfully.")
       }
 
       // El directorio cambió (alta/edición): invalidar la caché para que una re-navegación no muestre datos viejos.
       invalidateUsersCache()
-    } catch {
-      // fallback behaviors
-      if (formMode === 'create') notifySuccess("User created", "User created locally because the server was unavailable.")
-      else notifySuccess("User updated", "User updated locally because the server was unavailable.")
+    } catch (error) {
+      notifyError(
+        formMode === 'create' ? "No se pudo crear el usuario" : "No se pudo actualizar el usuario",
+        error instanceof Error ? error.message : "Error de conexión con el servidor"
+      )
     } finally {
       setIsSaving(false)
     }
