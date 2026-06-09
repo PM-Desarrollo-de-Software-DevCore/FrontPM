@@ -3,6 +3,9 @@ import { slugify } from "@/lib/slug";
 import { useRef, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { getProjects } from "@/services/projectService"
+import { getUsersDirectory, UserDirectoryEntry } from "@/services/userService"
+import { getAllProjectMembers, ProjectMember } from "@/services/memberService"
+import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
 import type { Project as ProjectType } from '@/types/project'
 
 type Risk = "low" | "medium" | "high"
@@ -39,8 +42,8 @@ function SkeletonCard() {
     </div>
   )
 }
-
-function ProjectCard({ project }: { project: ProjectType }) {
+  
+function ProjectCard({ project, usersById, members }: { project: ProjectType; usersById: Record<string, UserDirectoryEntry>; members: ProjectMember[] }) {
   const router = useRouter()
   const [expanded, setExpanded] = useState(false)
   const [isOverflowing, setIsOverflowing] = useState(false)
@@ -52,9 +55,21 @@ function ProjectCard({ project }: { project: ProjectType }) {
     }
   }, [])
 
-  const priority = (project as any).priority || 'Medium'
+  const priority = project.priority || 'Medium'
   const riskKey = (priority as string).toLowerCase() as Risk
   const risk = riskConfig[riskKey]
+
+  const displayMembers = members
+    .map((member) => {
+      const user = usersById[member.userId]
+      if (!user) return null
+      return {
+        id: member.userId,
+        label: `${user.name} ${user.lastname}`.trim() || user.email,
+        profileImageUrl: user.profileImageUrl,
+      }
+    })
+    .filter((m): m is { id: string; label: string; profileImageUrl: string | null } => Boolean(m))
 
   return (
     <div
@@ -113,6 +128,8 @@ export default function Carrousel() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [projects, setProjects] = useState<ProjectType[] | null>(null)
   const [loading, setLoading] = useState(true)
+  const [usersById, setUsersById] = useState<Record<string, UserDirectoryEntry>>({})
+  const [membersByProject, setMembersByProject] = useState<Record<string, ProjectMember[]>>({})
 
   useEffect(() => {
     let mounted = true
@@ -134,6 +151,33 @@ export default function Carrousel() {
     return () => { mounted = false }
   }, [])
 
+  useEffect(() => {
+    let mounted = true
+
+    async function loadMembers() {
+      try {
+        const [users, grouped] = await Promise.all([
+          getUsersDirectory(),
+          getAllProjectMembers(),
+        ])
+        if (!mounted) return
+        setUsersById(
+          users.reduce<Record<string, UserDirectoryEntry>>((acc, u) => {
+            acc[u.id] = u
+            return acc
+          }, {})
+        )
+        setMembersByProject(grouped)
+      } catch {
+        // Sin miembros/fotos: las tarjetas caen al placeholder de avatar.
+      }
+    }
+
+    loadMembers()
+
+    return () => { mounted = false }
+  }, [])
+
   return (
     <div className="w-full py-4">
       <div
@@ -144,7 +188,7 @@ export default function Carrousel() {
           {loading
             ? [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
             : projects?.map((project) => (
-                <ProjectCard key={project.id} project={project} />
+                <ProjectCard key={project.id} project={project} usersById={usersById} members={membersByProject[project.id] || []} />
               ))
           }
           <div className="flex-shrink-0 w-4" />
