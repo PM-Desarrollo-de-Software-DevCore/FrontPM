@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react"
 
+import { getToken } from "@/lib/auth"
+
 
 export type TaskByStatus = {
   status: "pending" | "in_progress" | "completed" | "on_hold"
@@ -98,7 +100,7 @@ export function useDashboardStats(filters?: FiltersOptions) {
       setLoading(true)
       setError(null)
 
-      const token = localStorage.getItem("authToken")
+      const token = getToken()
       if (!token) { setError("No hay sesión activa"); setLoading(false); return }
 
       try {
@@ -143,7 +145,7 @@ export function useUserTasks(filters?: FiltersOptions) {
       setLoading(true)
       setError(null)
 
-      const token = localStorage.getItem("authToken")
+      const token = getToken()
       if (!token) { setError("No hay sesión activa"); setLoading(false); return }
 
       try {
@@ -203,7 +205,7 @@ export function useWeeklyProgress(filters?: FiltersOptions) {
       setLoading(true)
       setError(null)
 
-      const token = localStorage.getItem("authToken")
+      const token = getToken()
       if (!token) { setError("No hay sesión activa"); setLoading(false); return }
 
       try {
