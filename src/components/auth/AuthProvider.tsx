@@ -15,9 +15,10 @@ import {
   getToken,
   loginUser,
   logout as logoutUser,
+  syncSessionCookie,
 } from '@/lib/auth'
 import { AuthContext, AuthContextValue } from '@/hooks/useAuth'
-import { getUserProfileDetails } from '@/services/userService'
+import { getUserProfileDetails, invalidateUsersCache } from '@/services/userService'
 
 /*
 skill/área/foto NO vienen en /auth/me. La única fuente del backend es GET /users
@@ -63,6 +64,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Sesión básica primero (name/email/role): basta para rutear y renderizar.
           setUser(currentUser)
           setIsAuthenticated(true)
+          // Backfill del espejo httpOnly (PM-171 Fase 0): las sesiones abiertas
+          // antes del deploy solo tienen el token en localStorage. Re-mintamos la
+          // cookie en cada rehidratación válida (no se puede leer una cookie
+          // httpOnly desde JS para condicionarlo, así que es idempotente).
+          // syncSessionCookie revalida que `token` siga vigente antes de escribir.
+          void syncSessionCookie(token)
           // Enriquecer skill/área/foto desde /users en SEGUNDO PLANO: NO bloquea
           // isLoading (igual que en login()). Antes se hacía `await` aquí, así que
           // "Loading session" esperaba /auth/me + /users (2 round-trips a Render).
@@ -124,6 +131,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   function logout() {
     logoutUser()
+    // No servir el directorio cacheado del usuario anterior tras logout+login
+    // sin recargar (la caché de getUsersRaw no incluye identidad en su key).
+    invalidateUsersCache()
     setUser(null)
     setIsAuthenticated(false)
   }

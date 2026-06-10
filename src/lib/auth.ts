@@ -71,6 +71,10 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
 
     if (token) {
       localStorage.setItem('authToken', token)
+      // Espejo httpOnly (PM-171 Fase 0). No se espera: en Fase 0 ningún consumidor
+      // lee la cookie, así que no añade latencia al login; la cola interna la
+      // serializa con el resto de operaciones de sesión.
+      void syncSessionCookie(token)
     }
 
     return {
@@ -99,6 +103,54 @@ export function getToken(): string | null {
   return localStorage.getItem('authToken')
 }
 
+/*
+ * Espejo del JWT en una cookie httpOnly (PM-171 Fase 0). La fuente de verdad de
+ * la sesión sigue siendo localStorage + la validación en /auth/me; la cookie es
+ * un espejo best-effort que habilitará el middleware y los Server Components en
+ * la Fase 1 sin expulsar a las sesiones ya abiertas. La cookie es first-party
+ * del front (Vercel): los fetch directos al backend (Render, cross-origin)
+ * siguen usando `Authorization: Bearer` desde localStorage.
+ *
+ * Todas las operaciones se serializan en una cola de un slot para que un POST
+ * (sync) y un DELETE (clear) nunca se reordenen: las cookies se aplican en el
+ * orden de LLEGADA de las respuestas, no de salida de las requests.
+ */
+let sessionCookieQueue: Promise<void> = Promise.resolve()
+
+function enqueueSessionCookieOp(op: () => Promise<void>): Promise<void> {
+  // `op` corre tanto si la anterior resolvió como si falló (espejo best-effort).
+  sessionCookieQueue = sessionCookieQueue.then(op, op)
+  return sessionCookieQueue
+}
+
+export function syncSessionCookie(token: string): Promise<void> {
+  return enqueueSessionCookieOp(async () => {
+    // Si el token activo cambió mientras esperábamos turno en la cola (logout o
+    // re-login en otra pestaña), no re-mintar la cookie de un token que ya no es
+    // el vigente: evita resucitar sesiones o pisar la cookie recién escrita.
+    if (getToken() !== token) return
+    try {
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+    } catch {
+      // Best-effort: la cookie nunca debe romper login/rehidratación.
+    }
+  })
+}
+
+export function clearSessionCookie(): Promise<void> {
+  return enqueueSessionCookieOp(async () => {
+    try {
+      await fetch('/api/auth/session', { method: 'DELETE', keepalive: true })
+    } catch {
+      // Best-effort.
+    }
+  })
+}
+
 /* Función para obtener el usuario autenticado | GET /auth/me
  * Reintenta ante errores de red o 5xx (blips de Render) para que la sesión se
  * obtenga de forma confiable en redes inestables. NO reintenta en 401 (token
@@ -125,6 +177,7 @@ export async function getCurrentUser(): Promise<User | null> {
       if (response.status === 401) {
         // Token rechazado por el servidor: invalidar sesión, sin reintentar.
         localStorage.removeItem('authToken')
+        void clearSessionCookie()
         return null
       }
 
@@ -162,6 +215,7 @@ export async function getCurrentUser(): Promise<User | null> {
 export function logout(): void {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('authToken')
+    void clearSessionCookie()
   }
 }
 

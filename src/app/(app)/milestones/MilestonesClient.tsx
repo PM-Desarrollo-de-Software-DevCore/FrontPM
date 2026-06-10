@@ -1,0 +1,580 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import Link from "next/link"
+import Image from "next/image"
+import { Card, CardContent } from "@/components/ui/card/card"
+import dynamic from "next/dynamic"
+import { Check, Flag, ExternalLink } from "lucide-react"
+
+import { slugify } from "@/lib/slug"
+import { getToken } from "@/lib/auth"
+import { getMilestonesOverview } from "@/services/milestonesService"
+import { getProjectTasks } from "@/services/taskService"
+import {
+  buildMilestoneViews,
+  type FrontProjectPriority,
+  type FrontProjectStatus,
+  type FrontSprintStatus,
+  type MilestoneProjectView,
+  type MilestoneSprint,
+} from "./_mappers"
+
+// Code-splitting: el doughnut (chart.js) se carga bajo demanda, fuera del bundle inicial de /milestones.
+const SprintProgressChart = dynamic(() => import("@/components/ui/graphs/SprintProgressChart"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full min-h-[160px] animate-pulse rounded-full bg-slate-100" />,
+})
+
+interface MilestoneTimelineItem {
+  id: string
+  date: string
+  title: string
+  description: string
+  sprint: string
+  kind: "start" | "end"
+}
+
+function formatDate(date: string | null, locale = "en-GB") {
+  if (!date) return "TBD"
+
+  const parsed = new Date(date)
+  if (Number.isNaN(parsed.getTime())) return "TBD"
+
+  return parsed.toLocaleDateString(locale, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  })
+}
+
+function formatShortDate(date: string) {
+  const parsed = new Date(date)
+  if (Number.isNaN(parsed.getTime())) return "TBD"
+
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  })
+}
+
+function getProjectStatusClasses(status: FrontProjectStatus) {
+  switch (status) {
+    case "Completed":
+      return "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+    case "In Progress":
+      return "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
+    case "Planning":
+      return "bg-zinc-50 text-zinc-700 dark:bg-zinc-800/30 dark:text-zinc-300"
+    default:
+      return "bg-zinc-50 text-zinc-700 dark:bg-zinc-800/30 dark:text-zinc-300"
+  }
+}
+
+function getProjectPriorityClasses(priority: FrontProjectPriority) {
+  switch (priority) {
+    case "High":
+      return "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400"
+    case "Medium":
+      return "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+    case "Low":
+      return "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+    default:
+      return "bg-zinc-50 text-zinc-700 dark:bg-zinc-800/30 dark:text-zinc-300"
+  }
+}
+
+function getSprintStatusClasses(status: FrontSprintStatus) {
+  switch (status) {
+    case "finished":
+      return "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
+    case "active":
+      return "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/50"
+    case "planned":
+      return "bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-800/30 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800/50"
+    default:
+      return "bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-800/30 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800/50"
+  }
+}
+
+function buildTimelineItems(sprints: MilestoneSprint[]): MilestoneTimelineItem[] {
+  return sprints
+    .flatMap((sprint) => [
+      {
+        id: `${sprint.id}-start`,
+        date: sprint.startDate,
+        title: `${sprint.name} kickoff`,
+        description: "Sprint window opened and execution started",
+        sprint: sprint.name,
+        kind: "start" as const,
+      },
+      {
+        id: `${sprint.id}-end`,
+        date: sprint.endDate,
+        title: `${sprint.name} closure`,
+        description:
+          sprint.status === "finished"
+            ? "Sprint delivered and closed"
+            : "Target closing date for this sprint",
+        sprint: sprint.name,
+        kind: "end" as const,
+      },
+    ])
+    .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())
+}
+
+function ProjectButton({
+  project,
+  isSelected,
+  onSelect,
+}: {
+  project: MilestoneProjectView
+  isSelected: boolean
+  onSelect: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={isSelected}
+      onClick={onSelect}
+      className={`w-full rounded-2xl border p-4 text-left shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+        isSelected
+          ? "border-blue-500 bg-blue-50 shadow-md"
+          : "border-border bg-card hover:border-blue-200 hover:shadow-md"
+      }`}
+    >
+          <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-lg font-bold text-strong">{project.name}</h3>
+          <p className="mt-1 text-xs text-muted">Owner: {project.owner}</p>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${getProjectStatusClasses(project.status)}`}>
+            {project.status}
+          </span>
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${getProjectPriorityClasses(project.priority)}`}>
+            {project.priority}
+          </span>
+        </div>
+      </div>
+
+      <p className="line-clamp-2 text-xs leading-5 text-muted">{project.description}</p>
+
+      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-muted">
+        <span>{project.tasks} tasks</span>
+        <span>{project.progress}% complete</span>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {project.teamMembers.slice(0, 4).map((member) => (
+  <div
+          key={member.id}
+          title={member.label}
+          className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-gray-100 text-xs font-semibold text-gray-700 shadow-sm cursor-pointer"
+        >
+          {member.image ? (
+            <Image
+              src={member.image}
+              alt={member.label}
+              width={36}
+              height={36}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            member.initials || "?"
+          )}
+        </div>
+      ))}
+
+        {project.teamMembers.length > 4 && (
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-muted text-xs font-semibold text-muted-foreground shadow-sm">
+            +{project.teamMembers.length - 4}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-muted">
+        <span>Deadline: {formatDate(project.endDate, "en-GB").toUpperCase()}</span>
+        {isSelected && <span className="font-semibold text-primary">Active</span>}
+      </div>
+    </button>
+  )
+}
+
+export default function MilestonesClient({
+  initialProjects,
+}: {
+  initialProjects: MilestoneProjectView[] | null
+}) {
+  const [projects, setProjects] = useState<MilestoneProjectView[]>(initialProjects ?? [])
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null)
+  // Si el servidor prefetcheó (cookie pm_session presente), no estamos cargando.
+  const [isLoading, setIsLoading] = useState(initialProjects === null)
+  const [error, setError] = useState<string | null>(null)
+  // Avance real por sprint = tareas completadas / tareas totales del sprint.
+  // El overview de milestones no incluye tareas, así que se calcula con las
+  // tareas del proyecto seleccionado y se usa para el donut y la lista.
+  const [sprintProgressById, setSprintProgressById] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    // PM-171 Fase 1: si el Server Component ya proveyó los datos via cookie, NO
+    // re-fetcheamos en cliente. Solo se fetchea en el fallback (sesión sin cookie,
+    // p.ej. pre-deploy de Fase 0): initialProjects === null.
+    if (initialProjects !== null) return
+
+    let isCancelled = false
+
+    async function loadMilestoneData() {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        // 1 sola request agregada (antes: 3 + 2*N requests al backend remoto).
+        const overview = await getMilestonesOverview()
+
+        if (isCancelled) return
+
+        setProjects(buildMilestoneViews(overview))
+      } catch (loadError) {
+        if (isCancelled) return
+
+        setError(loadError instanceof Error ? loadError.message : "No se pudieron cargar los milestones")
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadMilestoneData()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [initialProjects])
+
+  useEffect(() => {
+    if (!projects.length) {
+      setSelectedProjectId(null)
+      setSelectedSprintId(null)
+      return
+    }
+
+    setSelectedProjectId((currentProjectId) => {
+      if (currentProjectId && projects.some((project) => project.id === currentProjectId)) {
+        return currentProjectId
+      }
+
+      return projects[0]?.id ?? null
+    })
+  }, [projects])
+
+  useEffect(() => {
+    const selectedProject = projects.find((project) => project.id === selectedProjectId)
+
+    if (!selectedProject) {
+      setSelectedSprintId(null)
+      return
+    }
+
+    if (!selectedProject.sprints.length) {
+      setSelectedSprintId(null)
+      return
+    }
+
+    setSelectedSprintId((currentSprintId) => {
+      if (currentSprintId && selectedProject.sprints.some((sprint) => sprint.id === currentSprintId)) {
+        return currentSprintId
+      }
+
+      return selectedProject.sprints.find((sprint) => sprint.status === "active")?.id
+        ?? selectedProject.sprints[0]?.id
+        ?? null
+    })
+  }, [projects, selectedProjectId])
+
+  useEffect(() => {
+    if (!selectedProjectId) {
+      setSprintProgressById({})
+      return
+    }
+
+    const token = getToken()
+    if (!token) {
+      setSprintProgressById({})
+      return
+    }
+
+    let isCancelled = false
+
+    getProjectTasks(selectedProjectId, token)
+      .then((tasks) => {
+        if (isCancelled) return
+
+        const totals = new Map<string, { total: number; completed: number }>()
+        for (const task of tasks) {
+          if (!task.id_sprint) continue
+          const entry = totals.get(task.id_sprint) ?? { total: 0, completed: 0 }
+          entry.total += 1
+          if (task.status === "completed") entry.completed += 1
+          totals.set(task.id_sprint, entry)
+        }
+
+        const map: Record<string, number> = {}
+        totals.forEach((value, sprintId) => {
+          map[sprintId] = value.total > 0 ? Math.round((value.completed / value.total) * 100) : 0
+        })
+
+        setSprintProgressById(map)
+      })
+      .catch(() => {
+        if (!isCancelled) setSprintProgressById({})
+      })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [selectedProjectId])
+
+  // Un sprint marcado como completado manualmente cuenta como 100%, aunque
+  // tenga tareas sin cerrar. En caso contrario usa el avance real por tareas y,
+  // si el sprint no tiene tareas, cae al progreso por fechas como respaldo.
+  const resolveSprintProgress = (sprint: MilestoneSprint) => {
+    if (sprint.status === "finished") return 100
+    return sprintProgressById[sprint.id] ?? sprint.progress
+  }
+
+  const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? null
+  const selectedSprint = selectedProject?.sprints.find((sprint) => sprint.id === selectedSprintId)
+    ?? selectedProject?.sprints[0]
+    ?? null
+  const selectedTimeline = selectedProject ? buildTimelineItems(selectedProject.sprints) : []
+
+  return (
+    <main className="min-h-screen w-full bg-background px-5 py-6 text-foreground">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold tracking-tight text-strong">Milestones</h1>
+          <p className="max-w-2xl text-sm text-muted">
+            Selecciona un proyecto para cambiar la vista superior, la progresión del sprint y la línea de tiempo sin salir de la página.
+          </p>
+        </div>
+
+        {selectedProject && (
+          <Link
+            href={`/projects/${slugify(selectedProject.name)}/tasks`}
+            className="inline-flex shrink-0 items-center gap-2 self-start rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-strong shadow-sm transition hover:bg-muted"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Ver proyecto
+          </Link>
+        )}
+      </div>
+
+      {isLoading && (
+        <div
+          className="grid grid-cols-1 gap-6 md:grid-cols-3"
+          aria-busy="true"
+          aria-label="Cargando milestones"
+        >
+          <div className="col-span-1 rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <div className="mb-6 h-4 w-1/2 animate-pulse rounded bg-muted" />
+            <div className="h-60 w-full animate-pulse rounded-2xl bg-muted" />
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={`stat-skeleton-${index}`} className="h-14 animate-pulse rounded-xl bg-muted" />
+              ))}
+            </div>
+          </div>
+          <div className="col-span-1 flex flex-col gap-3">
+            <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={`sprint-skeleton-${index}`} className="h-16 w-full animate-pulse rounded-2xl bg-muted" />
+            ))}
+          </div>
+          <div className="col-span-1 flex flex-col gap-3">
+            <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={`project-skeleton-${index}`} className="h-24 w-full animate-pulse rounded-2xl bg-muted" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!isLoading && error && (
+        <div className="rounded-2xl border border-red-500/50 bg-red-50/10 p-6 text-sm text-red-600 dark:bg-red-950/20 dark:border-red-900 dark:text-red-400 shadow-sm">
+          {error}
+        </div>
+      )}
+
+      {!isLoading && !error && selectedProject && (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <Card className="col-span-1 border-border bg-card shadow-sm">
+            <CardContent className="pt-4">
+              <div className="mb-6 flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-sm font-semibold text-strong">{selectedProject.name}</h3>
+                  <p className="mt-1 text-xs text-muted">Sprint Progress</p>
+                </div>
+
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${getProjectStatusClasses(selectedProject.status)}`}>
+                  {selectedProject.status}
+                </span>
+              </div>
+
+              {selectedSprint ? (
+                <div className="h-60 w-full">
+                  <SprintProgressChart sprint={{ ...selectedSprint, progress: resolveSprintProgress(selectedSprint) }} />
+                </div>
+              ) : (
+                <div className="flex h-60 w-full items-center justify-center rounded-2xl border border-dashed border-border bg-card text-sm text-muted">
+                  No sprint data available for this project yet.
+                </div>
+              )}
+
+              <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
+                <div className="rounded-xl bg-muted p-3">
+                  <p className="text-muted-foreground">Project progress</p>
+                  <p className="mt-1 text-sm font-semibold text-strong">{selectedProject.progress}%</p>
+                </div>
+                <div className="rounded-xl bg-muted p-3">
+                  <p className="text-muted-foreground">Tasks</p>
+                  <p className="mt-1 text-sm font-semibold text-strong">{selectedProject.tasks}</p>
+                </div>
+                <div className="rounded-xl bg-muted p-3">
+                  <p className="text-muted-foreground">Owner</p>
+                  <p className="mt-1 line-clamp-1 text-sm font-semibold text-strong">{selectedProject.owner}</p>
+                </div>
+                <div className="rounded-xl bg-muted p-3">
+                  <p className="text-muted-foreground">Deadline</p>
+                  <p className="mt-1 text-sm font-semibold text-strong">{formatDate(selectedProject.endDate).toUpperCase()}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="col-span-1 flex flex-col gap-3">
+            <div className="pt-1 text-sm font-semibold text-strong">Select Project Sprint</div>
+            {selectedProject.sprints.length ? (
+              selectedProject.sprints.map((sprint) => (
+                <button
+                  key={sprint.id}
+                  type="button"
+                  onClick={() => setSelectedSprintId(sprint.id)}
+                  className={`w-full rounded-2xl border px-4 py-3 text-left transition-all ${
+                    selectedSprint?.id === sprint.id
+                      ? "border-primary bg-muted shadow-sm"
+                      : getSprintStatusClasses(sprint.status)
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-strong">{sprint.name}</p>
+                      <p className="mt-0.5 text-xs text-muted">{resolveSprintProgress(sprint)}% complete</p>
+                    </div>
+
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <span className="rounded-full bg-card px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                        {sprint.status}
+                      </span>
+                      {sprint.status === "finished" && <Check className="h-4 w-4 shrink-0" />}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 text-xs text-muted">
+                    {formatShortDate(sprint.startDate)} - {formatShortDate(sprint.endDate)}
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border bg-card p-4 text-sm text-muted">
+                Este proyecto todavía no tiene sprints cargados.
+              </div>
+            )}
+          </div>
+
+          <Card className="col-span-1 border-border bg-card shadow-sm">
+            <CardContent className="pt-4">
+              <div className="mb-4">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-strong">
+                  <Flag className="h-4 w-4" />
+                  Milestone Timeline
+                </h3>
+                <p className="mt-1 text-xs text-muted">
+                  Milestones generados desde los sprints del proyecto seleccionado
+                </p>
+              </div>
+
+              <div className="max-h-80 space-y-4 overflow-y-auto pr-1">
+                {selectedTimeline.length ? (
+                  selectedTimeline.map((item, index) => (
+                    <div key={item.id} className="relative">
+                      {index < selectedTimeline.length - 1 && (
+                        <div className="absolute left-[9px] top-7 -bottom-4 w-0.5 bg-border" />
+                      )}
+
+                      <div className="flex gap-3">
+                        <div className="flex shrink-0 flex-col items-center pt-1">
+                          <div
+                            className={`h-5 w-5 rounded-full border-2 border-white shadow-sm ${
+                              item.kind === "start" ? "bg-blue-500" : "bg-emerald-500"
+                            }`}
+                          />
+                        </div>
+
+                        <div className="min-w-0 flex-1 pb-1">
+                          <div className="flex flex-wrap items-baseline justify-between gap-2">
+                            <p className="flex-1 text-xs font-semibold text-strong">{item.title}</p>
+                            <span className="shrink-0 text-xs text-muted">{formatShortDate(item.date)}</span>
+                          </div>
+
+                          <p className="mt-0.5 text-xs text-muted">{item.description}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{item.sprint}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-border bg-card p-4 text-sm text-muted">
+                    Sin milestones para mostrar en este proyecto.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="col-span-1 md:col-span-3">
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-strong">Related Projects</h3>
+                <p className="mt-1 text-xs text-muted">Los botones funcionan como tabs y actualizan toda la vista superior.</p>
+              </div>
+              <div className="text-xs text-muted">
+                {projects.length} projects loaded from backend
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {projects.map((project) => (
+                <ProjectButton
+                  key={project.id}
+                  project={project}
+                  isSelected={selectedProject.id === project.id}
+                  onSelect={() => setSelectedProjectId(project.id)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isLoading && !error && !selectedProject && (
+        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted shadow-sm">
+          No hay proyectos disponibles para mostrar.
+        </div>
+      )}
+    </main>
+  )
+}
