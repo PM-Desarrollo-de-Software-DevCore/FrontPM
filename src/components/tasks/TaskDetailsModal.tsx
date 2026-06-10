@@ -26,6 +26,12 @@ const STATUS_OPTIONS: { value: Task["status"]; label: string }[] = [
   { value: "completed", label: "Completed" },
 ]
 
+const PRIORITY_OPTIONS: { value: Task["priority"]; label: string }[] = [
+  { value: "high", label: "High" },
+  { value: "medium", label: "Medium" },
+  { value: "low", label: "Low" },
+]
+
 interface Props {
   task: Task
   users: User[]
@@ -47,6 +53,10 @@ export default function TaskDetailsModal({
   const [selectedUser, setSelectedUser] = useState(task.assignedTo || "")
   const [endDate, setEndDate] = useState(task.end_date ? task.end_date.slice(0, 10) : "")
   const [selectedStatus, setSelectedStatus] = useState<Task["status"]>(task.status)
+  const [selectedPriority, setSelectedPriority] = useState<Task["priority"]>(task.priority)
+  const [storyPoints, setStoryPoints] = useState(
+    task.story_points != null ? String(task.story_points) : ""
+  )
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
@@ -76,6 +86,14 @@ export default function TaskDetailsModal({
   useEffect(() => {
     setSelectedStatus(task.status)
   }, [task.id, task.status])
+
+  useEffect(() => {
+    setSelectedPriority(task.priority)
+  }, [task.id, task.priority])
+
+  useEffect(() => {
+    setStoryPoints(task.story_points != null ? String(task.story_points) : "")
+  }, [task.id, task.story_points])
 
   useEffect(() => {
     setEndDate(task.end_date ? task.end_date.slice(0, 10) : "")
@@ -179,9 +197,16 @@ export default function TaskDetailsModal({
 
   const normalizedAssignee = selectedUser || null
   const currentEndDate = task.end_date ? task.end_date.slice(0, 10) : ""
+  // Backend: story_points debe ser null o entero 1-5; "" en el select = sin puntos (null).
+  const currentStoryPoints = task.story_points ?? null
+  const normalizedStoryPoints = storyPoints === "" ? null : Number(storyPoints)
 
   const changes: Partial<Task> = {
     ...(selectedStatus !== task.status ? { status: selectedStatus } : {}),
+    ...(selectedPriority !== task.priority ? { priority: selectedPriority } : {}),
+    ...(normalizedStoryPoints !== currentStoryPoints
+      ? { story_points: normalizedStoryPoints }
+      : {}),
     ...(endDate !== currentEndDate ? { end_date: endDate } : {}),
     ...(normalizedAssignee !== (task.assignedTo || null)
       ? { assignedTo: normalizedAssignee }
@@ -229,9 +254,17 @@ export default function TaskDetailsModal({
           <div className="grid grid-cols-2 gap-8">
             <div>
               <p className="mb-2 text-sm text-gray-400">Priority</p>
-              <div className="inline-flex rounded-full bg-red-100 px-4 py-1 text-sm text-red-500">
-                {task.priority}
-              </div>
+              <select
+                value={selectedPriority}
+                onChange={(e) => setSelectedPriority(e.target.value as Task["priority"])}
+                className="h-9 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-gray-400"
+              >
+                {PRIORITY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -257,6 +290,22 @@ export default function TaskDetailsModal({
                 onChange={(e) => setEndDate(e.target.value)}
                 className="h-9 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-gray-400"
               />
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm text-gray-400">Story Points</p>
+              <select
+                value={storyPoints}
+                onChange={(e) => setStoryPoints(e.target.value)}
+                className="h-9 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-gray-400"
+              >
+                <option value="">None</option>
+                {[1, 2, 3, 4, 5].map((point) => (
+                  <option key={point} value={point}>
+                    {point}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

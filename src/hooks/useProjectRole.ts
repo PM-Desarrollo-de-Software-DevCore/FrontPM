@@ -20,6 +20,7 @@ import { getProjectMembers, ProjectMemberRole } from "@/services/memberService"
 export interface ProjectRole {
   isGlobalAdmin: boolean
   isProjectManager: boolean
+  isScrumMaster: boolean
   isMember: boolean
   /** Puede ver montos sensibles (monthly_rate). */
   canSeeRates: boolean
@@ -27,6 +28,8 @@ export interface ProjectRole {
   canManageFinance: boolean
   /** Puede gestionar miembros del proyecto (solo admin global). */
   canManageMembers: boolean
+  /** Puede gestionar sprints (crear/cerrar). Backend: admin, PM o scrum_master. */
+  canManageSprints: boolean
   loading: boolean
   error: string | null
 }
@@ -78,14 +81,17 @@ export function useProjectRole(projectId: string | null | undefined): ProjectRol
 
   const isGlobalAdmin = user?.role === "admin"
   const isProjectManager = role === "project_manager"
+  const isScrumMaster = role === "scrum_master"
 
   return {
     isGlobalAdmin,
     isProjectManager,
+    isScrumMaster,
     isMember: isMember || isGlobalAdmin,
     canSeeRates: isGlobalAdmin || isProjectManager,
     canManageFinance: isGlobalAdmin || isProjectManager,
     canManageMembers: isGlobalAdmin,
+    canManageSprints: isGlobalAdmin || isProjectManager || isScrumMaster,
     loading: authLoading || loading,
     error,
   }

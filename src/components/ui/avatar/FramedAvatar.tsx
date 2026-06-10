@@ -7,11 +7,22 @@ type FramedAvatarProps = {
   alt: string
   size?: number
   completedTodayCount?: number | null
+  /** Posición en el leaderboard (1-based). Asigna marco a los primeros 3 lugares. */
+  rank?: number | null
   priority?: boolean
   className?: string
   imageClassName?: string
   showDefaultFrame?: boolean
   frameSize?: "small" | "medium" | "large" | "xl"
+}
+
+// Marco por posición del leaderboard: 1º diamante, 2º plata, 3º bronce; del 4º en
+// adelante sin marco.
+function getRankFrameSource(rank?: number | null) {
+  if (rank === 1) return "/images/marco/Marco_diamante.svg"
+  if (rank === 2) return "/images/marco/Marco_plata.svg"
+  if (rank === 3) return "/images/marco/Marco_bronce.svg"
+  return null
 }
 
 function getFrameSource(completedTodayCount?: number | null) {
@@ -51,13 +62,19 @@ export default function FramedAvatar({
   alt,
   size = 100,
   completedTodayCount,
+  rank,
   priority = false,
   className = "",
   imageClassName = "",
   showDefaultFrame = false,
   frameSize = "large",
 }: FramedAvatarProps) {
-  const frameSource = getFrameSourceWithDefault(completedTodayCount, showDefaultFrame)
+  // Si viene `rank` (contexto leaderboard), el marco lo define la posición top-3;
+  // si no, se usa la lógica por tareas completadas hoy.
+  const frameSource =
+    rank !== undefined && rank !== null
+      ? getRankFrameSource(rank)
+      : getFrameSourceWithDefault(completedTodayCount, showDefaultFrame)
   const fallbackSrc = "/images/persona.png"
   const frameOffsetClass = getFrameOffsetClass(frameSize)
 
@@ -73,7 +90,7 @@ export default function FramedAvatar({
           fill
           sizes={`${size}px`}
           priority={priority}
-          loading={priority ? undefined : "eager"}
+          loading={priority ? undefined : "lazy"}
           className={`object-cover ${imageClassName}`}
         />
       </div>
