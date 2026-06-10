@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
+import { SESSION_COOKIE_NAME } from "@/lib/sessionCookie"
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 
 export async function GET(
@@ -8,7 +10,15 @@ export async function GET(
 ) {
   try {
     const { projectId } = await context.params
-    const token = request.nextUrl.searchParams.get("token")
+    // PM-171 Fase 1: el ?token= (de localStorage, fuente de verdad de la sesión
+    // activa) se mantiene PRIMARIO para no cambiar el comportamiento actual ni
+    // arriesgar servir el PDF con una cookie stale tras un logout best-effort. La
+    // cookie httpOnly pm_session es el FALLBACK, listo para cuando reportService
+    // deje de mandar el token en la URL (y deje de filtrar el JWT). El iframe es
+    // same-origin, así que SameSite=Lax basta para que la cookie viaje en este GET.
+    const token =
+      request.nextUrl.searchParams.get("token") ??
+      request.cookies.get(SESSION_COOKIE_NAME)?.value
     const download = request.nextUrl.searchParams.get("download")
 
     if (!token) {
