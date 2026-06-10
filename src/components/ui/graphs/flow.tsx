@@ -2,9 +2,9 @@
 
 import {
   Chart as ChartJS,
-  LineElement,
   ArcElement,
   Tooltip,
+  type TooltipItem,
 } from "chart.js"
 import { Pie } from "react-chartjs-2"
 
@@ -54,7 +54,7 @@ export default function FlowChart({
         borderWidth: 1,
         padding: 10,
         callbacks: {
-          label: function (context: any) {
+          label: function (context: TooltipItem<"pie">) {
             return `${context.label}: ${context.parsed}`
           },
         },

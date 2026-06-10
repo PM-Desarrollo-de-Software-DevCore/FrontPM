@@ -9,6 +9,8 @@ import {
   PointElement,
   Tooltip,
   Filler,
+  type ScriptableContext,
+  type TooltipItem,
 } from "chart.js"
 import { Line } from "react-chartjs-2"
 
@@ -26,7 +28,7 @@ const labels = ["01 Jan", "02 Jan", "03 Jan", "04 Jan", "05 Jan", "06 Jan"]
 const performance = [1200, 1100, 980, 1050, 900, 870]
 
 export default function PerformanceChart() {
-  const chartRef = useRef<any>(null)
+  const chartRef = useRef<ChartJS<"line"> | null>(null)
 
   const data = {
     labels,
@@ -35,10 +37,10 @@ export default function PerformanceChart() {
         label: "Page Load Time (ms)",
         data: performance,
         borderColor: "#6366f1",
-        backgroundColor: (context: any) => {
+        backgroundColor: (context: ScriptableContext<"line">) => {
           const chart = context.chart
           const { ctx, chartArea } = chart
-          if (!chartArea) return null
+          if (!chartArea) return "rgba(99, 102, 241, 0.05)"
 
           const gradient = ctx.createLinearGradient(
             0,
@@ -66,7 +68,7 @@ export default function PerformanceChart() {
     plugins: {
       tooltip: {
         callbacks: {
-          label: function (context: any) {
+          label: function (context: TooltipItem<"line">) {
             return `${context.raw} ms`
           },
         },
@@ -81,7 +83,7 @@ export default function PerformanceChart() {
           color: "rgba(0,0,0,0.05)",
         },
         ticks: {
-          callback: (value: any) => `${value} ms`,
+          callback: (value: string | number) => `${value} ms`,
         },
       },
     },

@@ -91,7 +91,7 @@ export default function CreateTaskModal({
         if (!cancelled) {
           setSuggestions(response.suggestions)
         }
-      } catch (error) {
+      } catch {
         if (!cancelled) {
           setSuggestions([])
         }

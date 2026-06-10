@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded"
 import DownloadIcon from "@mui/icons-material/Download"
 import RestartAltIcon from "@mui/icons-material/RestartAlt"
@@ -22,44 +22,33 @@ export default function ProjectReportModal({
   projectName,
   onCloseAction,
 }: Props) {
-  const [reportUrl, setReportUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
+  const [reloadToken, setReloadToken] = useState(0)
+  const [prevOpenKey, setPrevOpenKey] = useState<string | null>(null)
 
-  const loadReport = async () => {
-    if (!projectId) {
-      return
-    }
+  // Cambia al abrir/cerrar el modal, al cambiar de proyecto o al regenerar.
+  const openKey = open && projectId ? `${projectId}:${reloadToken}` : null
 
-    setReportUrl(null)
-    setLoading(true)
+  // Reset durante el render (patrón recomendado por React en lugar de
+  // setState dentro de un efecto).
+  if (openKey !== prevOpenKey) {
+    setPrevOpenKey(openKey)
     setErrorMessage("")
-
-    try {
-      const nextUrl = getProjectReportUrl(projectId)
-      setReportUrl(nextUrl)
-    } catch {
-      setErrorMessage("No se pudo cargar el reporte")
-      setLoading(false)
-    }
+    setLoading(Boolean(openKey))
   }
 
-  useEffect(() => {
-    if (!open) {
-      setReportUrl(null)
-      setErrorMessage("")
-      setLoading(false)
-      return
-    }
+  // getProjectReportUrl añade un timestamp, así que se memoiza por openKey para
+  // que la URL (y el iframe) solo cambien al abrir o regenerar, no en cada render.
+  const reportUrl = useMemo(
+    () => (openKey ? getProjectReportUrl(projectId) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [openKey]
+  )
 
-    void loadReport()
-
-    return () => {}
-  }, [open, projectId])
-
-  useEffect(() => {
-    return () => {}
-  }, [])
+  const handleRegenerate = () => {
+    setReloadToken((token) => token + 1)
+  }
 
   const handleDownload = () => {
     const downloadUrl = getProjectReportUrl(projectId, true)
@@ -88,7 +77,7 @@ export default function ProjectReportModal({
               <span>
                 <button
                   type="button"
-                  onClick={() => void loadReport()}
+                  onClick={handleRegenerate}
                   disabled={loading}
                   className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                   aria-label="Regenerate PDF"
@@ -133,6 +122,7 @@ export default function ProjectReportModal({
           ) : reportUrl ? (
             <div className="relative h-full w-full">
               <iframe
+                key={openKey}
                 title="Project report preview"
                 src={reportUrl}
                 className="h-full w-full rounded-3xl border border-slate-200 bg-white"

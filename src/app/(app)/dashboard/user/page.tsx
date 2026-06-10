@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card/card"
 import TotalProgress from "@/components/ui/graphs/user_projectProg"
 import ProjectCard from "@/components/ui/graphs/user_task"
@@ -38,54 +38,50 @@ export default function UserDashboard() {
     dateTo: filters.dateTo,
   })
 
-  useEffect(() => {
-    if (!projectOptions.length) return
-
-    const projectExists = projectOptions.some(
-      (project) => project.value === filters.project
-    )
-
-    if (!filters.project || !projectExists) {
-      setFilters((prev) => ({
-        ...prev,
-        project: projectOptions[0]?.value,
-      }))
-    }
-  }, [filters.project, projectOptions])
-
-  const { data, loading, error } = useDashboardStats(filters)
-
-  useEffect(() => {
-    if (!taskData?.tasks?.length) return
-
+  const derivedProjectOptions = useMemo(() => {
     const projectMap = new Map<string, string>()
 
-    taskData.tasks.forEach((task) => {
+    taskData?.tasks?.forEach((task) => {
       if (task.project?.id_project && task.project.name) {
         projectMap.set(task.project.id_project, task.project.name)
       }
     })
 
-    const derivedProjectOptions = Array.from(projectMap.entries()).map(
-      ([value, label]) => ({ value, label })
-    )
+    return Array.from(projectMap.entries()).map(([value, label]) => ({
+      value,
+      label,
+    }))
+  }, [taskData?.tasks])
 
-    if (derivedProjectOptions.length) {
-      setProjectOptions(derivedProjectOptions)
+  // Ajustes de estado durante el render (en lugar de setState dentro de un
+  // efecto): se conservan las últimas opciones no vacías y se valida que el
+  // proyecto seleccionado siga existiendo en ellas.
+  const optionsChanged =
+    derivedProjectOptions.length > 0 &&
+    (derivedProjectOptions.length !== projectOptions.length ||
+      derivedProjectOptions.some(
+        (option, index) =>
+          option.value !== projectOptions[index]?.value ||
+          option.label !== projectOptions[index]?.label
+      ))
 
-      if (
-        !filters.project ||
-        !derivedProjectOptions.some(
-          (option) => option.value === filters.project
-        )
-      ) {
-        setFilters((prev) => ({
-          ...prev,
-          project: derivedProjectOptions[0].value,
-        }))
-      }
-    }
-  }, [taskData?.tasks, filters.project])
+  if (optionsChanged) {
+    setProjectOptions(derivedProjectOptions)
+  }
+
+  const activeOptions = optionsChanged ? derivedProjectOptions : projectOptions
+
+  if (
+    activeOptions.length &&
+    !activeOptions.some((option) => option.value === filters.project)
+  ) {
+    setFilters((prev) => ({
+      ...prev,
+      project: activeOptions[0].value,
+    }))
+  }
+
+  const { data, loading, error } = useDashboardStats(filters)
 
   return (
     <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 pt-4 pb-16 space-y-4">

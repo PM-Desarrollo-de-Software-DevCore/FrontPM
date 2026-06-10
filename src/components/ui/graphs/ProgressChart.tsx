@@ -10,6 +10,8 @@ import {
   Tooltip,
   Legend,
   Filler,
+  type ScriptableContext,
+  type TooltipItem,
 } from "chart.js"
 import { Line } from "react-chartjs-2"
 
@@ -29,7 +31,7 @@ const planned = [10, 20, 40, 60, 80, 100]
 const real = [5, 15, 30, 50, 70, 85]
 
 export default function ProgressChart() {
-  const chartRef = useRef<any>(null)
+  const chartRef = useRef<ChartJS<"line"> | null>(null)
 
   const data = {
     labels,
@@ -38,10 +40,10 @@ export default function ProgressChart() {
         label: "Planned",
         data: planned,
         borderColor: "#6366f1",
-        backgroundColor: (context: any) => {
+        backgroundColor: (context: ScriptableContext<"line">) => {
           const chart = context.chart
           const { ctx, chartArea } = chart
-          if (!chartArea) return null
+          if (!chartArea) return "rgba(99, 102, 241, 0.05)"
 
           const gradient = ctx.createLinearGradient(
             0,
@@ -64,10 +66,10 @@ export default function ProgressChart() {
         label: "Real",
         data: real,
         borderColor: "#22c55e",
-        backgroundColor: (context: any) => {
+        backgroundColor: (context: ScriptableContext<"line">) => {
           const chart = context.chart
           const { ctx, chartArea } = chart
-          if (!chartArea) return null
+          if (!chartArea) return "rgba(34,197,94,0.05)"
 
           const gradient = ctx.createLinearGradient(
             0,
@@ -115,7 +117,7 @@ export default function ProgressChart() {
         intersect: false,
         mode: "index" as const,
         callbacks: {
-          label: function (context: any) {
+          label: function (context: TooltipItem<"line">) {
             return `${context.dataset.label}: ${context.raw}%`
           },
         },

@@ -124,6 +124,9 @@ export function useDashboardStats(filters?: FiltersOptions) {
     }
 
     fetchStats()
+    // El efecto depende de los campos individuales de `filters` a propósito:
+    // usar el objeto completo dispararía refetches en cada render por identidad.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters?.project, filters?.dateFrom, filters?.dateTo])
 
   return { data, loading, error }
@@ -166,6 +169,9 @@ export function useUserTasks(filters?: FiltersOptions) {
     }
 
     fetchTasks()
+    // El efecto depende de los campos individuales de `filters` a propósito:
+    // usar el objeto completo dispararía refetches en cada render por identidad.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters?.project, filters?.dateFrom, filters?.dateTo])
 
   return { data, loading, error }
@@ -224,6 +230,9 @@ export function useWeeklyProgress(filters?: FiltersOptions) {
     }
 
     fetchWeekly()
+    // El efecto depende de los campos individuales de `filters` a propósito:
+    // usar el objeto completo dispararía refetches en cada render por identidad.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters?.project, filters?.dateFrom, filters?.dateTo])
 
   return { data, loading, error }

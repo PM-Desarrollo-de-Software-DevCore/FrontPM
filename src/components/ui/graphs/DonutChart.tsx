@@ -6,6 +6,8 @@ import {
   CategoryScale,
   LinearScale,
   Tooltip,
+  type ScriptableContext,
+  type TooltipItem,
 } from "chart.js"
 import { Bar } from "react-chartjs-2"
 
@@ -19,8 +21,8 @@ export default function WorkloadChart() {
       {
         label: "Tasks",
         data: [8, 5, 10, 6],
-        backgroundColor: (ctx: any) => {
-          const value = ctx.raw
+        backgroundColor: (ctx: ScriptableContext<"bar">) => {
+          const value = Number(ctx.raw)
           if (value >= 9) return "#ef4444"
           if (value >= 6) return "#eab308"
           return "#22c55e"
@@ -47,7 +49,7 @@ export default function WorkloadChart() {
         borderWidth: 1,
         padding: 10,
         callbacks: {
-          label: function (context: any) {
+          label: function (context: TooltipItem<"bar">) {
             return `${context.raw} tasks`
           },
         },

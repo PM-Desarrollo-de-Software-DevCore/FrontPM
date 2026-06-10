@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { getProjects } from '@/services/projectService'
 import { getSearchIndex } from '@/services/searchService'
 import { getUsersDirectory } from '@/services/userService'
-import { getToken } from '@/lib/auth'
 
 interface Stat {
   label: string
@@ -19,8 +18,6 @@ export default function StatsRow() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const token = getToken()!
-
         const [projects, users, searchIndex] = await Promise.all([
           getProjects(),
           getUsersDirectory(),
