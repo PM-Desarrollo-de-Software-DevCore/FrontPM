@@ -80,11 +80,6 @@ export async function createSprint(
   token: string
 ) {
 
-  console.log(
-    "CREATE SPRINT BODY:",
-    sprintData
-  )
-
   const response =
     await fetch(
       `${API_URL}/projects/${projectId}/sprints`,

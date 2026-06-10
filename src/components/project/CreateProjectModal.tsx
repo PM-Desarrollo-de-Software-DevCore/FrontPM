@@ -355,7 +355,17 @@ export default function CreateProjectModal({
       };
 
       if (isEditMode && project) {
-        const updatedProject = await updateProject(project.id, projectPayload);
+        // El update del proyecto y la sincronización de miembros son operaciones
+        // independientes: si falla guardar los campos del proyecto, NO debe
+        // impedir el cambio de rol de los integrantes (y viceversa).
+        let projectUpdateError = "";
+        let updatedProject: Project = project;
+        try {
+          updatedProject = await updateProject(project.id, projectPayload);
+        } catch (err) {
+          projectUpdateError =
+            err instanceof Error ? err.message : "No se pudo actualizar el proyecto";
+        }
 
         const manageableCurrentMembers = initialMembers.filter((member) =>
           availableUsers.some((user) => user.id === member.userId)
@@ -393,13 +403,7 @@ export default function CreateProjectModal({
           }
         }
 
-        if (memberSyncFailed) {
-          setMemberSyncWarning(
-            memberSyncError
-              ? `El proyecto se actualizó, pero los miembros no pudieron sincronizarse: ${memberSyncError}`
-              : "El proyecto se actualizó, pero los miembros no pudieron sincronizarse."
-          );
-        } else {
+        if (!memberSyncFailed) {
           setInitialMembers(
             selectedUsers.map((user) => ({
               userId: user.id,
@@ -415,7 +419,19 @@ export default function CreateProjectModal({
           ),
         });
 
-        if (!memberSyncFailed) {
+        // Reporta por separado el resultado de cada operación. Solo se cierra el
+        // modal si ambas tuvieron éxito.
+        if (projectUpdateError || memberSyncFailed) {
+          const parts: string[] = [];
+          if (projectUpdateError) parts.push(`Proyecto: ${projectUpdateError}`);
+          if (memberSyncFailed) {
+            parts.push(`Miembros: ${memberSyncError || "no se pudieron sincronizar"}`);
+          }
+          const detail = parts.join(" · ");
+          setMemberSyncWarning(detail);
+          notifyError("No se pudo guardar todo", detail);
+        } else {
+          notifySuccess("Success", "Project updated successfully!");
           closeModal();
         }
 

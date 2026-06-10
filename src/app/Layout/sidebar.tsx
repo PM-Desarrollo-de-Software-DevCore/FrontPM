@@ -18,8 +18,7 @@ import {
   AlarmClockCheck,
   Flag,
   UserCircle2,
-  UserPlus,
-  ClipboardList
+  UserPlus
 } from "lucide-react"
 
 import Link from "next/link"
@@ -77,12 +76,6 @@ const sidebarItems: SidebarItem[] = [
   href: "/users/create",
   icon: UserPlus,
   roles: ["admin"],
-  },
-  {
-    label: "Requests",
-    href: "/admin/profile-requests",
-    icon: ClipboardList,
-    roles: ["admin"],
   },
 ]
 

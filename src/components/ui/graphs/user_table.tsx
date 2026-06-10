@@ -14,14 +14,18 @@ export default function BugsResolved() {
   useEffect(() => {
     let cancelled = false
 
-    getGlobalLeaderboard(5)
+    getGlobalLeaderboard()
       .then((data) => {
         if (!cancelled) {
           setLeaderboard(data)
           const userIds = data.map((entry) => entry.userId)
-          getMultipleUsersCompletedTodayCount(userIds).then((counts) => {
-            if (!cancelled) setLeaderboardCounts(counts)
-          })
+          getMultipleUsersCompletedTodayCount(userIds)
+            .then((counts) => {
+              if (!cancelled) setLeaderboardCounts(counts)
+            })
+            .catch(() => {
+              /* el conteo de hoy es complementario; si falla no rompe el leaderboard */
+            })
         }
       })
       .catch((err: Error) => {
@@ -71,6 +75,7 @@ export default function BugsResolved() {
                 src={entry.profileImageUrl ?? "/images/persona.png"}
                 alt={`${entry.name} ${entry.lastname}`}
                 size={32}
+                rank={index + 1}
                 completedTodayCount={leaderboardCounts.get(entry.userId) ?? 0}
               />
 

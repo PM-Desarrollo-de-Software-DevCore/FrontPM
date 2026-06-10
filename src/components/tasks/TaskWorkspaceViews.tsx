@@ -28,6 +28,9 @@ type Props = {
   onTaskMoveAction: (result: DropResult) => void
   onTaskClickAction: (task: Task) => void
   onCreateTaskAction: (sprintId: string, status: Task["status"]) => void
+  onChangeSprintStatusAction: (sprintId: string, status: string) => void
+  canManageSprints: boolean
+  kanbanSort: KanbanSortKey
 }
 
 const viewTabs: Array<{ key: ViewKey; label: string; description: string }> = [
@@ -43,6 +46,66 @@ const statusMeta: Record<Task["status"], { label: string; color: string }> = {
   pending: { label: "Pending", color: "bg-amber-400" },
   in_progress: { label: "In progress", color: "bg-sky-500" },
   completed: { label: "Completed", color: "bg-emerald-500" },
+}
+
+const sprintStatusMeta: Record<string, { label: string; className: string }> = {
+  planned: { label: "Planned", className: "bg-slate-100 text-slate-600" },
+  active: { label: "Active", className: "bg-sky-100 text-sky-700" },
+  finished: { label: "Completed", className: "bg-emerald-100 text-emerald-700" },
+}
+
+function getSprintStatusMeta(status?: string) {
+  return sprintStatusMeta[status ?? "planned"] ?? sprintStatusMeta.planned
+}
+
+const sprintStatusOptions: Array<{ value: string; label: string }> = [
+  { value: "planned", label: "Planned" },
+  { value: "active", label: "Active" },
+  { value: "finished", label: "Completed" },
+]
+
+/**
+ * Control de estado del sprint. Quien puede gestionar sprints ve un selector
+ * para cambiar el estado (planned/active/finished); el resto ve un badge de
+ * solo lectura. La actualizacion la resuelve el contenedor (page.tsx).
+ */
+function SprintStatusControl({
+  sprint,
+  canManageSprints,
+  onChangeSprintStatusAction,
+}: {
+  sprint: Sprint
+  canManageSprints: boolean
+  onChangeSprintStatusAction: (sprintId: string, status: string) => void
+}) {
+  const meta = getSprintStatusMeta(sprint.status)
+
+  if (!canManageSprints) {
+    return (
+      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${meta.className}`}>
+        {meta.label}
+      </span>
+    )
+  }
+
+  return (
+    <select
+      value={sprint.status ?? "planned"}
+      onClick={(event) => event.stopPropagation()}
+      onChange={(event) => {
+        event.stopPropagation()
+        onChangeSprintStatusAction(sprint.id, event.target.value)
+      }}
+      className={`cursor-pointer rounded-full border-0 px-3 py-1 text-xs font-semibold outline-none ${meta.className}`}
+      aria-label="Sprint status"
+    >
+      {sprintStatusOptions.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  )
 }
 
 function formatDateLabel(value?: string | null) {
@@ -128,28 +191,104 @@ function buildCalendarDays(referenceDate: Date) {
   return { monthStart, monthEnd, days }
 }
 
+export type KanbanSortKey = "priority" | "date" | "sprint"
+
+const priorityRank: Record<Task["priority"], number> = { high: 0, medium: 1, low: 2 }
+
+function sortKanbanTasks(list: Task[], sortBy: KanbanSortKey, sprintsById: Map<string, Sprint>) {
+  const copy = [...list]
+
+  if (sortBy === "priority") {
+    copy.sort((a, b) => priorityRank[a.priority] - priorityRank[b.priority])
+  } else if (sortBy === "date") {
+    copy.sort((a, b) => {
+      const da = a.end_date ? new Date(a.end_date).getTime() : Number.POSITIVE_INFINITY
+      const db = b.end_date ? new Date(b.end_date).getTime() : Number.POSITIVE_INFINITY
+      return da - db
+    })
+  } else {
+    // Por sprint: primero los sprints mas recientes (start_date desc); el backlog al final.
+    copy.sort((a, b) => {
+      const sa = a.id_sprint ? sprintsById.get(a.id_sprint) : null
+      const sb = b.id_sprint ? sprintsById.get(b.id_sprint) : null
+      const ta = sa ? new Date(sa.start_date).getTime() : Number.NEGATIVE_INFINITY
+      const tb = sb ? new Date(sb.start_date).getTime() : Number.NEGATIVE_INFINITY
+      return tb - ta
+    })
+  }
+
+  return copy
+}
+
 function TaskKanbanView({
   tasks,
+  sprints,
   usersById,
   sprintsById,
   onTaskMoveAction,
   onTaskClickAction,
-  onCreateTaskAction,
+  onChangeSprintStatusAction,
+  canManageSprints,
+  kanbanSort,
 }: {
   tasks: Task[]
+  sprints: Sprint[]
   usersById: Map<string, TaskUser>
   sprintsById: Map<string, Sprint>
   onTaskMoveAction: (result: DropResult) => void
   onTaskClickAction: (task: Task) => void
-  onCreateTaskAction: (sprintId: string, status: Task["status"]) => void
+  onChangeSprintStatusAction: (sprintId: string, status: string) => void
+  canManageSprints: boolean
+  kanbanSort: KanbanSortKey
 }) {
   const columns: Task["status"][] = ["pending", "in_progress", "completed"]
+  const orderedSprints = [...sprints].sort(
+    (left, right) => new Date(left.start_date).getTime() - new Date(right.start_date).getTime()
+  )
 
   return (
     <DragDropContext onDragEnd={onTaskMoveAction}>
+      {orderedSprints.length > 0 && (
+        <div className="mb-5 rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-3">
+            <h3 className="text-lg font-semibold text-slate-900">Sprints</h3>
+            <p className="text-xs text-slate-500">Revisa y cambia el estado de cada sprint.</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {orderedSprints.map((sprint) => {
+              const sprintTasks = tasks.filter((task) => task.id_sprint === sprint.id)
+              const completedCount = sprintTasks.filter((task) => task.status === "completed").length
+
+              return (
+                <div
+                  key={sprint.id}
+                  className="flex items-center gap-3 rounded-3xl border border-slate-100 bg-slate-50 px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">{sprint.name}</p>
+                    <p className="text-xs text-slate-500">
+                      {completedCount}/{sprintTasks.length} completadas
+                    </p>
+                  </div>
+                  <SprintStatusControl
+                    sprint={sprint}
+                    canManageSprints={canManageSprints}
+                    onChangeSprintStatusAction={onChangeSprintStatusAction}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         {columns.map((status) => {
-          const statusTasks = tasks.filter((task) => task.status === status)
+          const statusTasks = sortKanbanTasks(
+            tasks.filter((task) => task.status === status),
+            kanbanSort,
+            sprintsById
+          )
 
           return (
             <div key={status} className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm">
@@ -161,13 +300,6 @@ function TaskKanbanView({
                     <p className="text-xs text-slate-500">{statusTasks.length} tareas</p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onCreateTaskAction("backlog", status)}
-                  className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                >
-                  + Nueva
-                </button>
               </div>
 
               <Droppable droppableId={`general:${status}`}>
@@ -205,12 +337,16 @@ function ScrumBoardView({
   usersById,
   onTaskClickAction,
   onTaskMoveAction,
+  onChangeSprintStatusAction,
+  canManageSprints,
 }: {
   tasks: Task[]
   sprints: Sprint[]
   usersById: Map<string, TaskUser>
   onTaskClickAction: (task: Task) => void
   onTaskMoveAction: (result: DropResult) => void
+  onChangeSprintStatusAction: (sprintId: string, status: string) => void
+  canManageSprints: boolean
 }) {
   const orderedSprints = [...sprints].sort((left, right) => new Date(left.start_date).getTime() - new Date(right.start_date).getTime())
   const backlogTasks = tasks.filter((task) => !task.id_sprint)
@@ -290,8 +426,15 @@ function ScrumBoardView({
                   </p>
                 </div>
 
-                <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
-                  {sprintTasks.length} tareas
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+                    {sprintTasks.length} tareas
+                  </div>
+                  <SprintStatusControl
+                    sprint={sprint}
+                    canManageSprints={canManageSprints}
+                    onChangeSprintStatusAction={onChangeSprintStatusAction}
+                  />
                 </div>
               </div>
 
@@ -817,7 +960,9 @@ export default function TaskWorkspaceViews({
   users,
   onTaskMoveAction,
   onTaskClickAction,
-  onCreateTaskAction,
+  onChangeSprintStatusAction,
+  canManageSprints,
+  kanbanSort,
 }: Props) {
   const [activeView, setActiveView] = useState<ViewKey>("kanban")
 
@@ -849,11 +994,14 @@ export default function TaskWorkspaceViews({
       {activeView === "kanban" && (
         <TaskKanbanView
           tasks={tasks}
+          sprints={sprints}
           usersById={usersById}
           sprintsById={sprintsById}
           onTaskMoveAction={onTaskMoveAction}
           onTaskClickAction={onTaskClickAction}
-          onCreateTaskAction={onCreateTaskAction}
+          onChangeSprintStatusAction={onChangeSprintStatusAction}
+          canManageSprints={canManageSprints}
+          kanbanSort={kanbanSort}
         />
       )}
 
@@ -869,7 +1017,15 @@ export default function TaskWorkspaceViews({
       )}
 
       {activeView === "scrum" && (
-        <ScrumBoardView tasks={tasks} sprints={sprints} usersById={usersById} onTaskClickAction={onTaskClickAction} onTaskMoveAction={onTaskMoveAction} />
+        <ScrumBoardView
+          tasks={tasks}
+          sprints={sprints}
+          usersById={usersById}
+          onTaskClickAction={onTaskClickAction}
+          onTaskMoveAction={onTaskMoveAction}
+          onChangeSprintStatusAction={onChangeSprintStatusAction}
+          canManageSprints={canManageSprints}
+        />
       )}
 
       {activeView === "table" && <TableView tasks={tasks} sprintsById={sprintsById} usersById={usersById} onTaskClickAction={onTaskClickAction} />}

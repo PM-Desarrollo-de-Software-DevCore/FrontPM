@@ -21,6 +21,7 @@ import { useConfirm } from "@/components/ui/confirm/ConfirmProvider";
 import { Task } from "@/types/task";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import RequestModificationModal from "@/components/profile/RequestModificationModal";
+import AdminProfileChangeRequests from "@/components/profile/AdminProfileChangeRequests";
 import {
   ProfileChangeRequest,
   ProfileChangeStatus,
@@ -172,16 +173,20 @@ export default function ProfileDashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    getGlobalLeaderboard(5)
+    getGlobalLeaderboard()
       .then((data) => {
         if (!cancelled) {
           setLeaderboard(data);
-          
+
           // Cargar conteos de tareas para todos los usuarios del leaderboard
           const userIds = data.map(entry => entry.userId)
-          getMultipleUsersCompletedTodayCount(userIds).then(counts => {
-            if (!cancelled) setLeaderboardCounts(counts)
-          })
+          getMultipleUsersCompletedTodayCount(userIds)
+            .then(counts => {
+              if (!cancelled) setLeaderboardCounts(counts)
+            })
+            .catch(() => {
+              /* conteo complementario; si falla no rompe el leaderboard */
+            })
         }
       })
       .catch((err: Error) => {
@@ -610,7 +615,25 @@ export default function ProfileDashboard() {
           </div>
         )}
 
-        <div className={isAdmin ? "md:col-span-4 lg:col-span-9 flex flex-col gap-4" : "md:col-span-6 lg:col-span-3 flex flex-col gap-4"}>
+        {isAdmin && (
+          <div className="md:col-span-4 lg:col-span-6 flex flex-col">
+
+            <Card className="rounded-2xl shadow-sm border border-gray-100 flex flex-col lg:h-150">
+
+              <div className="p-4 sm:p-6 border-b">
+                <h2 className="text-lg sm:text-xl font-semibold">
+                  Solicitudes de cambio de perfil
+                </h2>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                <AdminProfileChangeRequests />
+              </div>
+            </Card>
+          </div>
+        )}
+
+        <div className="md:col-span-6 lg:col-span-3 flex flex-col gap-4">
 
           <Card className="rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100">
 
@@ -625,15 +648,19 @@ export default function ProfileDashboard() {
             ) : leaderboard.length === 0 ? (
               <p className="text-xs sm:text-sm text-gray-500">Sin datos todavía</p>
             ) : (
-              <div className="flex flex-col gap-3 sm:gap-4">
-                {leaderboard.map((entry) => (
+              <div className="flex max-h-[460px] flex-col gap-3 overflow-y-auto pr-1 sm:gap-4">
+                {leaderboard.map((entry, index) => (
                   <div key={entry.userId} className="flex justify-between items-center">
 
                     <div className="flex items-center gap-2 sm:gap-3">
+                      <span className="w-4 shrink-0 text-center text-xs font-semibold text-gray-400">
+                        {index + 1}
+                      </span>
                       <LeaderboardAvatar
                         src={entry.profileImageUrl ?? "/images/persona.png"}
                         alt={`${entry.name} ${entry.lastname}`}
                         size={48}
+                        rank={index + 1}
                         completedTodayCount={leaderboardCounts.get(entry.userId) ?? 0}
                       />
                       <span className="text-xs sm:text-sm">

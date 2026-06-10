@@ -1,9 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card/card"
 import dynamic from "next/dynamic"
-import { Check, Flag } from "lucide-react"
+import { Check, Flag, ExternalLink } from "lucide-react"
+import { slugify } from "@/lib/slug"
 import {
   type BackendProject,
   type BackendProjectMember,
@@ -15,6 +17,8 @@ import {
   type BackendUser,
   getMilestonesOverview,
 } from "@/services/milestonesService"
+import { getProjectTasks } from "@/services/taskService"
+import { getToken } from "@/lib/auth"
 
 // Code-splitting: el doughnut (chart.js) se carga bajo demanda, fuera del bundle inicial de /milestones.
 const SprintProgressChart = dynamic(() => import("@/components/ui/graphs/SprintProgressChart"), {
@@ -378,6 +382,10 @@ export default function MilestonesPage() {
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Avance real por sprint = tareas completadas / tareas totales del sprint.
+  // El overview de milestones no incluye tareas, así que se calcula con las
+  // tareas del proyecto seleccionado y se usa para el donut y la lista.
+  const [sprintProgressById, setSprintProgressById] = useState<Record<string, number>>({})
 
   useEffect(() => {
     let isCancelled = false
@@ -481,6 +489,57 @@ export default function MilestonesPage() {
     })
   }, [projects, selectedProjectId])
 
+  useEffect(() => {
+    if (!selectedProjectId) {
+      setSprintProgressById({})
+      return
+    }
+
+    const token = getToken()
+    if (!token) {
+      setSprintProgressById({})
+      return
+    }
+
+    let isCancelled = false
+
+    getProjectTasks(selectedProjectId, token)
+      .then((tasks) => {
+        if (isCancelled) return
+
+        const totals = new Map<string, { total: number; completed: number }>()
+        for (const task of tasks) {
+          if (!task.id_sprint) continue
+          const entry = totals.get(task.id_sprint) ?? { total: 0, completed: 0 }
+          entry.total += 1
+          if (task.status === "completed") entry.completed += 1
+          totals.set(task.id_sprint, entry)
+        }
+
+        const map: Record<string, number> = {}
+        totals.forEach((value, sprintId) => {
+          map[sprintId] = value.total > 0 ? Math.round((value.completed / value.total) * 100) : 0
+        })
+
+        setSprintProgressById(map)
+      })
+      .catch(() => {
+        if (!isCancelled) setSprintProgressById({})
+      })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [selectedProjectId])
+
+  // Un sprint marcado como completado manualmente cuenta como 100%, aunque
+  // tenga tareas sin cerrar. En caso contrario usa el avance real por tareas y,
+  // si el sprint no tiene tareas, cae al progreso por fechas como respaldo.
+  const resolveSprintProgress = (sprint: MilestoneSprint) => {
+    if (sprint.status === "finished") return 100
+    return sprintProgressById[sprint.id] ?? sprint.progress
+  }
+
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? null
   const selectedSprint = selectedProject?.sprints.find((sprint) => sprint.id === selectedSprintId)
     ?? selectedProject?.sprints[0]
@@ -489,11 +548,23 @@ export default function MilestonesPage() {
 
   return (
     <main className="min-h-screen w-full bg-background px-5 py-6 text-foreground">
-      <div className="mb-8 flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-strong">Milestones</h1>
-        <p className="max-w-2xl text-sm text-muted">
-          Selecciona un proyecto para cambiar la vista superior, la progresión del sprint y la línea de tiempo sin salir de la página.
-        </p>
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold tracking-tight text-strong">Milestones</h1>
+          <p className="max-w-2xl text-sm text-muted">
+            Selecciona un proyecto para cambiar la vista superior, la progresión del sprint y la línea de tiempo sin salir de la página.
+          </p>
+        </div>
+
+        {selectedProject && (
+          <Link
+            href={`/projects/${slugify(selectedProject.name)}/tasks`}
+            className="inline-flex shrink-0 items-center gap-2 self-start rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-strong shadow-sm transition hover:bg-muted"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Ver proyecto
+          </Link>
+        )}
       </div>
 
       {isLoading && (
@@ -549,7 +620,7 @@ export default function MilestonesPage() {
 
               {selectedSprint ? (
                 <div className="h-60 w-full">
-                  <SprintProgressChart sprint={selectedSprint} />
+                  <SprintProgressChart sprint={{ ...selectedSprint, progress: resolveSprintProgress(selectedSprint) }} />
                 </div>
               ) : (
                 <div className="flex h-60 w-full items-center justify-center rounded-2xl border border-dashed border-border bg-card text-sm text-muted">
@@ -595,7 +666,7 @@ export default function MilestonesPage() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-strong">{sprint.name}</p>
-                      <p className="mt-0.5 text-xs text-muted">{sprint.progress}% complete</p>
+                      <p className="mt-0.5 text-xs text-muted">{resolveSprintProgress(sprint)}% complete</p>
                     </div>
 
                     <div className="flex shrink-0 flex-col items-end gap-2">

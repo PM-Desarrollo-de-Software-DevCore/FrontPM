@@ -13,14 +13,18 @@ export default function BugsResolved() {
 
   useEffect(() => {
     let cancelled = false
-    getGlobalLeaderboard(5)
+    getGlobalLeaderboard()
       .then((data) => {
         if (!cancelled) {
           setLeaderboard(data)
           const userIds = data.map(entry => entry.userId)
-          getMultipleUsersCompletedTodayCount(userIds).then(counts => {
-            if (!cancelled) setLeaderboardCounts(counts)
-          })
+          getMultipleUsersCompletedTodayCount(userIds)
+            .then(counts => {
+              if (!cancelled) setLeaderboardCounts(counts)
+            })
+            .catch(() => {
+              /* conteo complementario; si falla no rompe el leaderboard */
+            })
         }
       })
       .catch((err: Error) => {
@@ -48,13 +52,17 @@ export default function BugsResolved() {
           <p className="text-sm text-gray-500">Sin datos todavía</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {leaderboard.map((entry) => (
+            {leaderboard.map((entry, index) => (
               <div key={entry.userId} className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
+                  <span className="w-4 shrink-0 text-center text-xs font-semibold text-gray-400">
+                    {index + 1}
+                  </span>
                   <LeaderboardAvatar
                     src={entry.profileImageUrl ?? "/images/persona.png"}
                     alt={`${entry.name} ${entry.lastname}`}
                     size={48}
+                    rank={index + 1}
                     completedTodayCount={leaderboardCounts.get(entry.userId) ?? 0}
                   />
                   <span className="text-sm">{entry.name} {entry.lastname}</span>

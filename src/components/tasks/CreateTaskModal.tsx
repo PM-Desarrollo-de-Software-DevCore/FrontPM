@@ -35,6 +35,7 @@ export default function CreateTaskModal({
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium")
+  const [storyPoints, setStoryPoints] = useState("")
   const [endDate, setEndDate] = useState("")
   const [assignedTo, setAssignedTo] = useState("")
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null)
@@ -122,6 +123,7 @@ export default function CreateTaskModal({
       title: trimmedTitle,
       description,
       priority,
+      ...(storyPoints ? { story_points: Number(storyPoints) } : {}),
       ...(endDate ? { end_date: endDate } : {}),
       progress: 0,
       status: selectedStatus,
@@ -132,6 +134,7 @@ export default function CreateTaskModal({
     setTitle("")
     setDescription("")
     setPriority("medium")
+    setStoryPoints("")
     setEndDate("")
     setAssignedTo("")
     setSelectedSprintId(null)
@@ -253,6 +256,22 @@ export default function CreateTaskModal({
                 className="h-12 w-full rounded-2xl border border-gray-200 px-4 text-sm outline-none"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-600">Story Points</label>
+            <select
+              value={storyPoints}
+              onChange={(e) => setStoryPoints(e.target.value)}
+              className="h-12 w-full rounded-2xl border border-gray-200 px-4 text-sm outline-none"
+            >
+              <option value="">None</option>
+              {[1, 2, 3, 4, 5].map((point) => (
+                <option key={point} value={point}>
+                  {point}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
