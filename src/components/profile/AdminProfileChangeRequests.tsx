@@ -61,12 +61,16 @@ interface RejectModalProps {
 
 function RejectModal({ open, onClose, onConfirm, submitting }: RejectModalProps) {
   const [note, setNote] = useState("")
+  const [prevOpen, setPrevOpen] = useState(open)
 
-  useEffect(() => {
+  // Limpia la nota al abrir, durante el render (patrón recomendado por React
+  // en lugar de setState dentro de un efecto).
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) {
       setNote("")
     }
-  }, [open])
+  }
 
   if (!open) return null
 

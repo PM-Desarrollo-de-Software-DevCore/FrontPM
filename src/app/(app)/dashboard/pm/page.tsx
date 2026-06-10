@@ -1,7 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card/card"
+import { Card, CardContent } from "@/components/ui/card/card"
 import TotalProgress from "@/components/ui/graphs/totalProgress"
 import ProjectCard from "@/components/ui/graphs/project_dash"
 

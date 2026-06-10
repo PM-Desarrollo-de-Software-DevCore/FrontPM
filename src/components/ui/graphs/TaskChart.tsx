@@ -7,6 +7,8 @@ import {
   Legend,
   ChartOptions,
   Plugin,
+  type Chart,
+  type TooltipItem,
 } from "chart.js"
 import { Pie } from "react-chartjs-2"
 
@@ -48,7 +50,7 @@ export default function TasksChart() {
         borderWidth: 1,
         padding: 10,
         callbacks: {
-          label: function (context: any) {
+          label: function (context: TooltipItem<"pie">) {
             return context.label + ": " + context.parsed + "%"
           },
         },
@@ -58,17 +60,18 @@ export default function TasksChart() {
 
   const percentagePlugin = {
     id: "textCenter",
-    beforeDatasetsDraw(chart: any) {
+    beforeDatasetsDraw(chart: Chart<"pie">) {
       const { ctx } = chart
       ctx.save()
 
-      chart.data.datasets[0].data.forEach((datapoint: number, index: number) => {
-        const { x, y } = chart.getDatasetMeta(0).data[index].tooltipPosition()
+      chart.data.datasets[0].data.forEach((datapoint, index) => {
+        const { x, y } = chart.getDatasetMeta(0).data[index].tooltipPosition(false)
+        if (x == null || y == null) return
         ctx.fillStyle = "white"
         ctx.font = "bold 14px Arial"
         ctx.textAlign = "center"
         ctx.textBaseline = "middle"
-        ctx.fillText(datapoint + "%", x, y)
+        ctx.fillText(`${datapoint ?? 0}%`, x, y)
       })
     },
   }

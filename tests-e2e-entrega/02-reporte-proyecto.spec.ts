@@ -27,7 +27,6 @@ test.describe("TC-E2E-02 - Generar reporte de proyecto con IA", () => {
     await expect(page.getByRole("button", { name: "Download PDF" })).toBeVisible()
 
     // El reporte carga como iframe — esperar a que aparezca o que muestre error controlado
-    const reportFrame = page.locator('[title="Project report preview"]')
     const loadingOrFrame = page.locator('[title="Project report preview"], [class*="border-dashed"]')
     await expect(loadingOrFrame.first()).toBeVisible({ timeout: 15000 })
 

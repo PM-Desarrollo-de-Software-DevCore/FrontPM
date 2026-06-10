@@ -10,6 +10,8 @@ import {
   Tooltip,
   Legend,
   Filler,
+  type ScriptableContext,
+  type TooltipItem,
 } from "chart.js"
 import { Line } from "react-chartjs-2"
 import { useWeeklyProgress } from "@/hooks/useDashboardStats"
@@ -49,7 +51,7 @@ type Props = {
 }
 
 export default function ThroughputChart({ filters }: Props) {
-  const chartRef = useRef<any>(null)
+  const chartRef = useRef<ChartJS<"line"> | null>(null)
 
   const dateFrom = filters?.dateFrom || getDateNDaysAgo(7)
   const dateTo = filters?.dateTo || getToday()
@@ -75,10 +77,10 @@ export default function ThroughputChart({ filters }: Props) {
         label: "Tasks Completed",
         data: completedTasks,
         borderColor: "#6366f1",
-        backgroundColor: (context: any) => {
+        backgroundColor: (context: ScriptableContext<"line">) => {
           const chart = context.chart
           const { ctx, chartArea } = chart
-          if (!chartArea) return null
+          if (!chartArea) return "rgba(99, 102, 241, 0.05)"
           const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
           gradient.addColorStop(0, "rgba(99, 102, 241, 0.4)")
           gradient.addColorStop(1, "rgba(99, 102, 241, 0.05)")
@@ -116,7 +118,7 @@ export default function ThroughputChart({ filters }: Props) {
         padding: 12,
         displayColors: false,
         callbacks: {
-          label: (context: any) => `Tareas: ${context.raw}`,
+          label: (context: TooltipItem<"line">) => `Tareas: ${context.raw}`,
         },
       },
     },

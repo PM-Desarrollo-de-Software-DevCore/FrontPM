@@ -11,6 +11,10 @@ export interface SearchIndex {
   tasks: (Task & { projectId: string })[]
 }
 
+// Los mappers no exportan sus tipos backend; se derivan de la firma para no duplicarlos.
+type RawSearchSprint = Parameters<typeof mapSprint>[0] & { id_project: string }
+type RawSearchTask = Parameters<typeof mapBackendTask>[0] & { id_project: string }
+
 // 1 request agregada que reemplaza el 1 + 2*N requests del buscador global
 // (antes: por cada proyecto, getProjectSprints + getProjectTasks). El backend
 // devuelve sprints y tasks de todos los proyectos del usuario en queries bulk;
@@ -33,8 +37,8 @@ export async function getSearchIndex(): Promise<SearchIndex> {
 
   const data = await response.json()
   const payload = data?.data ?? data
-  const rawSprints: any[] = Array.isArray(payload?.sprints) ? payload.sprints : []
-  const rawTasks: any[] = Array.isArray(payload?.tasks) ? payload.tasks : []
+  const rawSprints: RawSearchSprint[] = Array.isArray(payload?.sprints) ? payload.sprints : []
+  const rawTasks: RawSearchTask[] = Array.isArray(payload?.tasks) ? payload.tasks : []
 
   return {
     sprints: rawSprints.map((sprint) => ({ ...mapSprint(sprint), projectId: sprint.id_project })),

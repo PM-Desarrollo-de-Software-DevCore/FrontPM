@@ -139,7 +139,6 @@ function Sidebar({
   collapsible = "offcanvas",
   className,
   children,
-  dir,
   ...props
 }: React.ComponentProps<"div"> & {
   side?: "left" | "right"
@@ -475,7 +474,7 @@ function SidebarMenuButton({
       data-sidebar="menu-button"
       data-size={size}
       data-active={isActive}
-      className={cn(sidebarMenuButtonVariants({variant: isActive ? "active" : "default",size,}),className)}
+      className={cn(sidebarMenuButtonVariants({ variant: isActive ? "active" : variant, size }), className)}
       {...props}
     />
   )

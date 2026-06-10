@@ -5,7 +5,7 @@ import EditIcon from "@mui/icons-material/Edit"
 import DocumentScannerIcon from "@mui/icons-material/DocumentScanner"
 import { API_BASE_URL, getToken } from "@/lib/auth"
 import FramedAvatar from "@/components/ui/avatar/FramedAvatar"
-import { deleteUserProfileImage, uploadUserProfileImage, getUsersRaw, invalidateUsersCache } from "@/services/userService"
+import { deleteUserProfileImage, uploadUserProfileImage, getUsersRaw, invalidateUsersCache, type BackendUser } from "@/services/userService"
 import { useNotification } from "@/components/ui/notifications/NotificationProvider"
 import { useConfirm } from "@/components/ui/confirm/ConfirmProvider"
 import { useSearchParams } from "next/navigation"
@@ -39,20 +39,6 @@ type UserForm = {
   skills: string[]
   role: "user" | "admin"
   createdAt: string
-}
-
-type BackendUser = {
-  id: string | number
-  name?: string
-  lastname?: string
-  email?: string
-  phoneNumber?: string | null
-  area?: string | null
-  skill?: string | null
-  globalRole?: "user" | "admin"
-  role?: "user" | "admin"
-  createdAt?: string | Date
-  profileImageUrl?: string | null
 }
 
 type UserMutationPayload = {
@@ -567,7 +553,7 @@ export default function CreateUserPage() {
               nationality: '',
               designation: parseDelimitedList(finalUserData.area).length > 0 ? parseDelimitedList(finalUserData.area) : form.designation,
               skills: finalUserData.skill ? finalUserData.skill.split(',').map((s: string) => s.trim()) : form.skills,
-              role: finalUserData.globalRole || finalUserData.role || (form.role === 'admin' ? 'admin' : 'user'),
+              role: (finalUserData.globalRole || finalUserData.role || form.role) === 'admin' ? 'admin' : 'user',
               createdAt: finalUserData.createdAt ? new Date(finalUserData.createdAt).toISOString().split('T')[0] : getTodayDate(),
               profileImageUrl: finalUserData.profileImageUrl ?? null,
             }

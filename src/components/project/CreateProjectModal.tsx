@@ -52,6 +52,23 @@ interface SelectedProjectUser extends UserOption {
   projectRole: ProjectMemberRole;
 }
 
+const emptyFormState: ProjectFormState = {
+  name: "",
+  description: "",
+  client: "",
+  projectType: "Web app",
+  projectObjective: "",
+  methodology: "scrum",
+  startDate: "",
+  endDate: "",
+  priority: "Medium",
+  status: "Planning",
+  estimatedSprints: "",
+  budget: "",
+  monthlyCost: "",
+  billingModel: "fixed_price",
+};
+
 export default function CreateProjectModal({
   onCreate,
   onUpdate,
@@ -80,23 +97,6 @@ export default function CreateProjectModal({
   const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
   const { notifyError, notifySuccess } = useNotification()
   const confirm = useConfirm()
-
-  const emptyFormState: ProjectFormState = {
-    name: "",
-    description: "",
-    client: "",
-    projectType: "Web app",
-    projectObjective: "",
-    methodology: "scrum",
-    startDate: "",
-    endDate: "",
-    priority: "Medium",
-    status: "Planning",
-    estimatedSprints: "",
-    budget: "",
-    monthlyCost: "",
-    billingModel: "fixed_price",
-  };
 
   const labelClass = "mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-200";
   const fieldClass =
@@ -213,7 +213,7 @@ export default function CreateProjectModal({
         if (!cancelled) {
           setSuggestions(response.suggestions);
         }
-      } catch (error) {
+      } catch {
         if (!cancelled) {
           setSuggestions([]);
         }
@@ -268,7 +268,7 @@ export default function CreateProjectModal({
     };
 
     loadUsers();
-  }, [isOpen, isEditMode, project?.id]);
+  }, [isOpen, isEditMode, project?.id, notifyError]);
 
   const filteredUsers = useMemo(() => {
     const query = userQuery.trim().toLowerCase();
@@ -457,14 +457,6 @@ export default function CreateProjectModal({
         }
       }
 
-      if (memberSyncFailed) {
-        setMemberSyncWarning(
-          memberSyncError
-            ? `El proyecto se creó, pero los miembros no pudieron agregarse: ${memberSyncError}`
-            : "El proyecto se creó, pero los miembros no pudieron agregarse."
-        );
-      }
-
       onCreate?.({
         ...newProject,
         team: selectedUsers.map((user) =>
@@ -472,7 +464,18 @@ export default function CreateProjectModal({
         ),
       });
 
-      notifySuccess("Success", "Project created successfully!");
+      // El modal se cierra en ambos casos, pero si los miembros no pudieron
+      // agregarse hay que avisarlo en lugar de reportar éxito sin más.
+      if (memberSyncFailed) {
+        notifyError(
+          "Proyecto creado con advertencias",
+          memberSyncError
+            ? `Los miembros no pudieron agregarse: ${memberSyncError}`
+            : "Los miembros no pudieron agregarse."
+        );
+      } else {
+        notifySuccess("Success", "Project created successfully!");
+      }
 
       closeModal();
     } catch (err) {
@@ -572,17 +575,11 @@ export default function CreateProjectModal({
             </div>
 
             <div className="flex-1 space-y-5 overflow-y-auto pr-1">
-              {/* {error && (
-                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
-                  {error}
-                </div>
-              )} */}
-
-              {/* {memberSyncWarning && (
+              {memberSyncWarning && (
                 <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
                   {memberSyncWarning}
                 </div>
-              )} */}
+              )}
               <section className="rounded-3xl border border-zinc-200 bg-zinc-50/70 p-5 dark:border-white/10 dark:bg-slate-800/60">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
@@ -782,11 +779,7 @@ export default function CreateProjectModal({
                     disabled={loading || usersLoading}
                   />
 
-                  {/* {usersError && (
-                    <p className="mt-2 text-sm text-red-600">{usersError}</p>
-                  )} */}
-
-                  {/* {!usersError && userQuery.trim().length > 0 && (
+                  {userQuery.trim().length > 0 && (
                     <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-44 overflow-auto rounded-2xl border border-zinc-200 bg-white shadow-lg dark:border-white/10 dark:bg-slate-900">
                       {filteredUsers.length > 0 ? (
                         filteredUsers.map((user) => (
@@ -804,7 +797,7 @@ export default function CreateProjectModal({
                         <p className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-300">No se encontraron usuarios.</p>
                       )}
                     </div>
-                  )} */}
+                  )}
 
                   {selectedUsers.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">

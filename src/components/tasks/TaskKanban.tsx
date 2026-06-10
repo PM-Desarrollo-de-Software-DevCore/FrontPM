@@ -4,6 +4,7 @@
 
 import {
   Droppable,
+  type DropResult,
 } from "@hello-pangea/dnd"
 
 import TaskCard from "./TaskCard"
@@ -50,7 +51,7 @@ interface Props {
   sprintId?: string
 
   onTaskMoveAction: (
-    result: any
+    result: DropResult
   ) => void
 
   onTaskClickAction: (

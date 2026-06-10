@@ -84,17 +84,6 @@ function getPriorityLabel(priority: Task["priority"]): string {
   }
 }
 
-function getTaskProgressColor(status: Task["status"]): string {
-  switch (status) {
-    case "completed":
-      return "bg-emerald-500"
-    case "in_progress":
-      return "bg-sky-500"
-    default:
-      return "bg-amber-500"
-  }
-}
-
 const PROFILE_REQUEST_FIELD_LABELS: Record<string, string> = {
   name: "Nombre",
   lastname: "Apellido",
@@ -343,6 +332,9 @@ export default function ProfileDashboard() {
 
   useEffect(() => {
     reloadMyRequests()
+    // Solo debe re-ejecutarse al cambiar de usuario; reloadMyRequests se
+    // recrea en cada render y no puede ir en las dependencias sin causar loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
 
   const handleRequestCreated = (request: ProfileChangeRequest) => {

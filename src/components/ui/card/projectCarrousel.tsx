@@ -97,18 +97,50 @@ function ProjectCard({ project, usersById, members }: { project: ProjectType; us
 
       <div className="flex items-center justify-between">
         <div className="flex -ml-1.5">
-          {(project.team ?? []).slice(0, 3).map((member, i) => (
-            <div
-              key={i}
-              className="first:ml-0 -ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-300 text-[9px] font-semibold text-amber-900"
-            >
-              {member.slice(0, 2).toUpperCase()}
-            </div>
-          ))}
-          {project.team && project.team.length > 3 && (
-            <div className="-ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-200 text-[9px] font-semibold text-amber-900">
-              +{project.team.length - 3}
-            </div>
+          {displayMembers.length > 0 ? (
+            <>
+              {displayMembers.slice(0, 3).map((member) => (
+                <div
+                  key={member.id}
+                  title={member.label}
+                  className="first:ml-0 -ml-1.5 overflow-hidden rounded-full border-2 border-white"
+                >
+                  {member.profileImageUrl ? (
+                    <FramedAvatar
+                      src={member.profileImageUrl}
+                      alt={member.label}
+                      size={20}
+                      imageClassName="rounded-full"
+                    />
+                  ) : (
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-300 text-[9px] font-semibold text-amber-900">
+                      {member.label.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {displayMembers.length > 3 && (
+                <div className="-ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-200 text-[9px] font-semibold text-amber-900">
+                  +{displayMembers.length - 3}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {(project.team ?? []).slice(0, 3).map((member, i) => (
+                <div
+                  key={i}
+                  className="first:ml-0 -ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-300 text-[9px] font-semibold text-amber-900"
+                >
+                  {member.slice(0, 2).toUpperCase()}
+                </div>
+              ))}
+              {project.team && project.team.length > 3 && (
+                <div className="-ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-200 text-[9px] font-semibold text-amber-900">
+                  +{project.team.length - 3}
+                </div>
+              )}
+            </>
           )}
         </div>
 

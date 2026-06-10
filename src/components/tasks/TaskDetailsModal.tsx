@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Image from "next/image"
 
 import { Task } from "@/types/task"
 import { getToken } from "@/lib/auth"
@@ -119,12 +120,6 @@ export default function TaskDetailsModal({
 
     loadComments()
   }, [taskId])
-
-  useEffect(() => {
-    const query = `${task.title} ${task.description || ""}`.trim()
-    // Suggestions removed from detail modal — keep comments and assignment UI only
-    return undefined
-  }, [task.id, task.title, task.description])
 
   async function handleCreateComment() {
   if (!newComment.trim()) return
@@ -444,9 +439,11 @@ export default function TaskDetailsModal({
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 text-sm font-semibold text-gray-700">
                         {authorPhoto ? (
-                          <img
+                          <Image
                             src={authorPhoto}
                             alt={authorName}
+                            width={40}
+                            height={40}
                             className="h-full w-full object-cover"
                           />
                         ) : (
