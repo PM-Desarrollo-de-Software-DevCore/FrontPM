@@ -236,11 +236,15 @@ export default function CreateProjectModal({
     const loadUsers = async () => {
       try {
         setUsersLoading(true);
-        const users = await getNonAdminUsers();
-        setAvailableUsers(users);
 
         if (isEditMode && project?.id) {
-          const members = await getProjectMembers(project.id);
+          // Usuarios y miembros del proyecto son independientes: se piden en
+          // paralelo (antes era un waterfall: getNonAdminUsers y luego getProjectMembers).
+          const [users, members] = await Promise.all([
+            getNonAdminUsers(),
+            getProjectMembers(project.id),
+          ]);
+          setAvailableUsers(users);
           setInitialMembers(members);
 
           const usersById = new Map(users.map((user) => [user.id, user]));
@@ -257,6 +261,10 @@ export default function CreateProjectModal({
             .filter((user): user is SelectedProjectUser => Boolean(user));
 
           setSelectedUsers(selected);
+        } else {
+          // Modo creación: solo se necesita el directorio de usuarios.
+          const users = await getNonAdminUsers();
+          setAvailableUsers(users);
         }
       } catch (err) {
         const errorMessage =
