@@ -133,6 +133,10 @@ async function fetchWithRetry(url: string, init: RequestInit, maxAttempts = 3): 
 const USERS_RAW_TTL_MS = 30_000;
 let usersRawCache: { data: BackendUser[]; ts: number } | null = null;
 let usersRawInflight: Promise<BackendUser[]> | null = null;
+// Generación de caché: si invalidateUsersCache() corre mientras un fetch está en
+// vuelo, se incrementa y ese fetch NO repuebla la caché al resolver (si no, tras
+// logout+login dentro del TTL se serviría el directorio del usuario anterior).
+let usersRawGeneration = 0;
 
 export async function getUsersRaw(): Promise<BackendUser[]> {
   if (usersRawCache && Date.now() - usersRawCache.ts < USERS_RAW_TTL_MS) {
@@ -142,7 +146,8 @@ export async function getUsersRaw(): Promise<BackendUser[]> {
     return usersRawInflight;
   }
 
-  usersRawInflight = (async () => {
+  const generation = usersRawGeneration;
+  const inflight = (async () => {
     const response = await fetchWithRetry(`${API_URL}/users`, {
       method: "GET",
       headers: getAuthHeaders(),
@@ -155,20 +160,26 @@ export async function getUsersRaw(): Promise<BackendUser[]> {
 
     const data = await response.json();
     const users = Array.isArray(data) ? data : data.data || [];
-    usersRawCache = { data: users, ts: Date.now() };
+    if (generation === usersRawGeneration) {
+      usersRawCache = { data: users, ts: Date.now() };
+    }
     return users;
   })();
+  usersRawInflight = inflight;
 
   try {
-    return await usersRawInflight;
+    return await inflight;
   } finally {
-    usersRawInflight = null;
+    if (usersRawInflight === inflight) {
+      usersRawInflight = null;
+    }
   }
 }
 
 // Invalida la caché del directorio (usar tras crear/editar/borrar usuarios si se
 // necesita frescura inmediata; el TTL se auto-sana en USERS_RAW_TTL_MS de todos modos).
 export function invalidateUsersCache(): void {
+  usersRawGeneration++;
   usersRawCache = null;
   usersRawInflight = null;
 }
