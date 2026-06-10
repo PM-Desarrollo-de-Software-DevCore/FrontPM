@@ -149,65 +149,56 @@ export async function createTask(
   taskData: Partial<Task>,
   token: string
 ) {
+  const response = await fetch(
+    `${API_URL}/projects/${projectId}/tasks`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type":
+          "application/json",
+
+        Authorization: `Bearer ${token}`,
+      },
+
+      body: JSON.stringify(
+        taskData
+      ),
+    }
+  )
+
+  const text =
+    await response.text()
+
+  let parsedBody: Record<string, unknown> | null = null
   try {
-    const response = await fetch(
-      `${API_URL}/projects/${projectId}/tasks`,
-      {
-        method: "POST",
-
-        headers: {
-          "Content-Type":
-            "application/json",
-
-          Authorization: `Bearer ${token}`,
-        },
-
-        body: JSON.stringify(
-          taskData
-        ),
-      }
-    )
-
-    const text =
-      await response.text()
-
-    let parsedBody: Record<string, unknown> | null = null
-    try {
-      parsedBody = text ? JSON.parse(text) : null
-    } catch {
-      parsedBody = null
-    }
-
-    if (!response.ok) {
-      console.error(text)
-
-      const messageFromBody =
-        typeof parsedBody?.message === "string"
-          ? parsedBody.message
-          : null
-
-      const errorFromBody =
-        typeof parsedBody?.error === "string"
-          ? parsedBody.error
-          : null
-
-      const backendMessage =
-        messageFromBody ||
-        errorFromBody ||
-        "Error creating task"
-
-      throw new Error(backendMessage)
-    }
-
-    return parsedBody ?? text
-  } catch (error) {
-    console.error(
-      "CREATE TASK ERROR:",
-      error
-    )
-
-    throw error
+    parsedBody = text ? JSON.parse(text) : null
+  } catch {
+    parsedBody = null
   }
+
+  if (!response.ok) {
+    const messageFromBody =
+      typeof parsedBody?.message === "string"
+        ? parsedBody.message
+        : null
+
+    const errorFromBody =
+      typeof parsedBody?.error === "string"
+        ? parsedBody.error
+        : null
+
+    // El error se propaga al handler (handleCreateTask), que lo muestra con
+    // notifyError. No se loguea aqui para no ensuciar la consola con errores
+    // de validacion esperados (p.ej. permisos insuficientes).
+    throw new Error(
+      messageFromBody ||
+      errorFromBody ||
+      "Error creating task"
+    )
+  }
+
+  return parsedBody ?? text
 }
 
 export async function updateTask(
@@ -239,7 +230,6 @@ export async function updateTask(
   }
 
   const text = await response.text()
-  console.log("UPDATE TASK RESPONSE:", text)
 
   return text ? JSON.parse(text) : null
 }

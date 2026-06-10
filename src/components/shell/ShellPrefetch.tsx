@@ -15,7 +15,7 @@ import { prefetchProjects } from "@/services/projectService"
  */
 export default function ShellPrefetch() {
   useEffect(() => {
-    prefetchGlobalLeaderboard(5)
+    prefetchGlobalLeaderboard()
     prefetchUsersDirectory()
     prefetchProjects()
   }, [])

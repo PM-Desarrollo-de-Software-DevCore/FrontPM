@@ -20,10 +20,13 @@ export interface ProjectPayload {
   status: Project['status'];
 }
 
-function convertDateToISO(dateString?: string): string {
-  if (!dateString) return "";
+function convertDateToISO(dateString?: string): string | undefined {
+  // Vacío -> undefined para OMITIR la fecha del payload. Enviar "" hace que el
+  // validador (z.coerce.date) la interprete como Invalid Date y devuelva 400.
+  if (!dateString) return undefined;
   if (dateString.includes("T")) return dateString;
   const date = new Date(`${dateString}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return undefined;
   return date.toISOString();
 }
 
@@ -213,7 +216,10 @@ export async function updateProject(projectId: string, project: Partial<ProjectP
   });
 
   if (!response.ok) {
-    throw new Error('No se pudo actualizar el proyecto');
+    // Surface el mensaje real del backend (p.ej. validación Zod) en vez de un
+    // genérico que oculta la causa del 400.
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'No se pudo actualizar el proyecto');
   }
 
   const data = await response.json();

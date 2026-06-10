@@ -47,6 +47,11 @@ export default function CreateSprintModal({
   ] = useState("")
 
   const [
+    status,
+    setStatus,
+  ] = useState<Sprint["status"]>("planned")
+
+  const [
     loading,
     setLoading,
   ] = useState(false)
@@ -109,7 +114,7 @@ export default function CreateSprintModal({
             endDate,
 
           status:
-            "active",
+            status || "planned",
         })
 
         // RESET FORM
@@ -117,6 +122,7 @@ export default function CreateSprintModal({
         setName("")
         setStartDate("")
         setEndDate("")
+        setStatus("planned")
 
       } catch (error) {
 
@@ -247,6 +253,32 @@ export default function CreateSprintModal({
                 className="h-12 w-full rounded-2xl border border-gray-200 px-4 text-sm outline-none transition focus:border-blue-400"
               />
             </div>
+          </div>
+
+          {/* STATUS */}
+
+          <div>
+
+            <label className="mb-2 block text-sm font-medium text-gray-600">
+
+              Status
+            </label>
+
+            <select
+              value={status}
+
+              onChange={(e) =>
+                setStatus(
+                  e.target.value as Sprint["status"]
+                )
+              }
+
+              className="h-12 w-full rounded-2xl border border-gray-200 bg-white px-4 text-sm outline-none transition focus:border-blue-400"
+            >
+              <option value="planned">Planned</option>
+              <option value="active">Active</option>
+              <option value="finished">Completed</option>
+            </select>
           </div>
 
           {/* BUTTONS */}

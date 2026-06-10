@@ -53,13 +53,17 @@ export default function SprintProgressChart({ sprint }: { sprint: { progress: nu
     id: "textCenter",
     beforeDatasetsDraw(chart) {
       const { ctx, width, height } = chart
+      // Leer el valor del dataset (no de un closure): los plugins inline no se
+      // re-registran cuando cambia el prop, pero chart.data sí se actualiza, así
+      // que el texto del centro refleja siempre el porcentaje vigente.
+      const value = Number(chart.data.datasets[0]?.data[0] ?? 0)
       ctx.save()
 
       ctx.font = "bold 28px Arial"
       ctx.textAlign = "center"
       ctx.textBaseline = "middle"
       ctx.fillStyle = "#0f172a"
-      ctx.fillText(`${sprint.progress}%`, width / 2, height / 2)
+      ctx.fillText(`${value}%`, width / 2, height / 2)
 
       ctx.font = "14px Arial"
       ctx.fillStyle = "#64748b"
