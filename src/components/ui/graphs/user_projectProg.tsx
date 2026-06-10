@@ -9,7 +9,7 @@ type Props = {
   error?: string | null
 }
 
-export default function TotalProgress({ dashboardData, projectId, loading, error }: Props) {
+export default function TotalProgress({ dashboardData, projectId, loading }: Props) {
   const projectProgress = projectId
     ? dashboardData?.tasksByProject?.find((project) => project.id_project === projectId)
         ?.completionPercentage

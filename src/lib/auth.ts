@@ -176,11 +176,10 @@ export async function checkServerConnection(): Promise<boolean> {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), timeout)
 
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      // /health es el endpoint de warmup del backend (Render tiene cold starts);
+      // es más ligero que /auth/me y no depende de autenticación.
+      await fetch(`${API_BASE_URL}/health`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         signal: controller.signal,
       })
 

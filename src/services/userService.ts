@@ -2,8 +2,8 @@ import { getToken } from "@/lib/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-type BackendUser = {
-  id: string;
+export type BackendUser = {
+  id: string | number;
   name?: string;
   lastname?: string;
   email?: string;
@@ -12,6 +12,8 @@ type BackendUser = {
   profileImageUrl?: string | null;
   skill?: string | null;
   area?: string | null;
+  phoneNumber?: string | null;
+  createdAt?: string | Date;
 };
 
 export interface UserOption {
@@ -58,7 +60,7 @@ function normalizeRole(rawRole?: string): UserOption["role"] {
 
 function userFromBackendFormat(user: BackendUser): UserOption {
   return {
-    id: user.id,
+    id: String(user.id),
     name: user.name ?? "",
     lastname: user.lastname ?? "",
     email: user.email ?? "",
@@ -67,9 +69,9 @@ function userFromBackendFormat(user: BackendUser): UserOption {
   };
 }
 
-function userDirectoryFromBackendFormat(user: any): UserDirectoryEntry {
+function userDirectoryFromBackendFormat(user: BackendUser): UserDirectoryEntry {
   return {
-    id: user.id,
+    id: String(user.id),
     name: user.name ?? "",
     lastname: user.lastname ?? "",
     email: user.email ?? "",
@@ -129,10 +131,10 @@ async function fetchWithRetry(url: string, init: RequestInit, maxAttempts = 3): 
 // el TTL corto evita refetch en navegaciones seguidas. La gestión de usuarios
 // (users/create) hace su propio fetch directo, así que siempre ve datos frescos.
 const USERS_RAW_TTL_MS = 30_000;
-let usersRawCache: { data: any[]; ts: number } | null = null;
-let usersRawInflight: Promise<any[]> | null = null;
+let usersRawCache: { data: BackendUser[]; ts: number } | null = null;
+let usersRawInflight: Promise<BackendUser[]> | null = null;
 
-export async function getUsersRaw(): Promise<any[]> {
+export async function getUsersRaw(): Promise<BackendUser[]> {
   if (usersRawCache && Date.now() - usersRawCache.ts < USERS_RAW_TTL_MS) {
     return usersRawCache.data;
   }
@@ -283,112 +285,38 @@ export async function deleteUserProfileImage(userId: string): Promise<UserProfil
   };
 }
 
-export async function getProjectMembers(
-  projectId: string
-): Promise<UserOption[]> {
+type BackendProjectMember = {
+  id_user: string | number;
+};
 
+export async function getProjectMembers(projectId: string): Promise<UserOption[]> {
   // GET MEMBERS
-
-  const membersResponse =
-    await fetch(
-      `${API_URL}/projects/${projectId}/members`,
-      {
-        method: "GET",
-
-        headers:
-          getAuthHeaders(),
-
-        cache: "no-store",
-      }
-    )
+  const membersResponse = await fetch(`${API_URL}/projects/${projectId}/members`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
 
   if (!membersResponse.ok) {
-    throw new Error(
-      "No se pudieron obtener los miembros"
-    )
+    throw new Error("No se pudieron obtener los miembros");
   }
 
-  const membersData =
-    await membersResponse.json()
+  const membersData = await membersResponse.json();
+  const members: BackendProjectMember[] = Array.isArray(membersData)
+    ? membersData
+    : membersData.data || [];
 
-  const members =
-    Array.isArray(
-      membersData
-    )
-      ? membersData
-      : membersData.data ||
-        []
-
-  // GET USERS
-
-  const usersResponse =
-    await fetch(
-      `${API_URL}/users`,
-      {
-        method: "GET",
-
-        headers:
-          getAuthHeaders(),
-
-        cache: "no-store",
-      }
-    )
-
-  if (!usersResponse.ok) {
-    throw new Error(
-      "No se pudieron obtener los usuarios"
-    )
-  }
-
-  const usersData =
-    await usersResponse.json()
-
-  const users =
-    Array.isArray(
-      usersData
-    )
-      ? usersData
-      : usersData.data ||
-        []
+  // GET USERS (directorio cacheado/deduplicado)
+  const users = await getUsersRaw();
 
   // COMBINE MEMBERS + USERS
-
   return members
-    .map((member: any) => {
-      const fullUser =
-        users.find(
-          (u: any) =>
-            u.id ===
-            member.id_user
-        )
+    .map((member) => {
+      const fullUser = users.find((u) => String(u.id) === String(member.id_user));
 
-      if (!fullUser)
-        return null
+      if (!fullUser) return null;
 
-      return {
-        id: fullUser.id,
-
-        name:
-          fullUser.name ||
-          "",
-
-        lastname:
-          fullUser.lastname ||
-          "",
-
-        email:
-          fullUser.email ||
-          "",
-
-        role:
-          normalizeRole(
-            fullUser.globalRole ||
-              fullUser.role
-          ),
-
-        profileImageUrl:
-          fullUser.profileImageUrl ?? null,
-      }
+      return userFromBackendFormat(fullUser);
     })
-    .filter(Boolean) as UserOption[]
+    .filter((user): user is UserOption => user !== null);
 }

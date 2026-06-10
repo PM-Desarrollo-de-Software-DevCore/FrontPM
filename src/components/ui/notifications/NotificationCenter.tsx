@@ -120,6 +120,9 @@ export default function NotificationCenter() {
     return () => {
       window.clearInterval(interval)
     }
+    // Solo debe re-ejecutarse al cambiar de usuario; loadNotifications se
+    // recrea en cada render y no puede ir en las dependencias sin causar loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
 
   useEffect(() => {

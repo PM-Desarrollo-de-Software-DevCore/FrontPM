@@ -7,6 +7,7 @@ import {
   LinearScale,
   PointElement,
   Tooltip,
+  type TooltipItem,
 } from "chart.js"
 import { Line } from "react-chartjs-2"
 
@@ -56,7 +57,7 @@ export default function VelocityChart({
         borderWidth: 1,
         padding: 10,
         callbacks: {
-          label: function (context: any) {
+          label: function (context: TooltipItem<"line">) {
             return `${context.raw} finished tasks`
           },
         },

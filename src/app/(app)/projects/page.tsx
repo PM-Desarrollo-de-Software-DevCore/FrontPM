@@ -8,7 +8,6 @@ import { getProjects } from "@/services/projectService";
 import { getProjectsStats } from "@/services/milestonesService";
 import { getUsersDirectory, UserDirectoryEntry } from "@/services/userService";
 import { getAllProjectMembers, ProjectMember } from "@/services/memberService";
-import FramedAvatar from "@/components/ui/avatar/FramedAvatar";
 import { slugify } from "@/lib/slug";
 
 function formatDate(date: string) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card/card"
 import dynamic from "next/dynamic"
 import { Check, Flag, ExternalLink } from "lucide-react"
@@ -350,9 +351,11 @@ function ProjectButton({
           className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-gray-100 text-xs font-semibold text-gray-700 shadow-sm cursor-pointer"
         >
           {member.image ? (
-            <img
+            <Image
               src={member.image}
               alt={member.label}
+              width={36}
+              height={36}
               className="h-full w-full object-cover"
             />
           ) : (

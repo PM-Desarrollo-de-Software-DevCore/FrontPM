@@ -1,13 +1,9 @@
 "use client";
 
-import React, { PropsWithChildren, useEffect, useState } from "react";
+import { PropsWithChildren, useEffect } from "react";
 
 export default function ThemeProvider({ children }: PropsWithChildren) {
-  const [mounted, setMounted] = useState(false);
-
   useEffect(() => {
-    setMounted(true);
-
     try {
       // Sincroniza el estado visual con localStorage
       const stored = localStorage.getItem("theme");
@@ -19,7 +15,7 @@ export default function ThemeProvider({ children }: PropsWithChildren) {
       // Fallback a prefers-color-scheme
       const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
       document.documentElement.classList.toggle("dark", prefersDark);
-    } catch (err) {
+    } catch {
       /* ignore */
     }
   }, []);
@@ -35,31 +31,28 @@ export default function ThemeProvider({ children }: PropsWithChildren) {
         } else if (stored === "light") {
           document.documentElement.classList.remove("dark");
         }
-      } catch (err) {
+      } catch {
         /* ignore */
       }
     };
 
     const handleCustomTheme = (ev: Event) => {
       try {
-        // @ts-ignore
-        const theme = ev?.detail?.theme;
+        const theme = (ev as CustomEvent<{ theme?: string }>).detail?.theme;
         if (theme === "dark") document.documentElement.classList.add("dark");
         else if (theme === "light") document.documentElement.classList.remove("dark");
-      } catch (err) {
+      } catch {
         /* ignore */
       }
     };
 
     window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("themechange", handleCustomTheme as EventListener);
+    window.addEventListener("themechange", handleCustomTheme);
     return () => {
       window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("themechange", handleCustomTheme as EventListener);
+      window.removeEventListener("themechange", handleCustomTheme);
     };
   }, []);
-
-  if (!mounted) return <>{children}</>;
 
   return <>{children}</>;
 }

@@ -1,42 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
+
+type Theme = "light" | "dark";
+
+/* El tema vive fuera de React (localStorage + clase `dark` en <html>), así que
+ * se lee con useSyncExternalStore en lugar de duplicarlo en un useState. */
+function readTheme(): Theme {
+  try {
+    const stored = localStorage.getItem("theme");
+    if (stored === "dark" || stored === "light") return stored;
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return prefersDark ? "dark" : "light";
+  } catch {
+    return "light";
+  }
+}
+
+function subscribe(onChange: () => void) {
+  window.addEventListener("themechange", onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener("themechange", onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
 
 export function useTheme() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [isHydrated, setIsHydrated] = useState(false);
+  const theme = useSyncExternalStore<Theme>(subscribe, readTheme, () => "light");
 
-  useEffect(() => {
+  const setTheme = useCallback((next: Theme) => {
     try {
-      const stored = localStorage.getItem("theme") as "light" | "dark" | null;
-      if (stored) {
-        setTheme(stored);
-        document.documentElement.classList.toggle("dark", stored === "dark");
-        setIsHydrated(true);
-        return;
-      }
-
-      const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const initialTheme = prefersDark ? "dark" : "light";
-      setTheme(initialTheme);
-      document.documentElement.classList.toggle("dark", prefersDark);
-      setIsHydrated(true);
-    } catch (err) {
-      setIsHydrated(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isHydrated) return;
-    
-    try {
-      localStorage.setItem("theme", theme);
-      document.documentElement.classList.toggle("dark", theme === "dark");
-      window.dispatchEvent(new CustomEvent("themechange", { detail: { theme } }));
-    } catch (err) {
+      localStorage.setItem("theme", next);
+      document.documentElement.classList.toggle("dark", next === "dark");
+      window.dispatchEvent(new CustomEvent("themechange", { detail: { theme: next } }));
+    } catch {
       // ignore
     }
-  }, [theme, isHydrated]);
+  }, []);
 
   return { theme, setTheme } as const;
 }

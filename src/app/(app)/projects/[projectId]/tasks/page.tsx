@@ -151,6 +151,8 @@ export default function TasksPage() {
   useEffect(() => {
     // Reusa loadData (mismo batch de tasks+sprints+members) en lugar de duplicar
     // la logica de fetch en el montaje. loadData ya valida token/resolvedProjectId.
+    // Falso positivo de set-state-in-effect: los setState ocurren tras un await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadData()
   }, [loadData])
 
@@ -471,31 +473,6 @@ export default function TasksPage() {
     setSelectedTask((prev) => (prev && prev.id === taskId ? { ...prev, ...changes } : prev))
     notifySuccess("Task updated", "Changes were saved successfully.")
   }
-  const handleAssignUser = async (taskId: string, userId: string) => {
-    try {
-      await updateTask(
-        taskId,
-        {
-          assignedTo: userId,
-        },
-        token
-      )
-
-      setTasks((currentTasks) =>
-        currentTasks.map((task) =>
-          task.id === taskId ? { ...task, assignedTo: userId } : task
-        )
-      )
-      notifySuccess("Task updated", "The assignee was updated successfully.")
-    } catch (error) {
-      notifyError(
-        "Task could not be updated",
-        error instanceof Error ? error.message : "Please try again."
-      )
-      throw error
-    }
-  }
-
   const handleOpenTask = (task: Task) => {
     setSelectedTask(task)
   }
