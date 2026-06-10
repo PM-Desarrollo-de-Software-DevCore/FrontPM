@@ -433,6 +433,11 @@ const esToEnEntries: Array<[string, string]> = [
 // cola ("Reportee"/"Conceptoo"). El sentido es->en (inglés es el default) sí los traduce.
 const enToEsEntries: Array<[string, string]> = esToEnEntries
   .filter(([es, en]) => !es.includes(en))
+  // Tampoco revertir si el inglés aparece dentro del español FUENTE de OTRA entrada
+  // (p.ej. "Milestones" vive literalmente en "Milestones generados desde los sprints..."):
+  // revertir en->es sobre ese source en español lo corrompería ("Hitos generados...").
+  // El revert del texto ya mostrado se recalcula desde el source cacheado, no desde aquí.
+  .filter(([es, en]) => !esToEnEntries.some(([otherEs]) => otherEs !== es && otherEs.includes(en)))
   .map(([es, en]) => [en, es]);
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -463,80 +468,98 @@ function translateText(value: string, language: Language): string {
   return applyDictionary(value, dictionary);
 }
 
-function translateDom(language: Language) {
-  if (typeof document === "undefined") return;
+const TRANSLATABLE_ATTRIBUTES: Array<"placeholder" | "title" | "aria-label"> = [
+  "placeholder",
+  "title",
+  "aria-label",
+];
+const SKIP_TAGS = ["SCRIPT", "STYLE", "NOSCRIPT", "CODE", "PRE", "TEXTAREA"];
+const ATTRIBUTE_SELECTOR = "input, textarea, button, [title], [aria-label]";
 
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  const textNodes: Text[] = [];
+function shouldSkipTextNode(node: Text): boolean {
+  if (!node.nodeValue || !node.nodeValue.trim()) return true;
+  const parent = node.parentElement;
+  if (!parent) return true;
+  if (SKIP_TAGS.includes(parent.tagName)) return true;
+  if (parent.closest("[data-no-i18n='true']")) return true;
+  return false;
+}
 
-  while (walker.nextNode()) {
-    const node = walker.currentNode as Text;
-    const parentTag = node.parentElement?.tagName;
+function translateTextNode(node: Text, language: Language) {
+  if (shouldSkipTextNode(node)) return;
 
-    if (!node.nodeValue) continue;
-    if (!node.nodeValue.trim()) continue;
-    if (node.parentElement?.closest("[data-no-i18n='true']")) continue;
-    if (parentTag && ["SCRIPT", "STYLE", "NOSCRIPT", "CODE", "PRE", "TEXTAREA"].includes(parentTag)) continue;
+  const current = node.nodeValue || "";
 
-    textNodes.push(node);
+  // Si el valor actual no es la última traducción que escribimos, el texto fuente
+  // cambió (React re-renderizó el nodo) → re-cachear el original. Sin esto, un nodo
+  // reutilizado por React queda congelado en la traducción de su primer valor.
+  if (current !== textNodeTranslatedValues.get(node)) {
+    textNodeOriginalValues.set(node, current);
   }
 
-  textNodes.forEach((node) => {
-    const current = node.nodeValue || "";
+  const source = textNodeOriginalValues.get(node) ?? current;
+  const translated = translateText(source, language);
+  if (translated !== node.nodeValue) {
+    node.nodeValue = translated;
+  }
+  textNodeTranslatedValues.set(node, translated);
+}
 
-    // Si el valor actual no es la última traducción que escribimos, el texto fuente
-    // cambió (React re-renderizó el nodo) → re-cachear el original. Sin esto, un nodo
-    // reutilizado por React queda congelado en la traducción de su primer valor.
-    if (current !== textNodeTranslatedValues.get(node)) {
-      textNodeOriginalValues.set(node, current);
+function translateElementAttributes(element: HTMLElement, language: Language) {
+  if (element.closest("[data-no-i18n='true']")) return;
+
+  if (!attributeOriginalValues.has(element)) {
+    attributeOriginalValues.set(element, new Map());
+  }
+  if (!attributeTranslatedValues.has(element)) {
+    attributeTranslatedValues.set(element, new Map());
+  }
+
+  const elementOriginals = attributeOriginalValues.get(element)!;
+  const elementTranslated = attributeTranslatedValues.get(element)!;
+
+  TRANSLATABLE_ATTRIBUTES.forEach((attribute) => {
+    const current = element.getAttribute(attribute);
+    if (!current) return;
+
+    // Mismo criterio que los nodos de texto: si el atributo no es lo que
+    // tradujimos por última vez, React lo cambió → re-cachear el original.
+    if (current !== elementTranslated.get(attribute)) {
+      elementOriginals.set(attribute, current);
     }
 
-    const source = textNodeOriginalValues.get(node) ?? current;
-    const translated = translateText(source, language);
-    if (translated !== node.nodeValue) {
-      node.nodeValue = translated;
+    const translated = translateText(elementOriginals.get(attribute) ?? current, language);
+    if (translated !== current) {
+      element.setAttribute(attribute, translated);
     }
-    textNodeTranslatedValues.set(node, translated);
+    elementTranslated.set(attribute, translated);
   });
+}
 
-  const attributesToTranslate: Array<"placeholder" | "title" | "aria-label"> = [
-    "placeholder",
-    "title",
-    "aria-label",
-  ];
+// Traduce un subárbol: text nodes (vía TreeWalker) + atributos traducibles.
+// Se usa para el pase inicial (root = document.body) y, de forma incremental, para
+// cada nodo agregado que reporta el MutationObserver — así el costo por mutación es
+// O(nodos agregados) en vez de O(todo el DOM × diccionario).
+function translateSubtree(root: Node, language: Language) {
+  if (root.nodeType === Node.TEXT_NODE) {
+    translateTextNode(root as Text, language);
+    return;
+  }
+  if (root.nodeType !== Node.ELEMENT_NODE) return;
 
-  const elements = document.querySelectorAll<HTMLElement>("input, textarea, button, [title], [aria-label]");
+  const element = root as HTMLElement;
 
-  elements.forEach((element) => {
-    if (element.closest("[data-no-i18n='true']")) return;
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    translateTextNode(walker.currentNode as Text, language);
+  }
 
-    if (!attributeOriginalValues.has(element)) {
-      attributeOriginalValues.set(element, new Map());
-    }
-    if (!attributeTranslatedValues.has(element)) {
-      attributeTranslatedValues.set(element, new Map());
-    }
-
-    const elementOriginals = attributeOriginalValues.get(element)!;
-    const elementTranslated = attributeTranslatedValues.get(element)!;
-
-    attributesToTranslate.forEach((attribute) => {
-      const current = element.getAttribute(attribute);
-      if (!current) return;
-
-      // Mismo criterio que los nodos de texto: si el atributo no es lo que
-      // tradujimos por última vez, React lo cambió → re-cachear el original.
-      if (current !== elementTranslated.get(attribute)) {
-        elementOriginals.set(attribute, current);
-      }
-
-      const translated = translateText(elementOriginals.get(attribute) ?? current, language);
-      if (translated !== current) {
-        element.setAttribute(attribute, translated);
-      }
-      elementTranslated.set(attribute, translated);
-    });
-  });
+  if (element.matches(ATTRIBUTE_SELECTOR)) {
+    translateElementAttributes(element, language);
+  }
+  element
+    .querySelectorAll<HTMLElement>(ATTRIBUTE_SELECTOR)
+    .forEach((el) => translateElementAttributes(el, language));
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
@@ -550,14 +573,31 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
+    if (typeof document === "undefined") return;
+
     document.documentElement.lang = language;
     window.localStorage.setItem(STORAGE_KEY, language);
 
-    const apply = () => translateDom(language);
-    apply();
+    // Pase completo una sola vez (al montar / al cambiar de idioma).
+    translateSubtree(document.body, language);
 
-    const observer = new MutationObserver(() => {
-      apply();
+    // En cada mutación traducimos SOLO lo que cambió (no se re-escanea todo el DOM).
+    // El callback del observer corre como microtask antes del paint → sin flash de
+    // texto fuente en contenido dinámico.
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "characterData") {
+          if (mutation.target.nodeType === Node.TEXT_NODE) {
+            translateTextNode(mutation.target as Text, language);
+          }
+        } else if (mutation.type === "attributes") {
+          if (mutation.target.nodeType === Node.ELEMENT_NODE) {
+            translateElementAttributes(mutation.target as HTMLElement, language);
+          }
+        } else {
+          mutation.addedNodes.forEach((node) => translateSubtree(node, language));
+        }
+      }
     });
 
     observer.observe(document.body, {
