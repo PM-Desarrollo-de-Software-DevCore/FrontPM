@@ -71,19 +71,20 @@ export default function TeamRatesPanel({ projectId }: { projectId: string }) {
     )
   }
 
-  const colSpan = 3 + (canSeeRates ? 1 : 0) + (canManageMembers ? 1 : 0)
+  const colSpan = 3 + (canSeeRates ? 2 : 0) + (canManageMembers ? 1 : 0)
 
   return (
     <div className="space-y-3">
       <div className="rounded-xl border border-zinc-200 bg-white p-2 shadow-sm sm:p-4">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] text-left text-sm">
+          <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-slate-500">
                 <th className="px-3 py-2">Miembro</th>
                 <th className="px-3 py-2">Rol</th>
                 <th className="px-3 py-2 text-right">FTE</th>
                 {canSeeRates && <th className="px-3 py-2 text-right">Tarifa mensual</th>}
+                {canSeeRates && <th className="px-3 py-2 text-right">Tarifa de venta</th>}
                 {canManageMembers && <th className="px-3 py-2 text-center">Acciones</th>}
               </tr>
             </thead>
@@ -102,6 +103,9 @@ export default function TeamRatesPanel({ projectId }: { projectId: string }) {
                     <td className="px-3 py-2 text-right">{formatNumber(member.fte, "N/A", 2)}</td>
                     {canSeeRates && (
                       <td className="px-3 py-2 text-right">{formatMoney(member.monthly_rate)}</td>
+                    )}
+                    {canSeeRates && (
+                      <td className="px-3 py-2 text-right">{formatMoney(member.sale_rate)}</td>
                     )}
                     {canManageMembers && (
                       <td className="px-3 py-2 text-center">
@@ -125,7 +129,7 @@ export default function TeamRatesPanel({ projectId }: { projectId: string }) {
 
       {!canSeeRates && (
         <p className="text-xs text-slate-400">
-          La tarifa mensual solo es visible para administradores o el PM del proyecto.
+          Las tarifas solo son visibles para administradores o el PM del proyecto.
         </p>
       )}
 

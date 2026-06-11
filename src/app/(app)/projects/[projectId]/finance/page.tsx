@@ -30,7 +30,11 @@ export default function ProjectFinancePage() {
   const params = useParams()
   const routeProjectId = params.projectId as string
 
-  const [resolvedProject, setResolvedProject] = useState<{ id: string; name: string } | null>(null)
+  const [resolvedProject, setResolvedProject] = useState<{
+    id: string
+    name: string
+    billingModel: string | null
+  } | null>(null)
   const [projectError, setProjectError] = useState<string | null>(null)
   const [resolving, setResolving] = useState(true)
   const [tab, setTab] = useState<FinanceTab>("summary")
@@ -56,7 +60,7 @@ export default function ProjectFinancePage() {
           return
         }
 
-        setResolvedProject({ id: match.id, name: match.name })
+        setResolvedProject({ id: match.id, name: match.name, billingModel: match.billingModel ?? null })
       } catch (error) {
         if (!active) return
         setProjectError(error instanceof Error ? error.message : "No se pudo resolver el proyecto.")
@@ -140,7 +144,9 @@ export default function ProjectFinancePage() {
       {tab === "team" && <TeamRatesPanel projectId={projectId} />}
       {tab === "hours" && <TimeTrackingPanel projectId={projectId} />}
       {tab === "expenses" && <ExpensesPanel projectId={projectId} />}
-      {tab === "invoices" && <InvoicesPanel projectId={projectId} />}
+      {tab === "invoices" && (
+        <InvoicesPanel projectId={projectId} billingModel={resolvedProject.billingModel} />
+      )}
       {tab === "report" && <ReportPanel projectId={projectId} />}
     </div>
   )

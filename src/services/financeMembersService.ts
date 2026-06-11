@@ -1,5 +1,5 @@
 /**
- * Miembros de proyecto con datos financieros (FTE / monthly_rate).
+ * Miembros de proyecto con datos financieros (FTE / monthly_rate / sale_rate).
  * Contrato: docs/finanzas-frontend.md sección 4.
  *
  * El endpoint /projects/:id/members es compartido con el resto de la app y
@@ -16,6 +16,7 @@ export interface UpdateMemberPayload {
   role?: ProjectMemberRole
   fte?: number | null
   monthly_rate?: number | null
+  sale_rate?: number | null
 }
 
 // Caché + dedup in-flight por-proyecto de los miembros con datos financieros.
@@ -34,7 +35,7 @@ export function invalidateFinanceMembersCache(projectId?: string): void {
   }
 }
 
-/** GET /projects/:id/members — incluye fte y monthly_rate (rate = null si no autorizado). */
+/** GET /projects/:id/members — incluye fte, monthly_rate y sale_rate (rates = null si no autorizado). */
 export async function getProjectFinanceMembers(projectId: string): Promise<ProjectMemberFinance[]> {
   const cached = financeMembersCache.get(projectId)
   if (cached && Date.now() - cached.ts < FINANCE_MEMBERS_TTL_MS) {

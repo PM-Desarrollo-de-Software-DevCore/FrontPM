@@ -32,6 +32,9 @@ export default function MemberRateModal({
   const [rate, setRate] = useState(
     member.monthly_rate !== null && member.monthly_rate !== undefined ? String(member.monthly_rate) : ""
   )
+  const [saleRate, setSaleRate] = useState(
+    member.sale_rate !== null && member.sale_rate !== undefined ? String(member.sale_rate) : ""
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -45,6 +48,7 @@ export default function MemberRateModal({
         role,
         fte: fte.trim() === "" ? null : Number(fte),
         monthly_rate: rate.trim() === "" ? null : Number(rate),
+        sale_rate: saleRate.trim() === "" ? null : Number(saleRate),
       })
       onSaved()
     } catch (err) {
@@ -90,13 +94,26 @@ export default function MemberRateModal({
           </label>
 
           <label className="flex flex-col text-sm text-slate-700">
-            <span className="mb-1 font-medium">Tarifa mensual</span>
+            <span className="mb-1 font-medium">Tarifa mensual (costo)</span>
             <input
               type="number"
               step="0.01"
               min="0"
               value={rate}
               onChange={(event) => setRate(event.target.value)}
+              placeholder="Sin tarifa"
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
+            />
+          </label>
+
+          <label className="flex flex-col text-sm text-slate-700">
+            <span className="mb-1 font-medium">Tarifa de venta</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={saleRate}
+              onChange={(event) => setSaleRate(event.target.value)}
               placeholder="Sin tarifa"
               className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
             />

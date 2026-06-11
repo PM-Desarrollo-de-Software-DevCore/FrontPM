@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 
-import { Invoice, InvoiceStatus } from "@/types/finance"
-import { createInvoice, updateInvoice } from "@/services/invoiceService"
+import { Invoice, InvoiceStatus, SuggestedInvoiceAmount } from "@/types/finance"
+import { createInvoice, getSuggestedInvoiceAmount, updateInvoice } from "@/services/invoiceService"
+import { formatMoney } from "@/lib/utils"
 
 const STATUS_OPTIONS: { value: InvoiceStatus; label: string }[] = [
   { value: "draft", label: "Borrador" },
@@ -18,12 +19,21 @@ function toDateInput(value: string | null | undefined): string {
 type InvoiceFormModalProps = {
   projectId: string
   invoice: Invoice | null
+  /** billing_model del proyecto; habilita el auto-cálculo/preview cuando es "time_and_materials". */
+  billingModel?: string | null
   onClose: () => void
   onSaved: () => void
 }
 
-export default function InvoiceFormModal({ projectId, invoice, onClose, onSaved }: InvoiceFormModalProps) {
+export default function InvoiceFormModal({
+  projectId,
+  invoice,
+  billingModel,
+  onClose,
+  onSaved,
+}: InvoiceFormModalProps) {
   const isEdit = Boolean(invoice)
+  const isTimeAndMaterials = billingModel === "time_and_materials"
   const [amount, setAmount] = useState(invoice ? String(invoice.amount) : "")
   const [status, setStatus] = useState<InvoiceStatus>(invoice?.status ?? "draft")
   const [concept, setConcept] = useState(invoice?.concept ?? "")
@@ -33,12 +43,45 @@ export default function InvoiceFormModal({ projectId, invoice, onClose, onSaved 
   const [periodEnd, setPeriodEnd] = useState(toDateInput(invoice?.period_end))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestion, setSuggestion] = useState<SuggestedInvoiceAmount | null>(null)
+  const [suggestError, setSuggestError] = useState<string | null>(null)
+  // Invalida respuestas en vuelo cuando cambia el período (evita repoblar un preview obsoleto).
+  const suggestSeqRef = useRef(0)
+
+  const handleSuggest = async () => {
+    if (!periodStart || !periodEnd) return
+
+    const seq = ++suggestSeqRef.current
+    setSuggesting(true)
+    setSuggestError(null)
+
+    try {
+      const result = await getSuggestedInvoiceAmount(projectId, periodStart, periodEnd)
+      if (seq !== suggestSeqRef.current) return
+      setSuggestion(result)
+    } catch (err) {
+      if (seq !== suggestSeqRef.current) return
+      setSuggestion(null)
+      setSuggestError(err instanceof Error ? err.message : "No se pudo calcular el monto sugerido.")
+    } finally {
+      if (seq === suggestSeqRef.current) setSuggesting(false)
+    }
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
+    // En T&M, crear sin monto delega el cálculo al backend (horas × tarifa de venta del período).
+    const wantsAutoAmount = !isEdit && isTimeAndMaterials && amount.trim() === ""
     const parsedAmount = Number(amount)
-    if (!amount || Number.isNaN(parsedAmount) || parsedAmount < 0) {
+
+    if (wantsAutoAmount && (!periodStart || !periodEnd)) {
+      setError("Para auto-calcular el monto, selecciona inicio y fin del período.")
+      return
+    }
+
+    if (!wantsAutoAmount && (!amount || Number.isNaN(parsedAmount) || parsedAmount < 0)) {
       setError("Ingresa un monto válido.")
       return
     }
@@ -53,7 +96,7 @@ export default function InvoiceFormModal({ projectId, invoice, onClose, onSaved 
 
     try {
       const payload = {
-        amount: parsedAmount,
+        amount: wantsAutoAmount ? undefined : parsedAmount,
         status,
         concept: concept.trim() || undefined,
         issue_date: issueDate,
@@ -97,6 +140,11 @@ export default function InvoiceFormModal({ projectId, invoice, onClose, onSaved 
                 onChange={(event) => setAmount(event.target.value)}
                 className={fieldClass}
               />
+              {!isEdit && isTimeAndMaterials && (
+                <span className="mt-1 text-xs text-slate-500">
+                  Déjalo vacío para auto-calcular con las horas del período.
+                </span>
+              )}
             </label>
 
             <label className="flex flex-col text-sm text-slate-700">
@@ -151,7 +199,13 @@ export default function InvoiceFormModal({ projectId, invoice, onClose, onSaved 
               <input
                 type="date"
                 value={periodStart}
-                onChange={(event) => setPeriodStart(event.target.value)}
+                onChange={(event) => {
+                  setPeriodStart(event.target.value)
+                  suggestSeqRef.current++
+                  setSuggestion(null)
+                  setSuggestError(null)
+                  setSuggesting(false)
+                }}
                 className={fieldClass}
               />
             </label>
@@ -161,11 +215,62 @@ export default function InvoiceFormModal({ projectId, invoice, onClose, onSaved 
               <input
                 type="date"
                 value={periodEnd}
-                onChange={(event) => setPeriodEnd(event.target.value)}
+                onChange={(event) => {
+                  setPeriodEnd(event.target.value)
+                  suggestSeqRef.current++
+                  setSuggestion(null)
+                  setSuggestError(null)
+                  setSuggesting(false)
+                }}
                 className={fieldClass}
               />
             </label>
           </div>
+
+          {isTimeAndMaterials && (
+            <div className="space-y-2 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-slate-700">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-medium">Monto sugerido (horas × tarifa de venta)</span>
+                <button
+                  type="button"
+                  onClick={handleSuggest}
+                  disabled={suggesting || !periodStart || !periodEnd}
+                  className="rounded-2xl border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {suggesting ? "Calculando..." : "Calcular"}
+                </button>
+              </div>
+
+              {(!periodStart || !periodEnd) && (
+                <p className="text-xs text-slate-500">Selecciona inicio y fin del período para calcular.</p>
+              )}
+
+              {suggestError && <p className="text-xs text-red-600">{suggestError}</p>}
+
+              {suggestion && (
+                <div className="space-y-2">
+                  <p>
+                    <span>Total sugerido:</span>{" "}
+                    <span className="font-semibold">{formatMoney(suggestion.total)}</span>
+                  </p>
+                  {suggestion.membersMissingRate.length > 0 && (
+                    <p className="text-xs text-amber-600">
+                      <span>Miembros con horas sin tarifa de venta:</span>{" "}
+                      <span>{suggestion.membersMissingRate.length}</span>
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setAmount(String(suggestion.total))}
+                    disabled={suggestion.total <= 0}
+                    className="rounded-2xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                  >
+                    Usar este monto
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
