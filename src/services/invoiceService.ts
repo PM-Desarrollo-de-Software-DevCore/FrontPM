@@ -4,10 +4,11 @@
  */
 
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api"
-import { Invoice, InvoicesResponse, InvoiceStatus } from "@/types/finance"
+import { Invoice, InvoicesResponse, InvoiceStatus, SuggestedInvoiceAmount } from "@/types/finance"
 
 export interface InvoicePayload {
-  amount: number
+  /** Omitir (no enviar null) para que el backend auto-calcule en proyectos T&M con período. */
+  amount?: number
   status?: InvoiceStatus
   concept?: string
   issue_date: string
@@ -35,4 +36,17 @@ export function updateInvoice(invoiceId: string, payload: Partial<InvoicePayload
 /** DELETE /invoices/:id */
 export function deleteInvoice(invoiceId: string): Promise<void> {
   return apiDelete(`/invoices/${invoiceId}`, "No se pudo eliminar la factura.")
+}
+
+/** GET /projects/:id/invoices/suggested-amount — preview T&M (horas × tarifa de venta), solo admin/PM. */
+export function getSuggestedInvoiceAmount(
+  projectId: string,
+  periodStart: string,
+  periodEnd: string
+): Promise<SuggestedInvoiceAmount> {
+  const query = new URLSearchParams({ period_start: periodStart, period_end: periodEnd })
+  return apiGet<SuggestedInvoiceAmount>(
+    `/projects/${projectId}/invoices/suggested-amount?${query.toString()}`,
+    "No se pudo calcular el monto sugerido."
+  )
 }

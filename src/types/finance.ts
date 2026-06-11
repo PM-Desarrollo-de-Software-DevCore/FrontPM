@@ -111,7 +111,7 @@ export interface FinancialPortfolio {
 /** Rol dentro de un proyecto (incluye team_lead). */
 export type ProjectMemberRole = "project_manager" | "scrum_master" | "developer" | "team_lead"
 
-/** Miembro de proyecto con datos financieros. `monthly_rate` llega null si no autorizado a verlo. */
+/** Miembro de proyecto con datos financieros. `monthly_rate` (costo) y `sale_rate` (venta) llegan null si no autorizado a verlos. */
 export interface ProjectMemberFinance {
   id_mp: string
   id_user: string
@@ -119,6 +119,7 @@ export interface ProjectMemberFinance {
   role: ProjectMemberRole
   fte: number | null
   monthly_rate: number | null
+  sale_rate: number | null
   createdAt: string
 }
 
@@ -195,4 +196,19 @@ export interface InvoiceSummary {
 export interface InvoicesResponse {
   summary: InvoiceSummary
   invoices: Invoice[]
+}
+
+/** Línea del monto sugerido T&M: horas del miembro en el período × su tarifa de venta. */
+export interface SuggestedInvoiceLine {
+  userId: string
+  hours: number
+  sale_rate: number | null
+  subtotal: number
+}
+
+/** GET /projects/:id/invoices/suggested-amount → preview del auto-cálculo T&M (no crea factura). */
+export interface SuggestedInvoiceAmount {
+  lines: SuggestedInvoiceLine[]
+  total: number
+  membersMissingRate: string[]
 }

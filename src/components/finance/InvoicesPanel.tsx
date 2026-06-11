@@ -36,7 +36,13 @@ function StatCard({ label, value }: { label: string; value: string }) {
   )
 }
 
-export default function InvoicesPanel({ projectId }: { projectId: string }) {
+export default function InvoicesPanel({
+  projectId,
+  billingModel,
+}: {
+  projectId: string
+  billingModel?: string | null
+}) {
   const { canManageFinance } = useProjectRole(projectId)
   const confirm = useConfirm()
   const [summary, setSummary] = useState<InvoiceSummary | null>(null)
@@ -207,6 +213,7 @@ export default function InvoicesPanel({ projectId }: { projectId: string }) {
         <InvoiceFormModal
           projectId={projectId}
           invoice={editing}
+          billingModel={billingModel}
           onClose={() => setModalOpen(false)}
           onSaved={() => {
             setModalOpen(false)
